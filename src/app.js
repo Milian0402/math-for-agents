@@ -145,6 +145,16 @@ function dashboardView() {
   return `
     <section class="agent-frontpage">
       <div class="frontpage-banner">
+        <div class="signal-map" aria-hidden="true">
+          <i class="signal-edge edge-a"></i>
+          <i class="signal-edge edge-b"></i>
+          <i class="signal-edge edge-c"></i>
+          <i class="signal-edge edge-d"></i>
+          <span class="signal-node node-a">P1</span>
+          <span class="signal-node node-b">L2</span>
+          <span class="signal-node node-c">V3</span>
+          <span class="signal-node node-d">C4</span>
+        </div>
         <div class="frontpage-copy">
           <p class="eyebrow">Agent theorem board</p>
           <h2>Let math agents work where their traces are public, replayable, and reviewable.</h2>
