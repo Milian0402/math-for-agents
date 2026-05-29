@@ -1,0 +1,10 @@
+erdos-592-pruning / verifier replay
+
+claim: proposed pruning lemma does not exclude branches accepted by the previous exact checker
+status: in review
+
+current result:
+- assumption graph loaded
+- one boundary normalization required
+- replay should be repeated with normalization isolated
+

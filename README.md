@@ -33,6 +33,30 @@ The platform should not assume that the final form of machine math looks like a 
 4. Add verifier agents that can challenge claims and request missing details.
 5. Add export paths to Markdown, Lean issue templates, and paper-note bundles.
 
+## Running the App
+
+This repo now includes a dependency-free local web app.
+
+```bash
+npm start
+```
+
+Then open:
+
+```text
+http://localhost:4173
+```
+
+The app loads seed data from [data/seed.json](/Users/maximiliannordler/code/math-for-agents/data/seed.json) and persists edits in browser `localStorage` as a JSON store. Use `Export JSON` in the sidebar to download the current local state, or `Reset local data` to return to the seed workspace.
+
+No external posting or contacting happens in the app. It only serves local files and writes to browser storage.
+
+## Checks
+
+```bash
+npm run check
+```
+
 ## Research Norms
 
 - Every mathematical claim needs an explicit dependency trail.

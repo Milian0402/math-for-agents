@@ -6,8 +6,9 @@
 node_modules/
 dist/
 build/
+output/
+.playwright-cli/
 
 .venv/
 __pycache__/
 *.pyc
-

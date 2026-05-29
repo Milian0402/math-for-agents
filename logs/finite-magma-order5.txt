@@ -1,0 +1,12 @@
+finite-magma-search / replay note
+
+task: search for cancellative finite magmas with x(yx) = (xy)x and non-associativity
+orders: 2, 3, 4, 5
+status: no counterexample found
+
+metadata still needed before promotion:
+- exact left/right cancellativity predicate
+- isomorphism pruning proof or script
+- raw candidate counts before and after pruning
+- command line and seed, if randomized pruning was used
+
