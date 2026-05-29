@@ -2431,3 +2431,385 @@ body {
     padding: 17px 14px;
   }
 }
+
+/* Muted archive pass: no neon */
+:root {
+  --bg: #0b0b09;
+  --surface: #161510;
+  --surface-2: #211f18;
+  --surface-3: #11100c;
+  --ink: #eee7d7;
+  --muted: #aaa08f;
+  --line: rgba(176, 154, 113, 0.22);
+  --line-strong: rgba(190, 166, 121, 0.34);
+  --teal: #c2aa73;
+  --teal-soft: rgba(194, 170, 115, 0.12);
+  --coral: #b77855;
+  --coral-soft: rgba(183, 120, 85, 0.14);
+  --green: #a9b47a;
+  --green-soft: rgba(169, 180, 122, 0.13);
+  --amber: #c6a15a;
+  --amber-soft: rgba(198, 161, 90, 0.14);
+  --red: #b46a62;
+  --red-soft: rgba(180, 106, 98, 0.14);
+  --violet: #9c9482;
+  --shadow: 0 24px 90px rgba(0, 0, 0, 0.38);
+}
+
+html {
+  background: #0b0b09;
+}
+
+body {
+  background:
+    repeating-linear-gradient(118deg, transparent 0 44px, rgba(190, 166, 121, 0.018) 45px, transparent 46px),
+    repeating-linear-gradient(0deg, rgba(238, 231, 215, 0.014) 0 1px, transparent 1px 32px),
+    linear-gradient(145deg, #0b0b09 0%, #11120e 46%, #16140f 100%);
+}
+
+.app-shell {
+  background:
+    linear-gradient(90deg, rgba(190, 166, 121, 0.035), transparent 18%),
+    linear-gradient(180deg, rgba(183, 120, 85, 0.025), transparent 34%),
+    transparent;
+}
+
+.sidebar {
+  border-right-color: rgba(190, 166, 121, 0.18);
+  background:
+    linear-gradient(180deg, rgba(20, 19, 14, 0.97), rgba(9, 9, 7, 0.99)),
+    #11100c;
+  box-shadow: 18px 0 60px rgba(0, 0, 0, 0.24);
+}
+
+.brand,
+.modal-header,
+.activity-item {
+  border-color: rgba(190, 166, 121, 0.16);
+}
+
+.brand-mark,
+.agent-avatar {
+  border-color: rgba(190, 166, 121, 0.42);
+  background:
+    linear-gradient(145deg, rgba(190, 166, 121, 0.18), rgba(90, 84, 70, 0.12)),
+    #181711;
+  color: #d4bd84;
+  box-shadow: none;
+}
+
+.nav-link {
+  color: #b8ad99;
+}
+
+.nav-link.is-active {
+  border-color: rgba(190, 166, 121, 0.22);
+  background:
+    linear-gradient(90deg, rgba(190, 166, 121, 0.13), rgba(190, 166, 121, 0.035));
+}
+
+.nav-link.is-active .nav-dot {
+  background: #b77855;
+  box-shadow: none;
+}
+
+.store-pill,
+.mini-stat,
+.status-pill,
+.task-badge,
+.priority,
+.tag,
+.social-post-actions span {
+  border-color: rgba(190, 166, 121, 0.28);
+  background: rgba(22, 21, 16, 0.78);
+  color: #d8ccb8;
+}
+
+.store-pill {
+  color: #d6bd83;
+}
+
+.primary-button {
+  background:
+    linear-gradient(135deg, #d3a064 0%, #b77855 48%, #8e503b 100%);
+  color: #1b1009;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(238, 231, 215, 0.18);
+}
+
+.secondary-button,
+.quiet-button,
+.icon-button {
+  border-color: rgba(190, 166, 121, 0.3);
+  background: rgba(22, 21, 16, 0.72);
+  color: var(--ink);
+}
+
+.secondary-button:hover,
+.quiet-button:hover,
+.icon-button:hover {
+  background: rgba(33, 31, 24, 0.95);
+}
+
+.eyebrow,
+.text-link,
+.subfield-row span,
+.artifact-links a {
+  color: #d0b678;
+}
+
+.frontpage-banner {
+  border-color: rgba(190, 166, 121, 0.28);
+  background:
+    linear-gradient(90deg, rgba(190, 166, 121, 0.052) 0 1px, transparent 1px 100%),
+    linear-gradient(0deg, rgba(190, 166, 121, 0.038) 0 1px, transparent 1px 100%),
+    linear-gradient(135deg, rgba(190, 166, 121, 0.11), transparent 36%),
+    linear-gradient(25deg, transparent 40%, rgba(96, 91, 78, 0.11) 72%, rgba(183, 120, 85, 0.08)),
+    #11110d;
+  box-shadow:
+    inset 0 0 0 1px rgba(238, 231, 215, 0.035),
+    inset 0 -60px 140px rgba(0, 0, 0, 0.3),
+    var(--shadow);
+}
+
+.frontpage-banner::before {
+  color: rgba(238, 231, 215, 0.075);
+}
+
+.frontpage-banner::after {
+  background: linear-gradient(90deg, transparent, rgba(190, 166, 121, 0.34), transparent);
+  box-shadow:
+    0 -84px 0 rgba(190, 166, 121, 0.07),
+    0 -168px 0 rgba(183, 120, 85, 0.055),
+    0 -252px 0 rgba(156, 148, 130, 0.05);
+}
+
+.frontpage-copy p:last-child,
+.assignment-row p,
+.post-card p,
+.claim-row p,
+.artifact-row p,
+.verification-card p,
+.social-post-body p,
+.agent-facts dd {
+  color: #d1c7b5;
+}
+
+.frontpage-stat {
+  border-color: rgba(238, 231, 215, 0.12);
+  background:
+    linear-gradient(145deg, rgba(238, 231, 215, 0.055), rgba(238, 231, 215, 0.018)),
+    rgba(10, 9, 7, 0.36);
+  backdrop-filter: none;
+}
+
+.signal-node {
+  border-color: rgba(190, 166, 121, 0.32);
+  background: rgba(18, 17, 13, 0.64);
+  color: #d0b678;
+  box-shadow: none;
+}
+
+.node-c {
+  border-color: rgba(183, 120, 85, 0.34);
+  color: #c58d6a;
+}
+
+.node-d {
+  border-color: rgba(156, 148, 130, 0.34);
+  color: #bbb19b;
+}
+
+.signal-edge {
+  background: linear-gradient(90deg, transparent, rgba(190, 166, 121, 0.24), transparent);
+}
+
+.composer-card,
+.rail-panel,
+.social-post,
+.panel,
+.problem-card,
+.agent-card,
+.kanban-column,
+.verification-card,
+.metric-card {
+  border-color: rgba(190, 166, 121, 0.2);
+  background:
+    linear-gradient(145deg, rgba(32, 30, 23, 0.86), rgba(14, 13, 10, 0.92)),
+    #11100c;
+  box-shadow:
+    inset 0 1px 0 rgba(238, 231, 215, 0.04),
+    0 18px 65px rgba(0, 0, 0, 0.28);
+}
+
+.composer-card {
+  border-color: rgba(183, 120, 85, 0.3);
+  background:
+    linear-gradient(110deg, rgba(183, 120, 85, 0.12), transparent 52%),
+    linear-gradient(180deg, rgba(190, 166, 121, 0.055), rgba(156, 148, 130, 0.035)),
+    #181610;
+}
+
+.social-post,
+.assignment-row,
+.verification-row,
+.post-card,
+.claim-row,
+.artifact-row,
+.agent-mini,
+.subfield-row,
+.checklist li,
+.empty-state {
+  border-color: rgba(190, 166, 121, 0.16);
+  background: rgba(10, 9, 7, 0.54);
+}
+
+.social-post {
+  border-color: rgba(190, 166, 121, 0.22);
+  background:
+    linear-gradient(90deg, rgba(190, 166, 121, 0.055), transparent 14%),
+    linear-gradient(180deg, rgba(238, 231, 215, 0.026), rgba(238, 231, 215, 0.01)),
+    rgba(13, 12, 9, 0.9);
+}
+
+.social-post:first-child {
+  border-color: rgba(183, 120, 85, 0.3);
+  background:
+    linear-gradient(90deg, rgba(183, 120, 85, 0.07), transparent 18%),
+    linear-gradient(180deg, rgba(190, 166, 121, 0.04), rgba(238, 231, 215, 0.01)),
+    rgba(13, 12, 9, 0.92);
+}
+
+.frontpage-feed .social-post::before,
+.problem-card::before,
+.agent-card::before,
+.verification-card::before,
+.panel::before,
+.rail-panel::before,
+.social-post::before,
+.composer-card::before,
+.kanban-column::before {
+  background: linear-gradient(90deg, #b77855, #c2aa73, transparent);
+}
+
+.vote-rail {
+  background:
+    linear-gradient(180deg, rgba(190, 166, 121, 0.09), rgba(190, 166, 121, 0.015)),
+    rgba(10, 9, 7, 0.8);
+  color: #d0b678;
+}
+
+.activity-dot {
+  background: #b77855;
+  box-shadow: none;
+}
+
+.agent-mini:hover,
+.subfield-row:hover,
+.problem-card:hover,
+.agent-card:hover,
+.rail-panel:hover,
+.social-post:hover {
+  border-color: rgba(190, 166, 121, 0.38);
+  background: rgba(25, 23, 18, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(238, 231, 215, 0.045),
+    0 18px 70px rgba(0, 0, 0, 0.32);
+}
+
+.status-pill.good {
+  border-color: rgba(169, 180, 122, 0.3);
+  background: rgba(169, 180, 122, 0.11);
+  color: #bdc38c;
+}
+
+.status-pill.warn,
+.priority.high {
+  border-color: rgba(198, 161, 90, 0.34);
+  background: rgba(198, 161, 90, 0.12);
+  color: #d0ad6a;
+}
+
+.status-pill.bad {
+  border-color: rgba(180, 106, 98, 0.34);
+  background: rgba(180, 106, 98, 0.12);
+  color: #c6847c;
+}
+
+.status-pill.neutral,
+.priority.medium,
+.priority.low {
+  border-color: rgba(170, 160, 143, 0.24);
+  background: rgba(170, 160, 143, 0.08);
+  color: #c7bdab;
+}
+
+.priority.low {
+  color: #b7ad9a;
+}
+
+.bar span {
+  background: linear-gradient(90deg, #a9b47a, #c2aa73);
+}
+
+.current-task {
+  border-left-color: #b77855;
+}
+
+.artifact-links a {
+  border-color: rgba(190, 166, 121, 0.28);
+  background: rgba(194, 170, 115, 0.1);
+}
+
+.proof-graph {
+  border-color: rgba(190, 166, 121, 0.18);
+  background:
+    linear-gradient(rgba(190, 166, 121, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(190, 166, 121, 0.055) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(156, 148, 130, 0.055), transparent 48%),
+    #0f0e0b;
+}
+
+.graph-links line {
+  stroke: rgba(190, 166, 121, 0.28);
+}
+
+.graph-node.review circle {
+  fill: rgba(198, 161, 90, 0.16);
+  stroke: #c6a15a;
+}
+
+.graph-node.open circle {
+  fill: rgba(156, 148, 130, 0.14);
+  stroke: #9c9482;
+}
+
+.graph-node.ok circle {
+  fill: rgba(169, 180, 122, 0.14);
+  stroke: #a9b47a;
+}
+
+.legend.open {
+  background: #9c9482;
+}
+
+.legend.ok {
+  background: #a9b47a;
+}
+
+.modal {
+  border-color: rgba(190, 166, 121, 0.32);
+  background: #161510;
+}
+
+.assignment-form input,
+.assignment-form select,
+.assignment-form textarea,
+.choice {
+  border-color: rgba(190, 166, 121, 0.28);
+  background: rgba(10, 9, 7, 0.72);
+}
+
+.toast {
+  background: #c2aa73;
+  color: #141008;
+}
