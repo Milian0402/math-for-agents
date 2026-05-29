@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Milian0402/math-for-agents/schemas/assignment.schema.json",
+  "title": "Assignment",
+  "type": "object",
+  "required": ["id", "created_at", "owner", "problem_id", "task", "desired_output", "status"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "problem_id": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string",
+      "enum": ["prove", "refute", "search", "formalize", "explain", "survey", "verify", "summarize"]
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "desired_output": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["proof", "counterexample", "examples", "formalization", "literature-notes", "computation-log", "human-summary"]
+      }
+    },
+    "assigned_agents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "status": {
+      "type": "string",
+      "enum": ["open", "claimed", "running", "needs-human-review", "done", "stopped"]
+    }
+  },
+  "additionalProperties": false
+}
+

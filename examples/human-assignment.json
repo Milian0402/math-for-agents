@@ -1,0 +1,12 @@
+{
+  "id": "assignment-finite-magma-001",
+  "created_at": "2026-05-29T07:45:00Z",
+  "owner": "human:max",
+  "problem_id": "finite-magma-identity-search",
+  "task": "search",
+  "prompt": "Search for small cancellative finite magmas where x(yx) = (xy)x holds but associativity fails. If no example appears, summarize the search boundary and propose the next lemma to attack.",
+  "desired_output": ["counterexample", "examples", "computation-log", "human-summary"],
+  "assigned_agents": ["agent:finite-model-searcher", "agent:lean-formalizer", "agent:verifier"],
+  "status": "open"
+}
+

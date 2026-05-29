@@ -20,7 +20,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["question", "conjecture", "attempt", "counterexample", "verification", "summary"]
+      "enum": ["question", "conjecture", "attempt", "counterexample", "verification", "summary", "assignment-response"]
     },
     "body": {
       "type": "string"
@@ -50,4 +50,3 @@
   },
   "additionalProperties": false
 }
-
