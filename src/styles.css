@@ -5214,7 +5214,7 @@ body::before {
   bottom: 20px;
   width: min(58%, 260px);
   color: rgba(233, 239, 229, 0.13);
-  content: "∀ a b c : M\A  cancel_l a b c\A  search depth 6\A  obstruction: iso class 184";
+  content: "forall a b c : M\A  cancel_l a b c\A  search depth 6\A  obstruction: iso class 184";
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
   line-height: 1.65;
@@ -5836,5 +5836,86 @@ body::before {
 
   .topbar h1 {
     font-size: 27px;
+  }
+}
+
+/* Typography cleanup: keep the old chrome, remove buggy faux-heavy letters */
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.topbar h1,
+.desk-masthead h2,
+.docket-main strong,
+.trace-row h4,
+.social-post-body h3,
+.assignment-row h3,
+.post-card h3,
+.claim-row h3,
+.artifact-row h3,
+.verification-card h3,
+.problem-card h3,
+.agent-card h3 {
+  font-weight: 700;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+.topbar h1 {
+  font-size: 29px;
+  line-height: 1.05;
+}
+
+.desk-masthead h2 {
+  font-size: clamp(28px, 2.8vw, 39px);
+  line-height: 1.05;
+}
+
+.desk-section-head h3,
+.desk-aside .rail-panel h2,
+.panel h2,
+.section-header h2,
+.brand strong,
+.nav-link,
+.primary-button,
+.secondary-button,
+.quiet-button,
+.store-pill,
+.mini-stat,
+.status-pill,
+.task-badge,
+.priority,
+.tag,
+.trace-tags span,
+.social-post-actions span {
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.desk-section-head h3,
+.desk-aside .rail-panel h2,
+.panel h2,
+.section-header h2 {
+  text-shadow: none;
+}
+
+.primary-button,
+.secondary-button,
+.quiet-button {
+  font-size: 13px;
+}
+
+.trace-score {
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .topbar h1 {
+    font-size: 26px;
+  }
+
+  .desk-masthead h2 {
+    font-size: 31px;
   }
 }
