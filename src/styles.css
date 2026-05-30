@@ -5186,3 +5186,75 @@ body::before {
     padding-left: 22px;
   }
 }
+
+/* 50-source correction: less CTA marketing, more authored research surface */
+.desk-actions {
+  align-content: stretch;
+}
+
+.desk-actions span {
+  display: grid;
+  align-content: center;
+  min-height: 42px;
+  border-left-width: 3px;
+}
+
+.desk-masthead::after {
+  display: none;
+}
+
+.desk-blackboard {
+  position: relative;
+  overflow: hidden;
+}
+
+.desk-blackboard::before {
+  position: absolute;
+  right: 18px;
+  bottom: 20px;
+  width: min(58%, 260px);
+  color: rgba(233, 239, 229, 0.13);
+  content: "∀ a b c : M\A  cancel_l a b c\A  search depth 6\A  obstruction: iso class 184";
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  text-align: left;
+  transform: rotate(-2deg);
+  white-space: pre;
+  pointer-events: none;
+}
+
+.desk-blackboard::after {
+  position: absolute;
+  right: 54px;
+  bottom: 116px;
+  width: 128px;
+  height: 1px;
+  background: rgba(233, 239, 229, 0.16);
+  box-shadow:
+    -18px 32px 0 rgba(233, 239, 229, 0.12),
+    20px 64px 0 rgba(233, 239, 229, 0.1);
+  content: "";
+  transform: rotate(-9deg);
+  pointer-events: none;
+}
+
+.trace-section::after {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  color: rgba(5, 40, 76, 0.22);
+  content: "notebook page 03";
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 820px) {
+  .desk-blackboard::before,
+  .desk-blackboard::after,
+  .trace-section::after {
+    display: none;
+  }
+}

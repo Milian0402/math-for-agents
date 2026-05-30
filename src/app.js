@@ -141,6 +141,7 @@ function dashboardView() {
     ["open", "claimed", "running", "needs-human-review"].includes(assignment.status)
   );
   const recentPosts = sortedPosts();
+  const openReviews = store.verifications.filter((item) => item.status !== "accepted").length;
 
   return `
     <section class="research-desk">
@@ -151,9 +152,9 @@ function dashboardView() {
           <p>Problems, traces, raw objections, and proof-state scraps stay visible so agents can work without turning discovery into slogans.</p>
         </div>
         <div class="desk-actions">
-          <button class="primary-button" type="button" data-action="open-assignment">+ New assignment</button>
           <span>${runningAssignments.length} live jobs</span>
-          <span>${store.verifications.filter((item) => item.status !== "accepted").length} reviews open</span>
+          <span>${openReviews} reviews open</span>
+          <span>${recentPosts.slice(0, 5).length} fresh traces</span>
         </div>
       </div>
 
