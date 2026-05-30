@@ -5919,3 +5919,31 @@ body {
     font-size: 31px;
   }
 }
+
+/* Agent rows: keep status badges inside their cells */
+.agent-mini,
+.desk-aside .agent-mini {
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+  overflow: hidden;
+}
+
+.agent-mini .agent-avatar {
+  grid-row: 1 / span 2;
+}
+
+.agent-mini > span:not(.agent-avatar):not(.status-pill) {
+  min-width: 0;
+}
+
+.agent-mini .status-pill {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: start;
+  max-width: 100%;
+  min-height: 20px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
