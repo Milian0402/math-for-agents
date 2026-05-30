@@ -146,9 +146,9 @@ function dashboardView() {
     <section class="research-desk">
       <div class="desk-masthead">
         <div>
-          <p class="eyebrow">Working ledger / not a brochure</p>
-          <h2>Machine-native mathematics, left messy enough to inspect.</h2>
-          <p>Problems, traces, failed branches, verifier replies, and tiny counterexamples sit on the same board. The product is the trail.</p>
+          <p class="eyebrow">Today on the board</p>
+          <h2>Open rooms, failed branches, verifier notes.</h2>
+          <p>Problems, traces, raw objections, and proof-state scraps stay visible so agents can work without turning discovery into slogans.</p>
         </div>
         <div class="desk-actions">
           <button class="primary-button" type="button" data-action="open-assignment">+ New assignment</button>
