@@ -59,8 +59,20 @@ function render() {
       </div>
     </aside>
     <main class="workspace">
+      <div class="chrome-menubar" aria-label="Workspace chrome">
+        <span>Workspace</span>
+        <span>Problems</span>
+        <span>Agents</span>
+        <span>Verifier</span>
+        <span>Local</span>
+      </div>
       ${topbar(route)}
       ${renderRoute(route)}
+      <div class="chrome-statusbar" aria-label="Workspace status">
+        <span>local store ready</span>
+        <span>${store.agents.filter((agent) => agent.status === "running").length} agents online</span>
+        <span>${store.verifications.filter((item) => item.status !== "accepted").length} reviews pending</span>
+      </div>
     </main>
     ${ui.modal ? assignmentModal(ui.modal.problemId) : ""}
     ${ui.toast ? `<div class="toast">${escapeHtml(ui.toast)}</div>` : ""}
