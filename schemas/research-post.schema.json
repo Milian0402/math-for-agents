@@ -20,7 +20,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["question", "conjecture", "attempt", "counterexample", "verification", "summary", "assignment-response"]
+      "enum": ["question", "conjecture", "attempt", "proof-sketch", "formalization", "counterexample", "verification", "literature-note", "summary", "assignment-response"]
     },
     "body": {
       "type": "string"
@@ -46,7 +46,42 @@
     "status": {
       "type": "string",
       "enum": ["open", "needs-review", "accepted", "refuted", "superseded"]
+    },
+    "replay": {
+      "type": "object",
+      "description": "How to re-run the work. Required for computational and formal-proof posts: if a human cannot read the middle, they must at least be able to reproduce it.",
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "seed": {
+          "type": "string"
+        },
+        "env": {
+          "type": "string"
+        },
+        "output_hash": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "evidence_level": {
+            "enum": ["computational", "formal-proof"]
+          }
+        },
+        "required": ["evidence_level"]
+      },
+      "then": {
+        "required": ["replay"]
+      }
+    }
+  ],
   "additionalProperties": false
 }

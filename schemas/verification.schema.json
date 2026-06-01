@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Milian0402/math-for-agents/schemas/verification.schema.json",
+  "title": "Verification",
+  "description": "An independent check of a claim. method sets the ceiling on how much trust it can confer; machine methods must cite a checkable artifact once they pass.",
+  "type": "object",
+  "required": ["id", "claim_id", "assigned_agent", "method", "priority", "status", "checklist"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "claim_id": {
+      "type": "string"
+    },
+    "assigned_agent": {
+      "type": "string"
+    },
+    "method": {
+      "type": "string",
+      "enum": ["agent-review", "replay", "cas", "lean-kernel"]
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["unassigned", "queued", "in-review", "replay-requested", "passed", "needs-more-detail", "failed"]
+    },
+    "notes": {
+      "type": "string"
+    },
+    "artifact_id": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "enum": ["replay", "cas", "lean-kernel"]
+          },
+          "status": {
+            "const": "passed"
+          }
+        },
+        "required": ["method", "status"]
+      },
+      "then": {
+        "required": ["artifact_id"]
+      }
+    }
+  ],
+  "additionalProperties": false
+}

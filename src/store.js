@@ -1,3 +1,11 @@
+import {
+  canPromote,
+  defaultMethodFor,
+  deriveTrustTier,
+  requiresReplay,
+  requiresVerification
+} from "./vocab.js";
+
 const STORE_KEY = "math-for-agents.store.v1";
 
 export async function loadStore() {
@@ -111,18 +119,31 @@ export function createContribution(store, input) {
     status: input.status || "open"
   };
 
+  const replay = buildReplay(input);
+  if (replay) post.replay = replay;
+
   store.posts.unshift(post);
 
+  // A claim is created when the agent states one, or when the Review Rule forces a
+  // check even without a stated claim: any counterexample, informal-proof, or
+  // formal-proof contribution must open an independent verification.
+  const statedClaim = input.claim_statement?.trim();
+  const ruleTriggered = requiresVerification(post);
+
   let claim = null;
-  if (input.claim_statement?.trim()) {
+  if (statedClaim || ruleTriggered) {
+    const method = defaultMethodFor(post);
+    const needsReplay = requiresReplay(input.evidence_level);
+
     claim = {
       id: `claim-${Date.now().toString(36)}`,
       problem_id: input.problem_id,
-      type: input.claim_type || "conjecture",
-      statement: input.claim_statement.trim(),
+      type: input.claim_type || (post.type === "counterexample" ? "counterexample" : "conjecture"),
+      statement: statedClaim || summarizeForClaim(post.body),
       status: "needs-review",
       evidence_level: input.evidence_level,
-      verification_state: "queued",
+      trust_tier: "unverified",
+      verification_state: needsReplay ? "replay-requested" : "queued",
       linked_posts: [post.id]
     };
     store.claims.unshift(claim);
@@ -131,10 +152,14 @@ export function createContribution(store, input) {
       id: `verify-${Date.now().toString(36)}`,
       claim_id: claim.id,
       assigned_agent: input.verifier || "agent:verifier",
-      priority: input.priority || "medium",
-      status: "queued",
-      notes: "Created from an agent contribution. Needs independent replay or proof review before promotion.",
-      checklist: ["Inspect contribution", "Check artifact links", "Replay or formalize evidence", "Promote or request detail"]
+      method,
+      priority: input.priority || (ruleTriggered ? "high" : "medium"),
+      status: needsReplay ? "replay-requested" : "queued",
+      notes:
+        method === "agent-review"
+          ? "Agent review only. This cannot settle the claim on its own; it needs a replay or a formal check to promote."
+          : "Independent check requested. Provide the backing artifact (replay log, CAS run, or Lean output) before promotion.",
+      checklist: checklistFor(method)
     });
   }
 
@@ -156,18 +181,61 @@ export function createContribution(store, input) {
   return { store: saveStore(store), post, claim };
 }
 
-export function updateVerification(store, verificationId, status) {
+function buildReplay(input) {
+  const command = input.replay_command?.trim() || input.replay?.command?.trim?.();
+  if (!command) return null;
+  return {
+    command,
+    seed: input.replay_seed?.trim?.() || input.replay?.seed || "",
+    env: input.replay_env?.trim?.() || input.replay?.env || "",
+    output_hash: input.replay_output_hash?.trim?.() || input.replay?.output_hash || ""
+  };
+}
+
+function summarizeForClaim(body) {
+  const firstSentence = body.split(/(?<=[.!?])\s/)[0] ?? body;
+  return firstSentence.trim().slice(0, 200);
+}
+
+function checklistFor(method) {
+  if (method === "lean-kernel") {
+    return ["Compile the Lean artifact", "Confirm no sorry or admit", "Match statement to claim", "Record the kernel result"];
+  }
+  if (method === "replay") {
+    return ["Load the command and seed", "Reproduce the run", "Compare the output hash", "Confirm the result matches the claim"];
+  }
+  if (method === "cas") {
+    return ["Re-run the CAS script", "Check the assumptions", "Compare the symbolic output", "Confirm the result matches the claim"];
+  }
+  return ["Read the argument", "Check the dependencies", "Probe the weak steps", "Decide pass or needs-more-detail"];
+}
+
+export function updateVerification(store, verificationId, status, patch = {}) {
   const verification = store.verifications.find((item) => item.id === verificationId);
   if (!verification) return { store, verification: null };
 
   verification.status = status;
+  if (patch.method) verification.method = patch.method;
+  if (patch.artifact_id) verification.artifact_id = patch.artifact_id;
   verification.updated_at = new Date().toISOString();
 
   const claim = store.claims.find((item) => item.id === verification.claim_id);
   if (claim) {
+    // Trust is derived from every verification this claim has, never from a single
+    // "accept" click. Agent review alone tops out below the promotion line.
+    const claimVerifications = store.verifications.filter((item) => item.claim_id === claim.id);
+    const tier = deriveTrustTier(claimVerifications);
+    claim.trust_tier = tier;
     claim.verification_state = status;
-    if (status === "accepted") claim.status = "proved informally";
-    if (status === "needs-more-detail") claim.status = "needs-review";
+
+    if (status === "failed") {
+      claim.status = "refuted";
+    } else if (canPromote(tier)) {
+      claim.status = "accepted";
+    } else {
+      // Reviewed or still in progress, but not strong enough to settle.
+      claim.status = "needs-review";
+    }
   }
 
   return { store: saveStore(store), verification };

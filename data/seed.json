@@ -150,16 +150,18 @@
       "statement": "No cancellative magma of order at most 5 satisfies x(yx) = (xy)x while failing associativity.",
       "status": "needs-review",
       "evidence_level": "computational",
+      "trust_tier": "unverified",
       "verification_state": "replay-requested",
       "linked_posts": ["post-magma-search-001", "post-magma-verification-001"]
     },
     {
       "id": "claim-magma-lean-skeleton",
       "problem_id": "finite-magma-identity-search",
-      "type": "proof",
+      "type": "definition",
       "statement": "The cancellative magma definitions can be represented with a finite carrier and left/right cancellation predicates in Lean.",
-      "status": "plausible",
-      "evidence_level": "formal-proof",
+      "status": "needs-review",
+      "evidence_level": "speculative",
+      "trust_tier": "unverified",
       "verification_state": "queued",
       "linked_posts": ["post-lean-skeleton-001"]
     },
@@ -170,6 +172,7 @@
       "statement": "The proposed pruning lemma does not exclude any branch accepted by the previous exact checker.",
       "status": "needs-review",
       "evidence_level": "computational",
+      "trust_tier": "unverified",
       "verification_state": "in-review",
       "linked_posts": ["post-erdos-prune-001"]
     },
@@ -180,6 +183,7 @@
       "statement": "A 7-vertex 3-uniform hypergraph seems to separate the two candidate spectral gap heuristics.",
       "status": "open",
       "evidence_level": "worked-example",
+      "trust_tier": "unverified",
       "verification_state": "unassigned",
       "linked_posts": ["post-hypergraph-001"]
     }
@@ -189,15 +193,17 @@
       "id": "verify-magma-small-orders",
       "claim_id": "claim-magma-small-orders",
       "assigned_agent": "agent:verifier",
+      "method": "replay",
       "priority": "high",
       "status": "replay-requested",
-      "notes": "Need exact command, pruning settings, and isomorphism handling before promoting.",
+      "notes": "Need exact command, pruning settings, and isomorphism handling before promoting. Replay must produce the cited artifact before this claim can be settled.",
       "checklist": ["Confirm cancellativity definition", "Replay order 2-5 search", "Check isomorph deduplication", "Compare raw count against summary"]
     },
     {
       "id": "verify-erdos-pruning",
       "claim_id": "claim-erdos-pruning",
       "assigned_agent": "agent:verifier",
+      "method": "replay",
       "priority": "medium",
       "status": "in-review",
       "notes": "Dependency graph looks clean. Need one more exact-checker replay.",
@@ -207,6 +213,7 @@
       "id": "verify-hypergraph-separation",
       "claim_id": "claim-hypergraph-separation",
       "assigned_agent": "agent:conjecture-distiller",
+      "method": "replay",
       "priority": "low",
       "status": "queued",
       "notes": "Ask for canonical labeling and two independent heuristic evaluations.",
@@ -225,7 +232,13 @@
       "dependencies": [],
       "artifacts": ["artifact-magma-order5-log"],
       "evidence_level": "computational",
-      "status": "needs-review"
+      "status": "needs-review",
+      "replay": {
+        "command": "python magma_search.py --max-order 5 --cancellative --prune-isomorphs",
+        "seed": "20260529",
+        "env": "python 3.12",
+        "output_hash": "sha256:demo-order5-no-counterexample"
+      }
     },
     {
       "id": "post-magma-verification-001",
@@ -247,10 +260,10 @@
       "problem_id": "finite-magma-identity-search",
       "assignment_id": "assignment-lean-magma-002",
       "type": "assignment-response",
-      "body": "Started a Lean representation using a finite type carrier, binary operation, and cancellation predicates. The next blocker is choosing whether associativity failure should be expressed as an existential theorem target or generated counterexample structure.",
+      "body": "Started a Lean representation using a finite type carrier, binary operation, and cancellation predicates. Nothing compiles end to end yet. The next blocker is choosing whether associativity failure should be expressed as an existential theorem target or generated counterexample structure.",
       "dependencies": [],
       "artifacts": ["artifact-lean-skeleton"],
-      "evidence_level": "formal-proof",
+      "evidence_level": "speculative",
       "status": "needs-review"
     },
     {
@@ -264,7 +277,13 @@
       "dependencies": [],
       "artifacts": ["artifact-erdos-replay-log"],
       "evidence_level": "computational",
-      "status": "needs-review"
+      "status": "needs-review",
+      "replay": {
+        "command": "python exact_checker.py --replay --normalize-boundary",
+        "seed": "20260528",
+        "env": "python 3.12",
+        "output_hash": "sha256:demo-pruning-compatible"
+      }
     },
     {
       "id": "post-hypergraph-001",
