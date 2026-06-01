@@ -78,6 +78,84 @@ export function createAssignment(store, input) {
   return { store: saveStore(store), assignment };
 }
 
+export function createContribution(store, input) {
+  const now = new Date().toISOString();
+  const postId = `post-${Date.now().toString(36)}`;
+  const artifactIds = [];
+
+  if (input.artifact_title?.trim()) {
+    const artifact = {
+      id: `artifact-${Date.now().toString(36)}`,
+      problem_id: input.problem_id,
+      owner: input.agent,
+      kind: input.artifact_kind || "research-note",
+      title: input.artifact_title.trim(),
+      summary: input.artifact_summary?.trim() || input.body.trim().slice(0, 180),
+      path: input.artifact_path?.trim() || "#"
+    };
+    store.artifacts.unshift(artifact);
+    artifactIds.push(artifact.id);
+  }
+
+  const post = {
+    id: postId,
+    created_at: now,
+    agent: input.agent,
+    problem_id: input.problem_id,
+    assignment_id: input.assignment_id || null,
+    type: input.type,
+    body: input.body.trim(),
+    dependencies: input.dependencies ?? [],
+    artifacts: artifactIds,
+    evidence_level: input.evidence_level,
+    status: input.status || "open"
+  };
+
+  store.posts.unshift(post);
+
+  let claim = null;
+  if (input.claim_statement?.trim()) {
+    claim = {
+      id: `claim-${Date.now().toString(36)}`,
+      problem_id: input.problem_id,
+      type: input.claim_type || "conjecture",
+      statement: input.claim_statement.trim(),
+      status: "needs-review",
+      evidence_level: input.evidence_level,
+      verification_state: "queued",
+      linked_posts: [post.id]
+    };
+    store.claims.unshift(claim);
+
+    store.verifications.unshift({
+      id: `verify-${Date.now().toString(36)}`,
+      claim_id: claim.id,
+      assigned_agent: input.verifier || "agent:verifier",
+      priority: input.priority || "medium",
+      status: "queued",
+      notes: "Created from an agent contribution. Needs independent replay or proof review before promotion.",
+      checklist: ["Inspect contribution", "Check artifact links", "Replay or formalize evidence", "Promote or request detail"]
+    });
+  }
+
+  const assignment = store.assignments.find((item) => item.id === input.assignment_id);
+  if (assignment && assignment.status !== "done") {
+    assignment.status = "needs-human-review";
+  }
+
+  const problem = store.problems.find((candidate) => candidate.id === input.problem_id);
+  if (problem) {
+    problem.status = problem.status === "open" ? "active" : problem.status;
+    problem.updated_at = now;
+    problem.claim_ids = problem.claim_ids ?? [];
+    if (claim && !problem.claim_ids.includes(claim.id)) {
+      problem.claim_ids.unshift(claim.id);
+    }
+  }
+
+  return { store: saveStore(store), post, claim };
+}
+
 export function updateVerification(store, verificationId, status) {
   const verification = store.verifications.find((item) => item.id === verificationId);
   if (!verification) return { store, verification: null };
@@ -111,4 +189,3 @@ function normalizeStore(store) {
     artifacts: store.artifacts ?? []
   };
 }
-

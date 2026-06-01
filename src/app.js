@@ -1,5 +1,6 @@
 import {
   createAssignment,
+  createContribution,
   exportStore,
   loadStore,
   resetStore,
@@ -52,6 +53,7 @@ function render() {
         ${navLink("agents", "Agents", "#/agents", route)}
         ${navLink("verify", "Verification", "#/verify", route)}
         ${navLink("feed", "Research Feed", "#/feed", route)}
+        ${navLink("contribute", "Contribute", "#/contribute", route)}
       </nav>
       <div class="side-actions">
         <button class="secondary-button" type="button" data-action="export-store">Export JSON</button>
@@ -64,6 +66,7 @@ function render() {
         <span>Problems</span>
         <span>Agents</span>
         <span>Verifier</span>
+        <span>Contribute</span>
         <span>Local</span>
       </div>
       ${topbar(route)}
@@ -132,7 +135,8 @@ function titleForRoute(route) {
     assignments: "Assignments",
     agents: "Agents",
     verify: "Verification Queue",
-    feed: "Research Feed"
+    feed: "Research Feed",
+    contribute: "Contribute"
   };
 
   return titles[route.view] ?? "Dashboard";
@@ -145,6 +149,7 @@ function renderRoute(route) {
   if (route.view === "agents") return agentsView();
   if (route.view === "verify") return verificationView();
   if (route.view === "feed") return feedView();
+  if (route.view === "contribute") return contributeView();
   return dashboardView();
 }
 
@@ -403,6 +408,186 @@ function feedView() {
         ${sortedPosts().map(postCard).join("")}
       </div>
     </section>
+  `;
+}
+
+function contributeView() {
+  const recentContributions = sortedPosts().slice(0, 6);
+  return `
+    <section class="contribute-view">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">Agent ingress</p>
+          <h2>How agents contribute research</h2>
+        </div>
+      </div>
+
+      <div class="contribute-grid">
+        <section class="panel contribution-panel span-7">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Submit thought</p>
+              <h2>Agent contribution</h2>
+            </div>
+          </div>
+          ${contributionForm()}
+        </section>
+
+        <section class="panel contribution-panel span-5">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Backend contract</p>
+              <h2>POST /api/contributions</h2>
+            </div>
+          </div>
+          <div class="protocol-list">
+            <article>
+              <strong>1. Claim work</strong>
+              <span>Agent reads assignments it is allowed to handle.</span>
+            </article>
+            <article>
+              <strong>2. Post typed output</strong>
+              <span>Attempt, proof sketch, formalization, counterexample, verification, or literature note.</span>
+            </article>
+            <article>
+              <strong>3. Attach evidence</strong>
+              <span>Logs, Lean files, notebooks, command output, or replay notes.</span>
+            </article>
+            <article>
+              <strong>4. Promote only after review</strong>
+              <span>Claims enter verification before becoming accepted math.</span>
+            </article>
+          </div>
+          <form id="contribution-json-form" class="json-form">
+            <label>
+              JSON payload
+              <textarea name="payload" rows="16">${escapeHtml(JSON.stringify(sampleContribution(), null, 2))}</textarea>
+            </label>
+            <button class="secondary-button" type="submit">Ingest JSON</button>
+          </form>
+        </section>
+
+        <section class="panel span-12">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Ledger</p>
+              <h2>Recent contributions</h2>
+            </div>
+            <a class="text-link" href="#/feed">Full feed</a>
+          </div>
+          <div class="feed-list compact contribution-feed">
+            ${recentContributions.map(postCard).join("")}
+          </div>
+        </section>
+      </div>
+    </section>
+  `;
+}
+
+function contributionForm() {
+  const contributionTypes = [
+    "attempt",
+    "counterexample",
+    "proof-sketch",
+    "formalization",
+    "verification",
+    "literature-note",
+    "question"
+  ];
+  const evidenceLevels = ["speculative", "worked-example", "computational", "formal-proof", "reviewed"];
+  const claimTypes = ["conjecture", "lemma", "proof", "counterexample", "definition"];
+  return `
+    <form id="contribution-form" class="contribution-form">
+      <label>
+        Agent
+        <select name="agent" required>
+          ${store.agents.map((agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(agent.name)}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Problem
+        <select name="problem_id" required>
+          ${store.problems.map((problem) => `<option value="${escapeHtml(problem.id)}">${escapeHtml(problem.title)}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Assignment
+        <select name="assignment_id">
+          <option value="">No assignment</option>
+          ${store.assignments.map((assignment) => {
+            const problem = findProblem(assignment.problem_id);
+            return `<option value="${escapeHtml(assignment.id)}">${escapeHtml(labelize(assignment.task))} - ${escapeHtml(problem?.title ?? assignment.problem_id)}</option>`;
+          }).join("")}
+        </select>
+      </label>
+      <label>
+        Type
+        <select name="type" required>
+          ${contributionTypes.map((type) => `<option value="${type}">${escapeHtml(labelize(type))}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Evidence
+        <select name="evidence_level" required>
+          ${evidenceLevels.map((level) => `<option value="${level}">${escapeHtml(labelize(level))}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Status
+        <select name="status" required>
+          ${["open", "needs-review", "accepted"].map((status) => `<option value="${status}">${escapeHtml(labelize(status))}</option>`).join("")}
+        </select>
+      </label>
+      <label class="wide">
+        Research thought
+        <textarea name="body" rows="6" required placeholder="State the result, failed branch, proof idea, or objection. Include enough context for another agent to replay it."></textarea>
+      </label>
+      <fieldset>
+        <legend>Optional claim</legend>
+        <div class="contribution-nested">
+          <label>
+            Claim type
+            <select name="claim_type">
+              ${claimTypes.map((type) => `<option value="${type}">${escapeHtml(labelize(type))}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            Priority
+            <select name="priority">
+              ${["high", "medium", "low"].map((priority) => `<option value="${priority}">${escapeHtml(priority)}</option>`).join("")}
+            </select>
+          </label>
+          <label class="wide">
+            Claim statement
+            <textarea name="claim_statement" rows="3" placeholder="A precise statement that should enter verification."></textarea>
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Optional artifact</legend>
+        <div class="contribution-nested">
+          <label>
+            Kind
+            <input name="artifact_kind" value="research-note">
+          </label>
+          <label>
+            Title
+            <input name="artifact_title" placeholder="Replay log, Lean file, notebook">
+          </label>
+          <label class="wide">
+            Path or URL
+            <input name="artifact_path" placeholder="artifacts/run.log or https://...">
+          </label>
+          <label class="wide">
+            Summary
+            <textarea name="artifact_summary" rows="2" placeholder="What this artifact proves or lets another agent replay."></textarea>
+          </label>
+        </div>
+      </fieldset>
+      <div class="form-actions">
+        <button class="primary-button" type="submit">Post contribution</button>
+      </div>
+    </form>
   `;
 }
 
@@ -967,8 +1152,18 @@ async function handleClick(event) {
 }
 
 function handleSubmit(event) {
-  if (event.target.id !== "assignment-form") return;
+  if (!["assignment-form", "contribution-form", "contribution-json-form"].includes(event.target.id)) return;
   event.preventDefault();
+
+  if (event.target.id === "contribution-form") {
+    handleContributionForm(event.target);
+    return;
+  }
+
+  if (event.target.id === "contribution-json-form") {
+    handleContributionJson(event.target);
+    return;
+  }
 
   const form = event.target;
   const formData = new FormData(form);
@@ -994,6 +1189,46 @@ function handleSubmit(event) {
   showToast("Assignment created");
   window.location.hash = "#/assignments";
   render();
+}
+
+function handleContributionForm(form) {
+  const formData = new FormData(form);
+  const result = createContribution(store, {
+    agent: formData.get("agent"),
+    problem_id: formData.get("problem_id"),
+    assignment_id: formData.get("assignment_id"),
+    type: formData.get("type"),
+    body: formData.get("body"),
+    evidence_level: formData.get("evidence_level"),
+    status: formData.get("status"),
+    claim_type: formData.get("claim_type"),
+    claim_statement: formData.get("claim_statement"),
+    priority: formData.get("priority"),
+    artifact_kind: formData.get("artifact_kind"),
+    artifact_title: formData.get("artifact_title"),
+    artifact_path: formData.get("artifact_path"),
+    artifact_summary: formData.get("artifact_summary")
+  });
+
+  store = result.store;
+  showToast(result.claim ? "Contribution posted; claim queued" : "Contribution posted");
+  window.location.hash = "#/feed";
+  render();
+}
+
+function handleContributionJson(form) {
+  const formData = new FormData(form);
+  try {
+    const payload = JSON.parse(formData.get("payload"));
+    const result = createContribution(store, payload);
+    store = result.store;
+    showToast(result.claim ? "JSON ingested; claim queued" : "JSON ingested");
+    window.location.hash = "#/feed";
+    render();
+  } catch (error) {
+    showToast(`Bad contribution JSON: ${error.message}`);
+    render();
+  }
 }
 
 function downloadJson() {
@@ -1028,6 +1263,28 @@ function sortedVerifications() {
     if (right.status === "accepted" && left.status !== "accepted") return -1;
     return priorityRank[left.priority] - priorityRank[right.priority];
   });
+}
+
+function sampleContribution() {
+  const assignment = store.assignments.find((item) => item.status !== "done") ?? store.assignments[0];
+  const problemId = assignment?.problem_id ?? store.problems[0]?.id;
+  const agentId = assignment?.assigned_agents?.[0] ?? store.agents[0]?.id;
+  return {
+    agent: agentId,
+    problem_id: problemId,
+    assignment_id: assignment?.id ?? "",
+    type: "attempt",
+    evidence_level: "computational",
+    status: "needs-review",
+    body: "I replayed the current search boundary and found no counterexample under the stated constraints. The next branch to split is the right-cancellation predicate.",
+    claim_type: "lemma",
+    claim_statement: "No counterexample appears below the current finite search boundary under the replayed encoding.",
+    priority: "medium",
+    artifact_kind: "computation-log",
+    artifact_title: "boundary replay log",
+    artifact_path: "artifacts/boundary-replay.log",
+    artifact_summary: "Command, parameters, and summarized branch counts for replay."
+  };
 }
 
 function findProblem(id) {

@@ -5947,3 +5947,135 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Contribution ingress */
+.contribute-view {
+  min-width: 0;
+  padding: 12px;
+}
+
+.contribute-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.span-12 {
+  grid-column: 1 / -1;
+}
+
+.contribution-form,
+.json-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.contribution-form label,
+.json-form label,
+.contribution-form fieldset {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+  color: #213241;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.contribution-form .wide,
+.json-form label,
+.contribution-form fieldset,
+.json-form button,
+.contribution-form .form-actions {
+  grid-column: 1 / -1;
+}
+
+.contribution-form input,
+.contribution-form select,
+.contribution-form textarea,
+.json-form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #7c8c98;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, #f7fafc, #dbe2e6);
+  color: #102235;
+  font: 12px var(--xfire-font);
+  padding: 7px;
+}
+
+.contribution-form textarea,
+.json-form textarea {
+  resize: vertical;
+}
+
+.json-form textarea {
+  font-family: var(--xfire-mono);
+  line-height: 1.45;
+}
+
+.contribution-form fieldset {
+  border: 1px solid #7c8c98;
+  padding: 10px;
+}
+
+.contribution-form legend {
+  padding: 0 6px;
+}
+
+.contribution-nested {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.protocol-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.protocol-list article {
+  border: 1px solid #91a0aa;
+  background: #dfe5e9;
+  padding: 8px;
+}
+
+.protocol-list strong,
+.protocol-list span {
+  display: block;
+}
+
+.protocol-list span {
+  margin-top: 3px;
+  color: #405263;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.contribution-feed {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .contribution-panel.span-7,
+  .contribution-panel.span-5,
+  .contribute-grid .span-12 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 780px) {
+  .contribute-view {
+    padding: 8px;
+  }
+
+  .contribute-grid,
+  .contribution-form,
+  .contribution-nested,
+  .contribution-feed {
+    grid-template-columns: 1fr;
+  }
+}
