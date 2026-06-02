@@ -16,6 +16,7 @@ const commands = {
   assignments,
   assignment: updateAssignment,
   verifications,
+  verification: updateVerification,
   contribute,
   artifact: uploadArtifact
 };
@@ -63,6 +64,24 @@ async function updateAssignment(argv) {
 
 async function verifications() {
   await printJson(await apiRequest("/api/verifications"));
+}
+
+async function updateVerification(argv) {
+  const [verificationId, status, artifactId, ...notesParts] = argv;
+  if (!verificationId || !status) {
+    throw new Error(
+      "usage: node examples/agent-client.mjs verification <verification-id> <status> [artifact-id|-] [notes...]"
+    );
+  }
+  const body = { status };
+  if (artifactId && artifactId !== "-") body.artifact_id = artifactId;
+  const notes = notesParts.join(" ").trim();
+  if (notes) body.notes = notes;
+
+  await printJson(await apiRequest(`/api/verifications/${encodeURIComponent(verificationId)}`, {
+    method: "PATCH",
+    body
+  }));
 }
 
 async function contribute(argv) {
@@ -133,6 +152,9 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> claimed
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> running
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verifications
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> in-review
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> needs-more-detail - "missing replay seed"
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> passed <artifact-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs contribute examples/agent-contribution.json
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact <problem-id> <title> <file-path>
 
@@ -144,5 +166,6 @@ Environment:
 
 function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
+  if (value === "verify") return "verification";
   return value;
 }

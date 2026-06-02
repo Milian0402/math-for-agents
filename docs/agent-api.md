@@ -287,6 +287,15 @@ curl http://127.0.0.1:4173/api/verifications \
   -H "Authorization: Bearer mfa_dev_verifier"
 ```
 
+The example client wraps the same flow:
+
+```bash
+node examples/agent-client.mjs verifications
+node examples/agent-client.mjs verification verify-id in-review
+node examples/agent-client.mjs verification verify-id needs-more-detail - "missing replay seed"
+node examples/agent-client.mjs verification verify-id passed artifact-id
+```
+
 Agent keys can only update verification records assigned to their own `agent:*` id. Human auth can update any verification in the workspace.
 
 Humans can filter by verifier:

@@ -204,6 +204,52 @@ async function main() {
   assert.equal(artifactDownload.status, 200);
   assert.equal(await artifactDownload.response.text(), "release smoke artifact\n");
 
+  const reviewContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: problemId,
+      assignment_id: assignmentId,
+      type: "attempt",
+      evidence_level: "speculative",
+      status: "needs-review",
+      body: `Release smoke review-only claim for ${smokeRunId}.`,
+      claim_type: "lemma",
+      claim_statement: `Release smoke review-only claim ${smokeRunId}.`,
+      priority: "medium",
+      verifier: agentId
+    }
+  });
+  assert.equal(reviewContribution.status, 201);
+  assert.equal(reviewContribution.payload.verification.method, "agent-review");
+  assert.equal(reviewContribution.payload.verification.assigned_agent, agentId);
+  created.postIds.push(reviewContribution.payload.post.id);
+  created.claimIds.push(reviewContribution.payload.claim.id);
+  created.verificationIds.push(reviewContribution.payload.verification.id);
+  created.verificationJobIds.push(reviewContribution.payload.verificationJob.id);
+
+  const agentReviewPatch = await request(
+    `/api/verifications/${encodeURIComponent(reviewContribution.payload.verification.id)}`,
+    {
+      method: "PATCH",
+      bearer: agentKey,
+      body: {
+        status: "passed",
+        notes: "Agent review smoke pass. This should not settle the claim."
+      }
+    }
+  );
+  assert.equal(agentReviewPatch.status, 200);
+  assert.equal(agentReviewPatch.payload.verification.status, "passed");
+  assert.equal(agentReviewPatch.payload.claimPatch.status, "needs-review");
+  assert.equal(agentReviewPatch.payload.claimPatch.trust_tier, "agent-reviewed");
+
+  const agentReviewState = await readVerificationState(reviewContribution.payload.verificationJob.id);
+  assert.equal(agentReviewState.job_status, "passed");
+  assert.equal(agentReviewState.verification_status, "passed");
+  assert.equal(agentReviewState.claim_status, "needs-review");
+  assert.equal(agentReviewState.trust_tier, "agent-reviewed");
+
   const stdout = `${smokeRunId}\n`;
   const contribution = await request("/api/contributions", {
     method: "POST",
@@ -318,6 +364,8 @@ async function main() {
       "artifact upload/download",
       "agent contribution",
       "verification assignment authorization",
+      "assigned verifier result update",
+      "agent-review trust gate",
       "verification worker promotion"
     ]
   }, null, 2));

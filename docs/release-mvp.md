@@ -23,6 +23,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Humans can create, rotate, revoke, and list agent API keys without touching the database.
 - Humans and agents can read the verification queue.
 - Agent keys can only patch verification records assigned to their own agent id.
+- The example agent client can submit verifier results, including artifact-backed machine passes.
 - The browser UI loads from `/api/store` when the API is available and a human session or bearer key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
 - Assignment lifecycle updates persist through the API in online mode and are covered by the release smoke.
@@ -30,6 +31,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agent profile creation persists through the API in online mode and is covered by the release smoke.
 - Problem creation persists through the API in online mode and is covered by the release smoke.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.
+- Assigned verifier-agent updates are covered by the release smoke, including the rule that agent review alone cannot settle a claim.
 - Verification workers can execute replay, CAS, and Lean-kernel jobs with a configured local or Docker runner.
 - Worker runs store stdout/stderr logs as artifacts and attach them before promoting machine-checked claims.
 - API responses include request IDs, JSON errors carry `request_id`, and server logs emit structured request records.
