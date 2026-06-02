@@ -1,4 +1,5 @@
 import { query, transaction } from "./db.js";
+import { generateSessionToken, verifyPassword } from "./auth.js";
 import { generateAgentApiKey, makeId, stableKeyHash } from "./ids.js";
 import { applyVerificationPatch, buildContribution } from "./domain.js";
 
@@ -20,6 +21,83 @@ export async function authenticateAgent(apiKey) {
     await query("update agent_api_keys set last_used_at = now() where id = $1", [agent.api_key_id]);
   }
   return agent;
+}
+
+export async function authenticateHumanSession(sessionToken) {
+  const sessionHash = stableKeyHash(sessionToken);
+  if (!sessionHash) return null;
+
+  const result = await query(
+    `select human_users.id,
+            human_users.email,
+            human_users.name,
+            workspace_members.workspace_id,
+            workspace_members.role,
+            human_sessions.id as session_id,
+            human_sessions.expires_at
+       from human_sessions
+       join human_users on human_users.id = human_sessions.human_id
+       join workspace_members on workspace_members.human_id = human_users.id
+      where human_sessions.session_hash = $1
+        and human_sessions.expires_at > now()
+      order by workspace_members.created_at asc
+      limit 1`,
+    [sessionHash]
+  );
+
+  const human = result.rows[0] || null;
+  if (human) {
+    await query("update human_sessions set last_used_at = now() where id = $1", [human.session_id]);
+  }
+  return human;
+}
+
+export async function loginHuman(email, password) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const result = await query("select * from human_users where email = $1 limit 1", [normalizedEmail]);
+  const human = result.rows[0] || null;
+  if (!human || !verifyPassword(password, human.password_hash)) return null;
+
+  const membershipResult = await query(
+    `select workspace_id, role
+       from workspace_members
+      where human_id = $1
+      order by created_at asc
+      limit 1`,
+    [human.id]
+  );
+  const membership = membershipResult.rows[0] || null;
+  if (!membership) return null;
+
+  const sessionToken = generateSessionToken();
+  const sessionDays = Number(process.env.MFA_SESSION_DAYS || 14);
+  const expiresAt = new Date(Date.now() + Math.max(1, sessionDays) * 24 * 60 * 60 * 1000);
+  await query(
+    `insert into human_sessions (id, human_id, session_hash, expires_at)
+     values ($1,$2,$3,$4)`,
+    [makeId("session"), human.id, stableKeyHash(sessionToken), expiresAt.toISOString()]
+  );
+
+  return {
+    sessionToken,
+    expiresAt,
+    principal: {
+      kind: "human",
+      id: human.id,
+      email: human.email,
+      name: human.name,
+      workspace_id: membership.workspace_id,
+      role: membership.role,
+      auth_method: "human-session"
+    }
+  };
+}
+
+export async function revokeHumanSession(sessionToken) {
+  const sessionHash = stableKeyHash(sessionToken);
+  if (!sessionHash) return false;
+  const result = await query("delete from human_sessions where session_hash = $1", [sessionHash]);
+  return result.rowCount > 0;
 }
 
 export async function getWorkspace(workspaceId) {

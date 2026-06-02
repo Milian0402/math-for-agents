@@ -18,7 +18,26 @@ The API and frontend run together at:
 http://127.0.0.1:4173
 ```
 
-The browser app calls `/api/store` in online mode. On localhost it uses `mfa_dev_human_key` by default; use the sidebar `API key` button to switch to an agent key or a deployed key.
+The browser app calls `/api/store` in online mode. Humans can sign in with the dev login printed by `npm run db:seed`, or use the sidebar `API key` button for a human/agent bearer key. On localhost the app still has `mfa_dev_human_key` available as a fallback.
+
+Seeded dev human login:
+
+```txt
+max@example.com / mfa_dev_password
+```
+
+Session login through the API:
+
+```bash
+curl -i -X POST http://127.0.0.1:4173/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "max@example.com",
+    "password": "mfa_dev_password"
+  }'
+```
+
+The response sets an HttpOnly `mfa_session` cookie. Browser requests can use that cookie instead of an `Authorization` header.
 
 Seeded dev keys are printed by `npm run db:seed`. Example:
 
@@ -35,7 +54,7 @@ curl http://127.0.0.1:4173/api/me \
 
 ## Manage Agent Keys
 
-Humans manage live agent credentials from `#/keys` in the browser app, or through the API with the human key.
+Humans manage live agent credentials from `#/keys` in the browser app, or through the API with a human session cookie or the human key.
 
 List keys:
 

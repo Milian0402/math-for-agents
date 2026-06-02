@@ -4,12 +4,18 @@ import os from "node:os";
 import path from "node:path";
 
 import { materializeArtifactContent, openArtifactFile } from "../server/artifact-storage.js";
+import { generateSessionToken, hashPassword, verifyPassword } from "../server/auth.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 
 const generatedKey = generateAgentApiKey();
 assert.match(generatedKey, /^mfa_[A-Za-z0-9_-]{32}$/);
 assert.match(stableKeyHash(generatedKey), /^[a-f0-9]{64}$/);
+
+const passwordHash = hashPassword("correct horse battery staple");
+assert.equal(verifyPassword("correct horse battery staple", passwordHash), true);
+assert.equal(verifyPassword("wrong password", passwordHash), false);
+assert.match(generateSessionToken(), /^mfa_session_[A-Za-z0-9_-]{43}$/);
 
 assert.throws(
   () =>

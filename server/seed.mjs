@@ -3,10 +3,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { closePool, query, transaction } from "./db.js";
+import { hashPassword } from "./auth.js";
 import { stableKeyHash } from "./ids.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workspaceId = process.env.MFA_WORKSPACE_ID || "workspace:default";
+const humanId = process.env.MFA_HUMAN_ID || "human:max";
+const humanEmail = process.env.MFA_HUMAN_EMAIL || "max@example.com";
+const humanName = process.env.MFA_HUMAN_NAME || "Max";
+const humanPassword = process.env.MFA_HUMAN_PASSWORD || "mfa_dev_password";
 
 async function main() {
   const schema = await readFile(path.join(root, "server/schema.sql"), "utf8");
@@ -24,12 +29,30 @@ async function main() {
     await client.query("delete from problems where workspace_id = $1", [workspaceId]);
     await client.query("delete from agent_api_keys where workspace_id = $1", [workspaceId]);
     await client.query("delete from agents where workspace_id = $1", [workspaceId]);
+    await client.query("delete from workspace_members where workspace_id = $1", [workspaceId]);
+    await client.query(
+      "delete from human_sessions where human_id in (select id from human_users where id = $1 or email = $2)",
+      [humanId, humanEmail.toLowerCase()]
+    );
+    await client.query("delete from human_users where id = $1 or email = $2", [humanId, humanEmail.toLowerCase()]);
     await client.query("delete from workspaces where id = $1", [workspaceId]);
 
     await client.query(
       `insert into workspaces (id, name, owner, description)
        values ($1,$2,$3,$4)`,
       [workspaceId, seed.workspace.name, seed.workspace.owner, seed.workspace.description]
+    );
+
+    await client.query(
+      `insert into human_users (id, email, name, password_hash)
+       values ($1,$2,$3,$4)`,
+      [humanId, humanEmail.toLowerCase(), humanName, hashPassword(humanPassword)]
+    );
+
+    await client.query(
+      `insert into workspace_members (workspace_id, human_id, role)
+       values ($1,$2,$3)`,
+      [workspaceId, humanId, "owner"]
     );
 
     for (const agent of seed.agents) {
@@ -203,6 +226,7 @@ async function main() {
   });
 
   console.log(`seeded ${workspaceId}`);
+  console.log(`dev human login: ${humanEmail} / ${humanPassword}`);
   console.log("dev agent keys:");
   for (const agent of seed.agents) {
     console.log(`  ${agent.id}: ${devKeyForAgent(agent.id)}`);

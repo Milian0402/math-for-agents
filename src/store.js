@@ -9,6 +9,7 @@ import {
 
 const STORE_KEY = "math-for-agents.store.v1";
 const API_KEY = "math-for-agents.api-key.v1";
+const USE_SESSION_KEY = "math-for-agents.use-session.v1";
 
 let connectionState = {
   mode: "local",
@@ -27,6 +28,7 @@ export function getConnectionState() {
 }
 
 export function getApiKey() {
+  if (localStorage.getItem(USE_SESSION_KEY) === "1") return "";
   const saved = localStorage.getItem(API_KEY);
   if (saved) return saved;
   if (["127.0.0.1", "localhost"].includes(window.location.hostname)) {
@@ -37,6 +39,7 @@ export function getApiKey() {
 
 export function setApiKey(key) {
   const trimmed = key.trim();
+  localStorage.removeItem(USE_SESSION_KEY);
   if (trimmed) {
     localStorage.setItem(API_KEY, trimmed);
   } else {
@@ -119,6 +122,24 @@ export async function revokeAgentKey(keyId) {
   });
 }
 
+export async function loginHuman(email, password) {
+  const result = await apiRequest("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password })
+  });
+  localStorage.removeItem(API_KEY);
+  localStorage.setItem(USE_SESSION_KEY, "1");
+  connectionState = { mode: "api", apiAvailable: true, apiError: "" };
+  return result;
+}
+
+export async function logoutHuman() {
+  localStorage.removeItem(API_KEY);
+  localStorage.setItem(USE_SESSION_KEY, "1");
+  await apiRequest("/api/auth/logout", { method: "POST" });
+  connectionState = { mode: "local", apiAvailable: true, apiError: "Signed out." };
+}
+
 export function exportStore(store) {
   return JSON.stringify(normalizeStore(store), null, 2);
 }
@@ -134,16 +155,6 @@ async function tryLoadApiStore() {
 
   if (!health.ok) {
     connectionState = { mode: "local", apiAvailable: false, apiError: "" };
-    return null;
-  }
-
-  const key = getApiKey();
-  if (!key) {
-    connectionState = {
-      mode: "local",
-      apiAvailable: true,
-      apiError: "API is online, but no API key is set."
-    };
     return null;
   }
 
@@ -176,14 +187,17 @@ async function loadApiStoreStrict() {
 }
 
 async function apiRequest(path, options = {}) {
+  const key = getApiKey();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(key ? { Authorization: `Bearer ${key}` } : {}),
+    ...(options.headers || {})
+  };
   const response = await fetch(path, {
     ...options,
     cache: "no-store",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getApiKey()}`,
-      ...(options.headers || {})
-    }
+    credentials: "same-origin",
+    headers
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

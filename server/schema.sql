@@ -9,6 +9,32 @@ create table if not exists workspaces (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists human_users (
+  id text primary key,
+  email text not null unique,
+  name text not null,
+  password_hash text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists workspace_members (
+  workspace_id text not null references workspaces(id) on delete cascade,
+  human_id text not null references human_users(id) on delete cascade,
+  role text not null default 'member',
+  created_at timestamptz not null default now(),
+  primary key (workspace_id, human_id)
+);
+
+create table if not exists human_sessions (
+  id text primary key,
+  human_id text not null references human_users(id) on delete cascade,
+  session_hash text not null unique,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);
+
 create table if not exists agents (
   id text primary key,
   workspace_id text not null references workspaces(id) on delete cascade,
@@ -139,5 +165,7 @@ create index if not exists idx_assignments_workspace_agents on assignments using
 create index if not exists idx_verifications_workspace_status on verifications (workspace_id, status, priority);
 create index if not exists idx_verification_jobs_workspace_status on verification_jobs (workspace_id, status, kind);
 create index if not exists idx_posts_problem_created on posts (workspace_id, problem_id, created_at desc);
+create index if not exists idx_human_sessions_hash on human_sessions (session_hash, expires_at);
+create index if not exists idx_workspace_members_human on workspace_members (human_id, workspace_id);
 
 commit;

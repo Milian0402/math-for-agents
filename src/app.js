@@ -6,6 +6,8 @@ import {
   getApiKey,
   listAgentKeys,
   loadStore,
+  loginHuman,
+  logoutHuman,
   resetStore,
   revokeAgentKey,
   rotateAgentKey,
@@ -65,6 +67,7 @@ function render() {
         ${navLink("contribute", "Contribute", "#/contribute", route)}
       </nav>
       <div class="side-actions">
+        ${humanAuthButton()}
         <button class="secondary-button" type="button" data-action="configure-api-key">API key</button>
         <button class="secondary-button" type="button" data-action="export-store">Export JSON</button>
         <button class="quiet-button" type="button" data-action="reset-store">${isApiMode() ? "Reload API data" : "Reset local data"}</button>
@@ -87,7 +90,8 @@ function render() {
         <span>${pendingVerifications().length} reviews pending</span>
       </div>
     </main>
-    ${ui.modal ? assignmentModal(ui.modal.problemId) : ""}
+    ${ui.modal?.type === "assignment" ? assignmentModal(ui.modal.problemId) : ""}
+    ${ui.modal?.type === "login" ? loginModal() : ""}
     ${ui.toast ? `<div class="toast">${escapeHtml(ui.toast)}</div>` : ""}
   `;
   afterRender(route);
@@ -177,6 +181,14 @@ function navLink(id, label, href, route) {
       ${escapeHtml(label)}
     </a>
   `;
+}
+
+function humanAuthButton() {
+  const principal = store?._meta?.principal;
+  if (principal?.kind === "human" && principal.auth_method === "human-session") {
+    return `<button class="secondary-button" type="button" data-action="logout-human">Logout</button>`;
+  }
+  return `<button class="secondary-button" type="button" data-action="open-login">Sign in</button>`;
 }
 
 function topbar(route) {
@@ -1419,6 +1431,36 @@ function assignmentModal(selectedProblemId = "") {
   `;
 }
 
+function loginModal() {
+  return `
+    <div class="modal-backdrop" data-action="close-modal">
+      <section class="modal login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title" data-modal>
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Human session</p>
+            <h2 id="login-title">Sign in to workspace</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-modal" aria-label="Close">x</button>
+        </div>
+        <form id="login-form" class="assignment-form">
+          <label>
+            Email
+            <input name="email" type="email" placeholder="max@example.com" autocomplete="username" required>
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <div class="form-actions">
+            <button class="secondary-button" type="button" data-action="close-modal">Cancel</button>
+            <button class="primary-button" type="submit">Sign in</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
 async function handleClick(event) {
   const actionTarget = event.target.closest("[data-action]");
   if (!actionTarget) return;
@@ -1427,6 +1469,23 @@ async function handleClick(event) {
 
   if (action === "open-assignment") {
     ui.modal = { type: "assignment", problemId: actionTarget.dataset.problemId ?? "" };
+    render();
+  }
+
+  if (action === "open-login") {
+    ui.modal = { type: "login" };
+    render();
+  }
+
+  if (action === "logout-human") {
+    try {
+      await logoutHuman();
+      ui.keys = emptyKeyState();
+      store = await loadStore();
+      showToast("Signed out");
+    } catch (error) {
+      showToast(`Logout failed: ${error.message}`);
+    }
     render();
   }
 
@@ -1525,8 +1584,13 @@ async function handleClick(event) {
 }
 
 async function handleSubmit(event) {
-  if (!["assignment-form", "contribution-form", "contribution-json-form", "agent-key-form"].includes(event.target.id)) return;
+  if (!["assignment-form", "contribution-form", "contribution-json-form", "agent-key-form", "login-form"].includes(event.target.id)) return;
   event.preventDefault();
+
+  if (event.target.id === "login-form") {
+    await handleLoginForm(event.target);
+    return;
+  }
 
   if (event.target.id === "agent-key-form") {
     await handleAgentKeyForm(event.target);
@@ -1569,6 +1633,20 @@ async function handleSubmit(event) {
     window.location.hash = "#/assignments";
   } catch (error) {
     showToast(`Assignment rejected: ${error.message}`);
+  }
+  render();
+}
+
+async function handleLoginForm(form) {
+  const formData = new FormData(form);
+  try {
+    await loginHuman(formData.get("email"), formData.get("password"));
+    store = await loadStore();
+    ui.modal = null;
+    ui.keys = emptyKeyState();
+    showToast("Signed in");
+  } catch (error) {
+    showToast(`Login failed: ${error.message}`);
   }
   render();
 }

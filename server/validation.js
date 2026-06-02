@@ -62,6 +62,8 @@ const ASSIGNMENT_FIELDS = new Set([
 
 const AGENT_KEY_FIELDS = new Set(["agent_id", "name"]);
 
+const LOGIN_FIELDS = new Set(["email", "password"]);
+
 const VERIFICATION_PATCH_FIELDS = new Set(["status", "method", "artifact_id", "notes", "checklist"]);
 
 export class RequestValidationError extends Error {
@@ -136,6 +138,17 @@ export function assertAgentKeyInput(input) {
   requireString(input.name, "name", errors);
   if (typeof input.name === "string" && input.name.trim().length > 80) {
     errors.push("name must be 80 characters or fewer");
+  }
+  throwIfErrors(errors);
+}
+
+export function assertLoginInput(input) {
+  const errors = [];
+  rejectUnknownFields(input, LOGIN_FIELDS, errors);
+  requireString(input.email, "email", errors);
+  requireString(input.password, "password", errors);
+  if (typeof input.email === "string" && !input.email.includes("@")) {
+    errors.push("email must be a valid email address");
   }
   throwIfErrors(errors);
 }

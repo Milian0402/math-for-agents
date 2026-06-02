@@ -8,6 +8,7 @@ import { materializeArtifactContent, openArtifactFile } from "./artifact-storage
 import { makeId } from "./ids.js";
 import {
   authenticateAgent,
+  authenticateHumanSession,
   createAgentApiKey,
   createAssignment,
   createArtifact,
@@ -20,6 +21,8 @@ import {
   listAssignmentsForAgent,
   listProblems,
   listVerificationQueue,
+  loginHuman,
+  revokeHumanSession,
   rotateAgentApiKey,
   updateVerification
 } from "./repository.js";
@@ -27,6 +30,7 @@ import {
   assertAgentKeyInput,
   assertArtifactInput,
   assertAssignmentInput,
+  assertLoginInput,
   assertVerificationPatch,
   RequestValidationError
 } from "./validation.js";
@@ -59,6 +63,26 @@ export function createServer() {
 async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/health") {
     sendJson(res, 200, { ok: true, service: "math-for-agents", mode: "online-mvp" });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/login") {
+    const body = await readJson(req);
+    assertLoginInput(body);
+    const result = await loginHuman(body.email, body.password);
+    if (!result) throw httpError(401, "invalid email or password");
+    sendJson(res, 200, { principal: result.principal }, {
+      "set-cookie": sessionCookie(result.sessionToken, result.expiresAt)
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+    const sessionToken = cookieValue(req, "mfa_session");
+    if (sessionToken) await revokeHumanSession(sessionToken);
+    sendJson(res, 200, { ok: true }, {
+      "set-cookie": clearSessionCookie()
+    });
     return;
   }
 
@@ -201,25 +225,43 @@ async function handleApi(req, res, url) {
 async function requirePrincipal(req) {
   const authorization = req.headers.authorization || "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice("Bearer ".length).trim() : "";
-  if (!token) throw httpError(401, "missing bearer token");
 
-  if (process.env.MFA_HUMAN_KEY && token === process.env.MFA_HUMAN_KEY) {
+  if (token) {
+    if (process.env.MFA_HUMAN_KEY && token === process.env.MFA_HUMAN_KEY) {
+      return {
+        kind: "human",
+        id: process.env.MFA_HUMAN_ID || "human:max",
+        workspace_id: process.env.MFA_WORKSPACE_ID || "workspace:default",
+        role: "owner",
+        auth_method: "human-key"
+      };
+    }
+
+    const agent = await authenticateAgent(token);
+    if (!agent) throw httpError(401, "invalid bearer token");
+
     return {
-      kind: "human",
-      id: process.env.MFA_HUMAN_ID || "human:max",
-      workspace_id: process.env.MFA_WORKSPACE_ID || "workspace:default"
+      kind: "agent",
+      id: agent.id,
+      workspace_id: agent.workspace_id,
+      name: agent.name,
+      role: agent.role,
+      auth_method: "agent-key"
     };
   }
 
-  const agent = await authenticateAgent(token);
-  if (!agent) throw httpError(401, "invalid bearer token");
+  const sessionToken = cookieValue(req, "mfa_session");
+  const human = await authenticateHumanSession(sessionToken);
+  if (!human) throw httpError(401, "missing session or bearer token");
 
   return {
-    kind: "agent",
-    id: agent.id,
-    workspace_id: agent.workspace_id,
-    name: agent.name,
-    role: agent.role
+    kind: "human",
+    id: human.id,
+    email: human.email,
+    name: human.name,
+    workspace_id: human.workspace_id,
+    role: human.role,
+    auth_method: "human-session"
   };
 }
 
@@ -265,9 +307,33 @@ async function serveStatic(req, res, url) {
   createReadStream(filePath).pipe(res);
 }
 
-function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" });
+function sendJson(res, statusCode, payload, headers = {}) {
+  res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8", ...headers });
   res.end(JSON.stringify(payload, null, 2));
+}
+
+function cookieValue(req, name) {
+  const cookie = req.headers.cookie || "";
+  const prefix = `${name}=`;
+  for (const part of cookie.split(";")) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(prefix)) return decodeURIComponent(trimmed.slice(prefix.length));
+  }
+  return "";
+}
+
+function sessionCookie(sessionToken, expiresAt) {
+  const maxAge = Math.max(1, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+  return cookieHeader("mfa_session", sessionToken, `Max-Age=${maxAge}; Expires=${new Date(expiresAt).toUTCString()}`);
+}
+
+function clearSessionCookie() {
+  return cookieHeader("mfa_session", "", "Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+}
+
+function cookieHeader(name, value, lifetime) {
+  const secure = process.env.MFA_COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
+  return `${name}=${encodeURIComponent(value)}; ${lifetime}; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`;
 }
 
 function sendFile(res, file) {
