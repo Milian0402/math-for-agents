@@ -2,6 +2,7 @@ import {
   canPromote,
   defaultMethodFor,
   deriveTrustTier,
+  MACHINE_METHODS,
   requiresReplay,
   requiresVerification
 } from "./vocab.js";
@@ -90,6 +91,11 @@ export function createContribution(store, input) {
   const now = new Date().toISOString();
   const postId = `post-${Date.now().toString(36)}`;
   const artifactIds = [];
+  const replay = buildReplay(input);
+
+  if (requiresReplay(input.evidence_level) && !replay) {
+    throw new Error(`${input.evidence_level} contributions require a replay command`);
+  }
 
   if (input.artifact_title?.trim()) {
     const artifact = {
@@ -119,7 +125,6 @@ export function createContribution(store, input) {
     status: input.status || "open"
   };
 
-  const replay = buildReplay(input);
   if (replay) post.replay = replay;
 
   store.posts.unshift(post);
@@ -213,6 +218,13 @@ function checklistFor(method) {
 export function updateVerification(store, verificationId, status, patch = {}) {
   const verification = store.verifications.find((item) => item.id === verificationId);
   if (!verification) return { store, verification: null };
+
+  const nextMethod = patch.method || verification.method;
+  const nextArtifactId = patch.artifact_id || verification.artifact_id;
+
+  if (status === "passed" && MACHINE_METHODS.includes(nextMethod) && !nextArtifactId) {
+    throw new Error(`Passed ${nextMethod} checks require a backing artifact`);
+  }
 
   verification.status = status;
   if (patch.method) verification.method = patch.method;

@@ -6,7 +6,7 @@ import {
   resetStore,
   updateVerification
 } from "./store.js";
-import { tierRank } from "./vocab.js";
+import { MACHINE_METHODS, tierRank } from "./vocab.js";
 
 const app = document.querySelector("#app");
 
@@ -935,6 +935,10 @@ function verificationCard(verification) {
   const problem = claim ? findProblem(claim.problem_id) : null;
   const method = verification.method ?? "agent-review";
   const agentOnly = method === "agent-review";
+  const machineCheck = MACHINE_METHODS.includes(method);
+  const relatedArtifacts = store.artifacts.filter((artifact) => !problem || artifact.problem_id === problem.id);
+  const artifactChoices = relatedArtifacts.length ? relatedArtifacts : store.artifacts;
+  const selectedArtifact = verification.artifact_id ?? "";
   return `
     <article class="verification-card">
       <div class="verification-main">
@@ -956,6 +960,25 @@ function verificationCard(verification) {
           </p>
         </div>
         <div class="verification-actions">
+          ${
+            machineCheck
+              ? `<label class="artifact-picker">
+                  <span>Backing artifact</span>
+                  <select name="artifact_id" aria-label="Backing artifact">
+                    <option value="">Choose artifact</option>
+                    ${artifactChoices
+                      .map(
+                        (artifact) => `
+                          <option value="${escapeHtml(artifact.id)}" ${artifact.id === selectedArtifact ? "selected" : ""}>
+                            ${escapeHtml(artifact.title)} - ${escapeHtml(labelize(artifact.kind))}
+                          </option>
+                        `
+                      )
+                      .join("")}
+                  </select>
+                </label>`
+              : ""
+          }
           <button class="secondary-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="passed">Mark passed</button>
           <button class="quiet-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="needs-more-detail">Need detail</button>
           <button class="quiet-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="failed">Mark failed</button>
@@ -1188,9 +1211,20 @@ async function handleClick(event) {
   }
 
   if (action === "set-verification") {
-    const result = updateVerification(store, actionTarget.dataset.id, actionTarget.dataset.status);
-    store = result.store;
-    showToast("Verification updated");
+    const card = actionTarget.closest(".verification-card");
+    const artifactId = card?.querySelector("[name='artifact_id']")?.value || "";
+    try {
+      const result = updateVerification(
+        store,
+        actionTarget.dataset.id,
+        actionTarget.dataset.status,
+        artifactId ? { artifact_id: artifactId } : {}
+      );
+      store = result.store;
+      showToast("Verification updated");
+    } catch (error) {
+      showToast(error.message);
+    }
     render();
   }
 }
@@ -1237,30 +1271,34 @@ function handleSubmit(event) {
 
 function handleContributionForm(form) {
   const formData = new FormData(form);
-  const result = createContribution(store, {
-    agent: formData.get("agent"),
-    problem_id: formData.get("problem_id"),
-    assignment_id: formData.get("assignment_id"),
-    type: formData.get("type"),
-    body: formData.get("body"),
-    evidence_level: formData.get("evidence_level"),
-    status: formData.get("status"),
-    claim_type: formData.get("claim_type"),
-    claim_statement: formData.get("claim_statement"),
-    priority: formData.get("priority"),
-    artifact_kind: formData.get("artifact_kind"),
-    artifact_title: formData.get("artifact_title"),
-    artifact_path: formData.get("artifact_path"),
-    artifact_summary: formData.get("artifact_summary"),
-    replay_command: formData.get("replay_command"),
-    replay_seed: formData.get("replay_seed"),
-    replay_env: formData.get("replay_env"),
-    replay_output_hash: formData.get("replay_output_hash")
-  });
+  try {
+    const result = createContribution(store, {
+      agent: formData.get("agent"),
+      problem_id: formData.get("problem_id"),
+      assignment_id: formData.get("assignment_id"),
+      type: formData.get("type"),
+      body: formData.get("body"),
+      evidence_level: formData.get("evidence_level"),
+      status: formData.get("status"),
+      claim_type: formData.get("claim_type"),
+      claim_statement: formData.get("claim_statement"),
+      priority: formData.get("priority"),
+      artifact_kind: formData.get("artifact_kind"),
+      artifact_title: formData.get("artifact_title"),
+      artifact_path: formData.get("artifact_path"),
+      artifact_summary: formData.get("artifact_summary"),
+      replay_command: formData.get("replay_command"),
+      replay_seed: formData.get("replay_seed"),
+      replay_env: formData.get("replay_env"),
+      replay_output_hash: formData.get("replay_output_hash")
+    });
 
-  store = result.store;
-  showToast(result.claim ? "Contribution posted; claim queued" : "Contribution posted");
-  window.location.hash = "#/feed";
+    store = result.store;
+    showToast(result.claim ? "Contribution posted; claim queued" : "Contribution posted");
+    window.location.hash = "#/feed";
+  } catch (error) {
+    showToast(`Contribution rejected: ${error.message}`);
+  }
   render();
 }
 
@@ -1274,7 +1312,7 @@ function handleContributionJson(form) {
     window.location.hash = "#/feed";
     render();
   } catch (error) {
-    showToast(`Bad contribution JSON: ${error.message}`);
+    showToast(`Could not ingest contribution: ${error.message}`);
     render();
   }
 }
