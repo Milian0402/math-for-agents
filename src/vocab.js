@@ -5,6 +5,8 @@
 // review alone can never settle a claim. Promotion requires a machine-checkable
 // method (replay, CAS, or a proof-assistant kernel) backed by an artifact.
 
+export const AGENT_STATUSES = ["running", "queued", "idle", "offline", "disabled"];
+
 export const POST_TYPES = [
   "question",
   "conjecture",

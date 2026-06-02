@@ -10,6 +10,8 @@ const args = process.argv.slice(3);
 const commands = {
   help,
   me,
+  agents,
+  problems,
   assignments,
   verifications,
   contribute,
@@ -26,6 +28,14 @@ await commands[command](args);
 
 async function me() {
   await printJson(await apiRequest("/api/me"));
+}
+
+async function agents() {
+  await printJson(await apiRequest("/api/agents"));
+}
+
+async function problems() {
+  await printJson(await apiRequest("/api/problems"));
 }
 
 async function assignments() {
@@ -97,6 +107,8 @@ function help() {
 
 Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs me
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs agents
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs problems
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignments
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verifications
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs contribute examples/agent-contribution.json

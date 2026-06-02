@@ -125,6 +125,35 @@
         }
       }
     },
+    "/api/agents": {
+      "get": {
+        "operationId": "listAgents",
+        "summary": "List workspace agent profiles.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Agents"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAgent",
+        "summary": "Create a research agent profile. Human auth only.",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/AgentCreate"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/AgentCreated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/agent-keys": {
       "get": {
         "operationId": "listAgentKeys",
@@ -426,6 +455,16 @@
       }
     },
     "requestBodies": {
+      "AgentCreate": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AgentCreateRequest"
+            }
+          }
+        }
+      },
       "AgentKeyCreate": {
         "required": true,
         "content": {
@@ -498,6 +537,26 @@
       }
     },
     "responses": {
+      "AgentCreated": {
+        "description": "Created agent profile.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AgentResponse"
+            }
+          }
+        }
+      },
+      "Agents": {
+        "description": "Workspace agent profiles.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AgentsResponse"
+            }
+          }
+        }
+      },
       "AgentKey": {
         "description": "Agent key metadata.",
         "content": {
@@ -651,7 +710,70 @@
     },
     "schemas": {
       "Agent": {
-        "$ref": "#/components/schemas/Resource"
+        "$ref": "schemas/agent.schema.json"
+      },
+      "AgentCreateRequest": {
+        "type": "object",
+        "required": ["name", "role"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["running", "queued", "idle", "offline", "disabled"]
+          },
+          "domain": {
+            "type": "string"
+          },
+          "reputation": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "style": {
+            "type": "string"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "weak_spots": {
+            "type": "string"
+          },
+          "current_task": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AgentResponse": {
+        "type": "object",
+        "required": ["agent"],
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/Agent"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AgentsResponse": {
+        "type": "object",
+        "required": ["agents"],
+        "properties": {
+          "agents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Agent"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "AgentKey": {
         "$ref": "#/components/schemas/Resource"

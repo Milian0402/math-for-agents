@@ -1,4 +1,5 @@
 import {
+  createAgent,
   createAgentKey,
   createAssignment,
   createContribution,
@@ -93,6 +94,7 @@ function render() {
     </main>
     ${ui.modal?.type === "assignment" ? assignmentModal(ui.modal.problemId) : ""}
     ${ui.modal?.type === "problem" ? problemModal() : ""}
+    ${ui.modal?.type === "agent" ? agentModal() : ""}
     ${ui.modal?.type === "login" ? loginModal() : ""}
     ${ui.toast ? `<div class="toast">${escapeHtml(ui.toast)}</div>` : ""}
   `;
@@ -464,6 +466,7 @@ function agentsView() {
           <p class="eyebrow">Agent profiles</p>
           <h2>Specialists, tools, and weak spots</h2>
         </div>
+        <button class="primary-button" type="button" data-action="open-agent">+ New agent</button>
       </div>
       <div class="agent-grid">
         ${store.agents.map(agentCard).join("")}
@@ -1346,6 +1349,62 @@ function proofGraph() {
   `;
 }
 
+function agentModal() {
+  return `
+    <div class="modal-backdrop" data-action="close-modal">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="agent-title" data-modal>
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Agent profile</p>
+            <h2 id="agent-title">Register a research agent</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-modal" aria-label="Close">x</button>
+        </div>
+        <form id="agent-form" class="assignment-form">
+          <label>
+            Name
+            <input name="name" type="text" required placeholder="Finite model searcher">
+          </label>
+          <label>
+            Role
+            <input name="role" type="text" required placeholder="Counterexample search">
+          </label>
+          <label>
+            Status
+            <select name="status">
+              ${["running", "queued", "idle", "offline", "disabled"].map((status) => `<option value="${status}" ${status === "idle" ? "selected" : ""}>${escapeHtml(labelize(status))}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            Domain
+            <input name="domain" type="text" placeholder="Finite algebra, Lean formalization">
+          </label>
+          <label class="wide">
+            Tools
+            <input name="tools" type="text" placeholder="Python, Sage, Lean 4">
+          </label>
+          <label class="wide">
+            Style
+            <textarea name="style" rows="3" placeholder="How this agent tends to work and what kind of output it should produce."></textarea>
+          </label>
+          <label class="wide">
+            Weak spot
+            <textarea name="weak_spots" rows="3" placeholder="Known failure mode, blind spot, or review need."></textarea>
+          </label>
+          <label class="wide">
+            Current task
+            <textarea name="current_task" rows="3" placeholder="Optional live assignment or operating note."></textarea>
+          </label>
+          <div class="form-actions">
+            <button class="secondary-button" type="button" data-action="close-modal">Cancel</button>
+            <button class="primary-button" type="submit">Create agent</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
 function problemModal() {
   return `
     <div class="modal-backdrop" data-action="close-modal">
@@ -1528,6 +1587,11 @@ async function handleClick(event) {
     render();
   }
 
+  if (action === "open-agent") {
+    ui.modal = { type: "agent" };
+    render();
+  }
+
   if (action === "open-login") {
     ui.modal = { type: "login" };
     render();
@@ -1640,7 +1704,7 @@ async function handleClick(event) {
 }
 
 async function handleSubmit(event) {
-  if (!["assignment-form", "problem-form", "contribution-form", "contribution-json-form", "agent-key-form", "login-form"].includes(event.target.id)) return;
+  if (!["assignment-form", "problem-form", "agent-form", "contribution-form", "contribution-json-form", "agent-key-form", "login-form"].includes(event.target.id)) return;
   event.preventDefault();
 
   if (event.target.id === "login-form") {
@@ -1655,6 +1719,11 @@ async function handleSubmit(event) {
 
   if (event.target.id === "problem-form") {
     await handleProblemForm(event.target);
+    return;
+  }
+
+  if (event.target.id === "agent-form") {
+    await handleAgentForm(event.target);
     return;
   }
 
@@ -1751,6 +1820,31 @@ async function handleProblemForm(form) {
   render();
 }
 
+async function handleAgentForm(form) {
+  const formData = new FormData(form);
+  try {
+    const result = await createAgent(store, {
+      name: formData.get("name"),
+      role: formData.get("role"),
+      status: formData.get("status"),
+      domain: formData.get("domain"),
+      style: formData.get("style"),
+      tools: parseCommaList(formData.get("tools")),
+      weak_spots: formData.get("weak_spots"),
+      current_task: formData.get("current_task")
+    });
+
+    store = result.store;
+    ui.modal = null;
+    ui.keys = emptyKeyState();
+    showToast("Agent registered");
+    window.location.hash = "#/agents";
+  } catch (error) {
+    showToast(`Agent rejected: ${error.message}`);
+  }
+  render();
+}
+
 async function handleContributionForm(form) {
   const formData = new FormData(form);
   try {
@@ -1800,11 +1894,14 @@ async function handleContributionJson(form) {
 }
 
 function parseTags(value) {
+  return parseCommaList(value).slice(0, 12);
+}
+
+function parseCommaList(value) {
   return String(value || "")
     .split(",")
     .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 12);
+    .filter(Boolean);
 }
 
 function downloadJson() {

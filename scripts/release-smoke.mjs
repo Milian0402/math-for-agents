@@ -6,14 +6,16 @@ import { runWorkerOnce, stdoutHash } from "../server/verification-worker.js";
 const baseUrl = process.env.MFA_BASE_URL || "http://127.0.0.1:4173";
 const humanEmail = process.env.MFA_HUMAN_EMAIL || "max@example.com";
 const humanPassword = process.env.MFA_HUMAN_PASSWORD || "mfa_dev_password";
-const agentId = process.env.MFA_SMOKE_AGENT_ID || "agent:finite-model-searcher";
+const seedAgentId = process.env.MFA_SMOKE_AGENT_ID || "agent:finite-model-searcher";
 const seedProblemId = process.env.MFA_SMOKE_PROBLEM_ID || "finite-magma-identity-search";
 const smokeRunId = `smoke-${Date.now().toString(36)}`;
 let problemId = seedProblemId;
+let agentId = seedAgentId;
 let assignmentId = "";
 
 const created = {
   keyIds: [],
+  agentIds: [],
   problemIds: [],
   assignmentIds: [],
   postIds: [],
@@ -57,6 +59,7 @@ async function main() {
   assert.equal(store.status, 200);
   assert.equal(store.payload.principal.auth_method, "human-session");
   assert.ok(store.payload.store.problems.some((problem) => problem.id === seedProblemId));
+  assert.ok(store.payload.store.agents.some((agent) => agent.id === seedAgentId));
 
   const createdProblem = await request("/api/problems", {
     method: "POST",
@@ -73,6 +76,28 @@ async function main() {
   assert.equal(createdProblem.payload.problem.title, `Release smoke problem ${smokeRunId}`);
   problemId = createdProblem.payload.problem.id;
   created.problemIds.push(problemId);
+
+  const createdAgent = await request("/api/agents", {
+    method: "POST",
+    body: {
+      name: `Release smoke agent ${smokeRunId}`,
+      role: "Replay smoke runner",
+      status: "idle",
+      domain: "Release smoke",
+      style: "Posts replayable command output for smoke verification.",
+      tools: ["node", "printf"],
+      weak_spots: "Temporary test profile.",
+      current_task: "Run one release smoke assignment."
+    }
+  });
+  assert.equal(createdAgent.status, 201);
+  assert.equal(createdAgent.payload.agent.name, `Release smoke agent ${smokeRunId}`);
+  agentId = createdAgent.payload.agent.id;
+  created.agentIds.push(agentId);
+
+  const listedAgents = await request("/api/agents");
+  assert.equal(listedAgents.status, 200);
+  assert.ok(listedAgents.payload.agents.some((agent) => agent.id === agentId));
 
   const createdKey = await request("/api/agent-keys", {
     method: "POST",
@@ -226,6 +251,7 @@ async function main() {
       "request-id errors",
       "human session login",
       "problem creation",
+      "agent profile creation",
       "agent key create/rotate/revoke",
       "assignment creation",
       "agent assignment fetch",
@@ -310,6 +336,9 @@ async function cleanup() {
     }
     if (created.keyIds.length) {
       await client.query("delete from agent_api_keys where id = any($1)", [created.keyIds]);
+    }
+    if (created.agentIds.length) {
+      await client.query("delete from agents where id = any($1)", [created.agentIds]);
     }
     if (created.problemIds.length) {
       await client.query("delete from problems where id = any($1)", [created.problemIds]);

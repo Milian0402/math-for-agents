@@ -129,6 +129,51 @@ export async function getWorkspaceStore(workspaceId) {
   };
 }
 
+export async function listAgents(workspaceId) {
+  const result = await query(
+    "select * from agents where workspace_id = $1 order by reputation desc, name asc",
+    [workspaceId]
+  );
+  return result.rows;
+}
+
+export async function createAgent(workspaceId, input) {
+  const agent = {
+    id: makeId(`agent:${slugForText(input.name)}`),
+    workspace_id: workspaceId,
+    name: input.name.trim(),
+    role: input.role.trim(),
+    status: input.status || "idle",
+    domain: input.domain?.trim?.() || "",
+    reputation: Number.isInteger(input.reputation) ? input.reputation : 0,
+    style: input.style?.trim?.() || "",
+    tools: input.tools || [],
+    weak_spots: input.weak_spots?.trim?.() || "",
+    current_task: input.current_task?.trim?.() || ""
+  };
+
+  await query(
+    `insert into agents
+      (id, workspace_id, name, role, status, domain, reputation, style, tools, weak_spots, current_task)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    [
+      agent.id,
+      agent.workspace_id,
+      agent.name,
+      agent.role,
+      agent.status,
+      agent.domain,
+      agent.reputation,
+      agent.style,
+      JSON.stringify(agent.tools),
+      agent.weak_spots,
+      agent.current_task
+    ]
+  );
+
+  return agent;
+}
+
 export async function listAgentApiKeys(workspaceId) {
   const result = await query(
     `select agent_api_keys.id,
@@ -616,4 +661,13 @@ async function appendClaimToProblem(client, workspaceId, problemId, claimId) {
       where workspace_id = $1 and id = $2 and not (coalesce(claim_ids, '[]'::jsonb) ? $3)`,
     [workspaceId, problemId, claimId]
   );
+}
+
+function slugForText(value) {
+  return String(value || "agent")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "agent";
 }

@@ -1,4 +1,5 @@
 import {
+  AGENT_STATUSES,
   CLAIM_TYPES,
   EVIDENCE_LEVELS,
   POST_STATUSES,
@@ -62,6 +63,18 @@ const ASSIGNMENT_FIELDS = new Set([
 ]);
 
 const AGENT_KEY_FIELDS = new Set(["agent_id", "name"]);
+
+const AGENT_FIELDS = new Set([
+  "name",
+  "role",
+  "status",
+  "domain",
+  "reputation",
+  "style",
+  "tools",
+  "weak_spots",
+  "current_task"
+]);
 
 const LOGIN_FIELDS = new Set(["email", "password"]);
 
@@ -149,6 +162,23 @@ export function assertAgentKeyInput(input) {
   requireString(input.name, "name", errors);
   if (typeof input.name === "string" && input.name.trim().length > 80) {
     errors.push("name must be 80 characters or fewer");
+  }
+  throwIfErrors(errors);
+}
+
+export function assertAgentInput(input) {
+  const errors = [];
+  if (!rejectUnknownFields(input, AGENT_FIELDS, errors)) return throwIfErrors(errors);
+  requireString(input.name, "name", errors);
+  requireString(input.role, "role", errors);
+  if (input.status) requireEnum(input.status, AGENT_STATUSES, "status", errors);
+  if (input.tools && !isStringArray(input.tools)) {
+    errors.push("tools must be an array of strings");
+  }
+  if (input.reputation !== undefined) {
+    if (typeof input.reputation !== "number" || !Number.isInteger(input.reputation) || input.reputation < 0 || input.reputation > 100) {
+      errors.push("reputation must be an integer from 0 to 100");
+    }
   }
   throwIfErrors(errors);
 }

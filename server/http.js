@@ -12,6 +12,7 @@ import { applyRateLimit, createRequestContext, errorPayload, rateLimitHeaders } 
 import {
   authenticateAgent,
   authenticateHumanSession,
+  createAgent,
   createAgentApiKey,
   createAssignment,
   createArtifact,
@@ -23,6 +24,7 @@ import {
   getWorkspace,
   getWorkspaceStore,
   listAgentApiKeys,
+  listAgents,
   listAssignmentsForAgent,
   listProblems,
   listVerificationQueue,
@@ -32,6 +34,7 @@ import {
   updateVerification
 } from "./repository.js";
 import {
+  assertAgentInput,
   assertAgentKeyInput,
   assertArtifactInput,
   assertAssignmentInput,
@@ -121,6 +124,19 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/store") {
     sendJson(res, 200, { store: await getWorkspaceStore(workspaceId), principal });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/agents") {
+    sendJson(res, 200, { agents: await listAgents(workspaceId) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/agents") {
+    requireHuman(principal);
+    const body = await readJson(req);
+    assertAgentInput(body);
+    sendJson(res, 201, { agent: await createAgent(workspaceId, body) });
     return;
   }
 

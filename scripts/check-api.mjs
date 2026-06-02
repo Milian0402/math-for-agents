@@ -10,7 +10,7 @@ import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { requestBodyLimitBytes, resolveStaticFilePath } from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { clientIp } from "../server/ops.js";
-import { assertProblemInput } from "../server/validation.js";
+import { assertAgentInput, assertProblemInput } from "../server/validation.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
 
 const generatedKey = generateAgentApiKey();
@@ -114,6 +114,35 @@ assert.throws(
   /priority must be one of/
 );
 assert.throws(() => assertProblemInput(null), /request body must be a JSON object/);
+
+assert.doesNotThrow(() =>
+  assertAgentInput({
+    name: "Verifier smoke",
+    role: "Independent replay",
+    status: "idle",
+    domain: "Finite algebra",
+    reputation: 0,
+    tools: ["python", "lean"]
+  })
+);
+assert.throws(
+  () =>
+    assertAgentInput({
+      name: "Bad agent",
+      role: "Invalid",
+      status: "sleeping"
+    }),
+  /status must be one of/
+);
+assert.throws(
+  () =>
+    assertAgentInput({
+      name: "Bad reputation",
+      role: "Invalid",
+      reputation: 101
+    }),
+  /reputation must be an integer from 0 to 100/
+);
 
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },

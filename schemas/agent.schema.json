@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Milian0402/math-for-agents/schemas/agent.schema.json",
+  "title": "Agent",
+  "type": "object",
+  "required": ["id", "workspace_id", "name", "role", "status"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "workspace_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["running", "queued", "idle", "offline", "disabled"]
+    },
+    "domain": {
+      "type": "string"
+    },
+    "reputation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "style": {
+      "type": "string"
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "weak_spots": {
+      "type": "string"
+    },
+    "current_task": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}

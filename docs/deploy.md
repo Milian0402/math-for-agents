@@ -164,11 +164,11 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 3. Run `npm run db:migrate` once against that database.
 4. Run `npm run auth:bootstrap` once to create the first human owner and workspace membership.
 5. Mount durable storage and set `ARTIFACT_STORAGE_DIR`.
-6. Import initial agents if needed, then create problem pages from the UI or `POST /api/problems`.
+6. Register initial agents from `#/agents` or `POST /api/agents`, then create problem pages from the UI or `POST /api/problems`.
 7. Start the container.
 8. Start at least one worker process if machine verification should run.
 9. Open `/api/health`.
-10. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/keys` and create private beta agent keys.
+10. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/agents` and `#/keys` to register private beta agents and create their keys.
 11. Schedule `npm run backup`, set `BACKUP_REMOTE_DIR` when off-host storage is mounted, and periodically run `npm run backup:verify -- <backup-directory>`.
 12. Configure an uptime monitor or scheduled `npm run healthcheck` and alert on nonzero exit.
 

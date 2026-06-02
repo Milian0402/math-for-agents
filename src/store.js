@@ -88,6 +88,17 @@ export async function createProblem(store, input) {
   return createLocalProblem(store, input);
 }
 
+export async function createAgent(store, input) {
+  if (isApiStore(store)) {
+    const result = await apiRequest("/api/agents", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+    return { agent: result.agent, store: await loadApiStoreStrict() };
+  }
+  return createLocalAgent(store, input);
+}
+
 export async function createContribution(store, input) {
   if (isApiStore(store)) {
     const result = await apiRequest("/api/contributions", {
@@ -257,6 +268,24 @@ function createLocalProblem(store, input) {
   return { store: saveStore(store), problem };
 }
 
+function createLocalAgent(store, input) {
+  const agent = {
+    id: `agent:${slugForText(input.name)}-${Date.now().toString(36)}`,
+    name: input.name.trim(),
+    role: input.role.trim(),
+    status: input.status || "idle",
+    domain: input.domain?.trim?.() || "",
+    reputation: Number.isInteger(input.reputation) ? input.reputation : 0,
+    style: input.style?.trim?.() || "",
+    tools: input.tools ?? [],
+    weak_spots: input.weak_spots?.trim?.() || "",
+    current_task: input.current_task?.trim?.() || ""
+  };
+
+  store.agents.unshift(agent);
+  return { store: saveStore(store), agent };
+}
+
 function createLocalAssignment(store, input) {
   const id = `assignment-${Date.now().toString(36)}`;
   const assignment = {
@@ -422,6 +451,15 @@ function checklistFor(method) {
     return ["Re-run the CAS script", "Check the assumptions", "Compare the symbolic output", "Confirm the result matches the claim"];
   }
   return ["Read the argument", "Check the dependencies", "Probe the weak steps", "Decide pass or needs-more-detail"];
+}
+
+function slugForText(value) {
+  return String(value || "agent")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "agent";
 }
 
 function updateLocalVerification(store, verificationId, status, patch = {}) {

@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import {
+  AGENT_STATUSES,
   POST_TYPES,
   EVIDENCE_LEVELS,
   POST_STATUSES,
@@ -43,6 +44,7 @@ async function readJson(relPath) {
 // Schema files must at least be valid JSON.
 for (const file of [
   "schemas/research-post.schema.json",
+  "schemas/agent.schema.json",
   "schemas/problem.schema.json",
   "schemas/assignment.schema.json",
   "schemas/claim.schema.json",
@@ -61,6 +63,14 @@ const problemIds = new Set(seed.problems.map((problem) => problem.id));
 const claimIds = new Set(seed.claims.map((claim) => claim.id));
 const postIds = new Set(seed.posts.map((post) => post.id));
 const artifactIds = new Set(seed.artifacts.map((artifact) => artifact.id));
+
+for (const agent of seed.agents) {
+  const where = `agent ${agent.id}`;
+  inEnum(agent.status, AGENT_STATUSES, `${where}.status`);
+  check(Array.isArray(agent.tools), `${where}.tools must be an array`);
+  check(Number.isInteger(agent.reputation), `${where}.reputation must be an integer`);
+  check(agent.reputation >= 0 && agent.reputation <= 100, `${where}.reputation must be between 0 and 100`);
+}
 
 for (const problem of seed.problems) {
   const where = `problem ${problem.id}`;
