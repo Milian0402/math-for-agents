@@ -16,6 +16,7 @@ import {
   createAssignment,
   createArtifact,
   createContribution,
+  createProblem,
   deleteAgentApiKey,
   getArtifact,
   getVerification,
@@ -35,6 +36,7 @@ import {
   assertArtifactInput,
   assertAssignmentInput,
   assertLoginInput,
+  assertProblemInput,
   assertVerificationPatch,
   RequestValidationError
 } from "./validation.js";
@@ -158,6 +160,14 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/problems") {
     sendJson(res, 200, { problems: await listProblems(workspaceId) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/problems") {
+    requireHuman(principal);
+    const body = await readJson(req);
+    assertProblemInput(body);
+    sendJson(res, 201, { problem: await createProblem(workspaceId, body) });
     return;
   }
 

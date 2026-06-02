@@ -7,11 +7,15 @@ const baseUrl = process.env.MFA_BASE_URL || "http://127.0.0.1:4173";
 const humanEmail = process.env.MFA_HUMAN_EMAIL || "max@example.com";
 const humanPassword = process.env.MFA_HUMAN_PASSWORD || "mfa_dev_password";
 const agentId = process.env.MFA_SMOKE_AGENT_ID || "agent:finite-model-searcher";
-const problemId = process.env.MFA_SMOKE_PROBLEM_ID || "finite-magma-identity-search";
+const seedProblemId = process.env.MFA_SMOKE_PROBLEM_ID || "finite-magma-identity-search";
 const smokeRunId = `smoke-${Date.now().toString(36)}`;
+let problemId = seedProblemId;
+let assignmentId = "";
 
 const created = {
   keyIds: [],
+  problemIds: [],
+  assignmentIds: [],
   postIds: [],
   claimIds: [],
   verificationIds: [],
@@ -52,7 +56,23 @@ async function main() {
   const store = await request("/api/store");
   assert.equal(store.status, 200);
   assert.equal(store.payload.principal.auth_method, "human-session");
-  assert.ok(store.payload.store.problems.some((problem) => problem.id === problemId));
+  assert.ok(store.payload.store.problems.some((problem) => problem.id === seedProblemId));
+
+  const createdProblem = await request("/api/problems", {
+    method: "POST",
+    body: {
+      title: `Release smoke problem ${smokeRunId}`,
+      area: "Release smoke",
+      priority: "high",
+      summary: "Temporary problem opened by the release smoke test.",
+      why_it_matters: "Proves humans can open a fresh research target online before sending agents to work.",
+      tags: ["smoke", "release"]
+    }
+  });
+  assert.equal(createdProblem.status, 201);
+  assert.equal(createdProblem.payload.problem.title, `Release smoke problem ${smokeRunId}`);
+  problemId = createdProblem.payload.problem.id;
+  created.problemIds.push(problemId);
 
   const createdKey = await request("/api/agent-keys", {
     method: "POST",
@@ -66,11 +86,26 @@ async function main() {
   const firstAgentKey = createdKey.payload.api_key;
   assert.match(firstAgentKey, /^mfa_/);
 
+  const createdAssignment = await request("/api/assignments", {
+    method: "POST",
+    body: {
+      problem_id: problemId,
+      task: "search",
+      prompt: "Run a small replayable smoke search and report the exact command.",
+      desired_output: ["computation-log", "human-summary"],
+      assigned_agents: [agentId]
+    }
+  });
+  assert.equal(createdAssignment.status, 201);
+  assignmentId = createdAssignment.payload.assignment.id;
+  created.assignmentIds.push(assignmentId);
+  created.postIds.push(createdAssignment.payload.post.id);
+
   const agentAssignments = await request("/api/assignments", {
     bearer: firstAgentKey
   });
   assert.equal(agentAssignments.status, 200);
-  assert.ok(Array.isArray(agentAssignments.payload.assignments));
+  assert.ok(agentAssignments.payload.assignments.some((assignment) => assignment.id === assignmentId));
 
   const rotatedKey = await request(`/api/agent-keys/${encodeURIComponent(createdKey.payload.key.id)}/rotate`, {
     method: "POST"
@@ -118,6 +153,7 @@ async function main() {
     bearer: agentKey,
     body: {
       problem_id: problemId,
+      assignment_id: assignmentId,
       type: "attempt",
       evidence_level: "computational",
       status: "needs-review",
@@ -189,7 +225,9 @@ async function main() {
       "health",
       "request-id errors",
       "human session login",
+      "problem creation",
       "agent key create/rotate/revoke",
+      "assignment creation",
       "agent assignment fetch",
       "artifact upload/download",
       "agent contribution",
@@ -267,8 +305,14 @@ async function cleanup() {
     if (created.artifactIds.length) {
       await client.query("delete from artifacts where id = any($1)", [created.artifactIds]);
     }
+    if (created.assignmentIds.length) {
+      await client.query("delete from assignments where id = any($1)", [created.assignmentIds]);
+    }
     if (created.keyIds.length) {
       await client.query("delete from agent_api_keys where id = any($1)", [created.keyIds]);
+    }
+    if (created.problemIds.length) {
+      await client.query("delete from problems where id = any($1)", [created.problemIds]);
     }
   });
 }

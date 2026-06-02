@@ -77,6 +77,17 @@ export async function createAssignment(store, input) {
   return createLocalAssignment(store, input);
 }
 
+export async function createProblem(store, input) {
+  if (isApiStore(store)) {
+    const result = await apiRequest("/api/problems", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+    return { problem: result.problem, store: await loadApiStoreStrict() };
+  }
+  return createLocalProblem(store, input);
+}
+
 export async function createContribution(store, input) {
   if (isApiStore(store)) {
     const result = await apiRequest("/api/contributions", {
@@ -224,6 +235,26 @@ async function loadLocalStore() {
   const seed = normalizeStore(await response.json());
   localStorage.setItem(STORE_KEY, JSON.stringify(seed));
   return withMeta(seed, connectionState);
+}
+
+function createLocalProblem(store, input) {
+  const now = new Date().toISOString();
+  const problem = {
+    id: `problem-${Date.now().toString(36)}`,
+    title: input.title.trim(),
+    area: input.area.trim(),
+    status: input.status || "open",
+    priority: input.priority || "medium",
+    updated_at: now,
+    summary: input.summary.trim(),
+    why_it_matters: input.why_it_matters?.trim?.() || "",
+    tags: input.tags ?? [],
+    assignment_ids: [],
+    claim_ids: []
+  };
+
+  store.problems.unshift(problem);
+  return { store: saveStore(store), problem };
 }
 
 function createLocalAssignment(store, input) {

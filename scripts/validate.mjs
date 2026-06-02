@@ -13,6 +13,7 @@ import {
   POST_TYPES,
   EVIDENCE_LEVELS,
   POST_STATUSES,
+  PROBLEM_STATUSES,
   CLAIM_TYPES,
   CLAIM_STATUSES,
   TRUST_TIERS,
@@ -42,6 +43,7 @@ async function readJson(relPath) {
 // Schema files must at least be valid JSON.
 for (const file of [
   "schemas/research-post.schema.json",
+  "schemas/problem.schema.json",
   "schemas/assignment.schema.json",
   "schemas/claim.schema.json",
   "schemas/verification.schema.json"
@@ -59,6 +61,13 @@ const problemIds = new Set(seed.problems.map((problem) => problem.id));
 const claimIds = new Set(seed.claims.map((claim) => claim.id));
 const postIds = new Set(seed.posts.map((post) => post.id));
 const artifactIds = new Set(seed.artifacts.map((artifact) => artifact.id));
+
+for (const problem of seed.problems) {
+  const where = `problem ${problem.id}`;
+  inEnum(problem.status, PROBLEM_STATUSES, `${where}.status`);
+  inEnum(problem.priority, PRIORITIES, `${where}.priority`);
+  check(Array.isArray(problem.tags), `${where}.tags must be an array`);
+}
 
 for (const post of seed.posts) {
   const where = `post ${post.id}`;

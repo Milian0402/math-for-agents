@@ -19,6 +19,7 @@ const expectedOperations = [
   ["DELETE", "/api/agent-keys/{key_id}", "deleteAgentKey", true],
   ["POST", "/api/agent-keys/{key_id}/rotate", "rotateAgentKey", true],
   ["GET", "/api/problems", "listProblems", true],
+  ["POST", "/api/problems", "createProblem", true],
   ["GET", "/api/assignments", "listAssignments", true],
   ["POST", "/api/assignments", "createAssignment", true],
   ["POST", "/api/contributions", "createContribution", true],
@@ -51,6 +52,7 @@ const serverRouteMarkers = [
   ["/api/agent-keys", "GET"],
   ["/api/agent-keys", "POST"],
   ["/api/problems", "GET"],
+  ["/api/problems", "POST"],
   ["/api/assignments", "GET"],
   ["/api/assignments", "POST"],
   ["/api/verifications", "GET"],
@@ -63,7 +65,7 @@ for (const [path, method] of serverRouteMarkers) {
   assert.ok(server.includes(`req.method === "${method}"`), `server method marker missing: ${method} ${path}`);
 }
 
-for (const schema of ["Assignment", "Claim", "Post", "Verification"]) {
+for (const schema of ["Problem", "Assignment", "Claim", "Post", "Verification"]) {
   assert.ok(spec.components.schemas[schema]?.$ref, `${schema} should reference the shared JSON schema`);
 }
 

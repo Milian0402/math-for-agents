@@ -2,6 +2,7 @@ import {
   createAgentKey,
   createAssignment,
   createContribution,
+  createProblem,
   exportStore,
   getApiKey,
   listAgentKeys,
@@ -91,6 +92,7 @@ function render() {
       </div>
     </main>
     ${ui.modal?.type === "assignment" ? assignmentModal(ui.modal.problemId) : ""}
+    ${ui.modal?.type === "problem" ? problemModal() : ""}
     ${ui.modal?.type === "login" ? loginModal() : ""}
     ${ui.toast ? `<div class="toast">${escapeHtml(ui.toast)}</div>` : ""}
   `;
@@ -351,6 +353,7 @@ function problemsView() {
           <p class="eyebrow">Problem pages</p>
           <h2>Theorem targets, searches, and open questions</h2>
         </div>
+        <button class="primary-button" type="button" data-action="open-problem">+ New problem</button>
       </div>
       <div class="problem-grid">
         ${store.problems.map(problemCard).join("")}
@@ -1343,6 +1346,54 @@ function proofGraph() {
   `;
 }
 
+function problemModal() {
+  return `
+    <div class="modal-backdrop" data-action="close-modal">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="problem-title" data-modal>
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Research problem</p>
+            <h2 id="problem-title">Open a new problem</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-modal" aria-label="Close">x</button>
+        </div>
+        <form id="problem-form" class="assignment-form">
+          <label>
+            Title
+            <input name="title" type="text" required placeholder="A precise theorem target or search question">
+          </label>
+          <label>
+            Area
+            <input name="area" type="text" required placeholder="Finite algebra, combinatorics, number theory">
+          </label>
+          <label>
+            Priority
+            <select name="priority">
+              ${["high", "medium", "low"].map((priority) => `<option value="${priority}" ${priority === "medium" ? "selected" : ""}>${escapeHtml(labelize(priority))}</option>`).join("")}
+            </select>
+          </label>
+          <label>
+            Tags
+            <input name="tags" type="text" placeholder="comma, separated, tags">
+          </label>
+          <label class="wide">
+            Summary
+            <textarea name="summary" rows="4" required placeholder="State what is open and what would count as progress."></textarea>
+          </label>
+          <label class="wide">
+            Why it matters
+            <textarea name="why_it_matters" rows="3" placeholder="Why agents should spend search, proof, or verification time here."></textarea>
+          </label>
+          <div class="form-actions">
+            <button class="secondary-button" type="button" data-action="close-modal">Cancel</button>
+            <button class="primary-button" type="submit">Create problem</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  `;
+}
+
 function assignmentModal(selectedProblemId = "") {
   const desiredOutputs = [
     "proof",
@@ -1472,6 +1523,11 @@ async function handleClick(event) {
     render();
   }
 
+  if (action === "open-problem") {
+    ui.modal = { type: "problem" };
+    render();
+  }
+
   if (action === "open-login") {
     ui.modal = { type: "login" };
     render();
@@ -1584,7 +1640,7 @@ async function handleClick(event) {
 }
 
 async function handleSubmit(event) {
-  if (!["assignment-form", "contribution-form", "contribution-json-form", "agent-key-form", "login-form"].includes(event.target.id)) return;
+  if (!["assignment-form", "problem-form", "contribution-form", "contribution-json-form", "agent-key-form", "login-form"].includes(event.target.id)) return;
   event.preventDefault();
 
   if (event.target.id === "login-form") {
@@ -1594,6 +1650,11 @@ async function handleSubmit(event) {
 
   if (event.target.id === "agent-key-form") {
     await handleAgentKeyForm(event.target);
+    return;
+  }
+
+  if (event.target.id === "problem-form") {
+    await handleProblemForm(event.target);
     return;
   }
 
@@ -1668,6 +1729,28 @@ async function handleAgentKeyForm(form) {
   render();
 }
 
+async function handleProblemForm(form) {
+  const formData = new FormData(form);
+  try {
+    const result = await createProblem(store, {
+      title: formData.get("title"),
+      area: formData.get("area"),
+      priority: formData.get("priority"),
+      summary: formData.get("summary"),
+      why_it_matters: formData.get("why_it_matters"),
+      tags: parseTags(formData.get("tags"))
+    });
+
+    store = result.store;
+    ui.modal = null;
+    showToast("Problem opened");
+    window.location.hash = `#/problem/${result.problem.id}`;
+  } catch (error) {
+    showToast(`Problem rejected: ${error.message}`);
+  }
+  render();
+}
+
 async function handleContributionForm(form) {
   const formData = new FormData(form);
   try {
@@ -1714,6 +1797,14 @@ async function handleContributionJson(form) {
     showToast(`Could not ingest contribution: ${error.message}`);
     render();
   }
+}
+
+function parseTags(value) {
+  return String(value || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 12);
 }
 
 function downloadJson() {

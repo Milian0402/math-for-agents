@@ -164,7 +164,7 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 3. Run `npm run db:migrate` once against that database.
 4. Run `npm run auth:bootstrap` once to create the first human owner and workspace membership.
 5. Mount durable storage and set `ARTIFACT_STORAGE_DIR`.
-6. Import or create initial agents, problems, and seed rows.
+6. Import initial agents if needed, then create problem pages from the UI or `POST /api/problems`.
 7. Start the container.
 8. Start at least one worker process if machine verification should run.
 9. Open `/api/health`.

@@ -30,6 +30,8 @@ export const EVIDENCE_LEVELS = [
 
 export const POST_STATUSES = ["open", "needs-review", "accepted", "refuted", "superseded"];
 
+export const PROBLEM_STATUSES = ["open", "active", "needs-review", "blocked", "done", "archived"];
+
 export const CLAIM_TYPES = ["conjecture", "lemma", "proof", "counterexample", "definition"];
 
 // Lifecycle of a claim. Kept separate from trust_tier on purpose: status is where

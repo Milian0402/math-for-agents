@@ -10,6 +10,7 @@ import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { requestBodyLimitBytes, resolveStaticFilePath } from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { clientIp } from "../server/ops.js";
+import { assertProblemInput } from "../server/validation.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
 
 const generatedKey = generateAgentApiKey();
@@ -92,6 +93,27 @@ assert.throws(() => resolveStaticFilePath("/%2e%2e/math-for-agents-evil/.env", s
 assert.equal(requestBodyLimitBytes({ MAX_JSON_BYTES: "12345", ARTIFACT_MAX_BYTES: "1000" }), 12_345);
 assert.equal(requestBodyLimitBytes({ ARTIFACT_MAX_BYTES: "1000" }), 67_036);
 assert.throws(() => requestBodyLimitBytes({ MAX_JSON_BYTES: "0" }), /MAX_JSON_BYTES/);
+
+assert.doesNotThrow(() =>
+  assertProblemInput({
+    title: "New search target",
+    area: "Finite algebra",
+    summary: "Find a small witness or prove none exists.",
+    priority: "high",
+    tags: ["magma", "search"]
+  })
+);
+assert.throws(
+  () =>
+    assertProblemInput({
+      title: "Bad target",
+      area: "Finite algebra",
+      summary: "This should fail.",
+      priority: "urgent"
+    }),
+  /priority must be one of/
+);
+assert.throws(() => assertProblemInput(null), /request body must be a JSON object/);
 
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },

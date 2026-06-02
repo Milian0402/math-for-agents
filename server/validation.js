@@ -4,6 +4,7 @@ import {
   POST_STATUSES,
   POST_TYPES,
   PRIORITIES,
+  PROBLEM_STATUSES,
   VERIFICATION_METHODS,
   VERIFICATION_STATUSES,
   MACHINE_METHODS,
@@ -64,6 +65,16 @@ const AGENT_KEY_FIELDS = new Set(["agent_id", "name"]);
 
 const LOGIN_FIELDS = new Set(["email", "password"]);
 
+const PROBLEM_FIELDS = new Set([
+  "title",
+  "area",
+  "status",
+  "priority",
+  "summary",
+  "why_it_matters",
+  "tags"
+]);
+
 const VERIFICATION_PATCH_FIELDS = new Set(["status", "method", "artifact_id", "notes", "checklist"]);
 
 export class RequestValidationError extends Error {
@@ -77,7 +88,7 @@ export class RequestValidationError extends Error {
 
 export function assertContributionInput(input) {
   const errors = [];
-  rejectUnknownFields(input, CONTRIBUTION_FIELDS, errors);
+  if (!rejectUnknownFields(input, CONTRIBUTION_FIELDS, errors)) return throwIfErrors(errors);
   requireString(input.agent, "agent", errors);
   requireString(input.problem_id, "problem_id", errors);
   requireString(input.type, "type", errors);
@@ -98,7 +109,7 @@ export function assertContributionInput(input) {
 
 export function assertArtifactInput(input) {
   const errors = [];
-  rejectUnknownFields(input, ARTIFACT_FIELDS, errors);
+  if (!rejectUnknownFields(input, ARTIFACT_FIELDS, errors)) return throwIfErrors(errors);
   requireString(input.problem_id, "problem_id", errors);
   requireString(input.owner, "owner", errors);
   requireString(input.kind, "kind", errors);
@@ -118,7 +129,7 @@ export function assertArtifactInput(input) {
 
 export function assertAssignmentInput(input) {
   const errors = [];
-  rejectUnknownFields(input, ASSIGNMENT_FIELDS, errors);
+  if (!rejectUnknownFields(input, ASSIGNMENT_FIELDS, errors)) return throwIfErrors(errors);
   requireString(input.problem_id, "problem_id", errors);
   requireString(input.task, "task", errors);
   requireString(input.prompt, "prompt", errors);
@@ -133,7 +144,7 @@ export function assertAssignmentInput(input) {
 
 export function assertAgentKeyInput(input) {
   const errors = [];
-  rejectUnknownFields(input, AGENT_KEY_FIELDS, errors);
+  if (!rejectUnknownFields(input, AGENT_KEY_FIELDS, errors)) return throwIfErrors(errors);
   requireString(input.agent_id, "agent_id", errors);
   requireString(input.name, "name", errors);
   if (typeof input.name === "string" && input.name.trim().length > 80) {
@@ -144,7 +155,7 @@ export function assertAgentKeyInput(input) {
 
 export function assertLoginInput(input) {
   const errors = [];
-  rejectUnknownFields(input, LOGIN_FIELDS, errors);
+  if (!rejectUnknownFields(input, LOGIN_FIELDS, errors)) return throwIfErrors(errors);
   requireString(input.email, "email", errors);
   requireString(input.password, "password", errors);
   if (typeof input.email === "string" && !input.email.includes("@")) {
@@ -153,9 +164,23 @@ export function assertLoginInput(input) {
   throwIfErrors(errors);
 }
 
+export function assertProblemInput(input) {
+  const errors = [];
+  if (!rejectUnknownFields(input, PROBLEM_FIELDS, errors)) return throwIfErrors(errors);
+  requireString(input.title, "title", errors);
+  requireString(input.area, "area", errors);
+  requireString(input.summary, "summary", errors);
+  if (input.status) requireEnum(input.status, PROBLEM_STATUSES, "status", errors);
+  if (input.priority) requireEnum(input.priority, PRIORITIES, "priority", errors);
+  if (input.tags && !isStringArray(input.tags)) {
+    errors.push("tags must be an array of strings");
+  }
+  throwIfErrors(errors);
+}
+
 export function assertVerificationPatch(input) {
   const errors = [];
-  rejectUnknownFields(input, VERIFICATION_PATCH_FIELDS, errors);
+  if (!rejectUnknownFields(input, VERIFICATION_PATCH_FIELDS, errors)) return throwIfErrors(errors);
   if (input.status) requireEnum(input.status, VERIFICATION_STATUSES, "status", errors);
   if (input.method) requireEnum(input.method, VERIFICATION_METHODS, "method", errors);
   if (input.checklist && !isStringArray(input.checklist)) {
@@ -174,11 +199,12 @@ export function replayCommand(input) {
 function rejectUnknownFields(input, allowedFields, errors) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     errors.push("request body must be a JSON object");
-    return;
+    return false;
   }
   for (const key of Object.keys(input)) {
     if (!allowedFields.has(key)) errors.push(`unknown field: ${key}`);
   }
+  return true;
 }
 
 function requireString(value, field, errors) {

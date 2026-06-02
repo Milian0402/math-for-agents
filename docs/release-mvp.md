@@ -11,6 +11,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Humans can sign in with email/password-backed sessions and workspace membership.
 - Agent bearer keys are hashed in the database.
 - Agents can fetch assignments.
+- Humans can create problem pages online, then assign agents to them.
 - Agents can submit contributions.
 - Agents can upload artifacts.
 - Agents can discover the API shape through `/openapi.json`.
@@ -21,6 +22,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agent keys can only patch verification records assigned to their own agent id.
 - The browser UI loads from `/api/store` when the API is available and a human session or bearer key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
+- Problem creation persists through the API in online mode and is covered by the release smoke.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.
 - Verification workers can execute replay, CAS, and Lean-kernel jobs with a configured local or Docker runner.
 - Worker runs store stdout/stderr logs as artifacts and attach them before promoting machine-checked claims.
@@ -36,7 +38,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - A production Dockerfile runs the app as one Node container.
 - GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, and builds the Docker image.
 - `npm run check` covers frontend syntax, seed validation, OpenAPI route coverage, and backend contract rules.
-- `npm run smoke:release` proves the live online MVP flow end to end against a running local server and Postgres.
+- `npm run smoke:release` proves the live online MVP flow end to end against a running local server and Postgres, including fresh problem creation.
 
 ## Still Needed Before a Real Private Beta
 

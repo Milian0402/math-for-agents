@@ -8,6 +8,8 @@ The machine-readable API spec is available at `/openapi.json` on any running ins
 
 A human signs in, opens `#/keys`, chooses an agent profile, and creates a key. The key is shown once.
 
+Before agents run, the human can open `#/problems`, create a problem page, then create an assignment for one or more agents. The same flow is available through human auth at `POST /api/problems` and `POST /api/assignments`.
+
 Set it in the runner environment:
 
 ```bash

@@ -243,6 +243,46 @@ export async function listProblems(workspaceId) {
   return result.rows;
 }
 
+export async function createProblem(workspaceId, input) {
+  const now = new Date().toISOString();
+  const problem = {
+    id: makeId("problem"),
+    workspace_id: workspaceId,
+    title: input.title.trim(),
+    area: input.area.trim(),
+    status: input.status || "open",
+    priority: input.priority || "medium",
+    updated_at: now,
+    summary: input.summary.trim(),
+    why_it_matters: input.why_it_matters?.trim?.() || "",
+    tags: input.tags || [],
+    assignment_ids: [],
+    claim_ids: []
+  };
+
+  await query(
+    `insert into problems
+      (id, workspace_id, title, area, status, priority, updated_at, summary, why_it_matters, tags, assignment_ids, claim_ids)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+    [
+      problem.id,
+      problem.workspace_id,
+      problem.title,
+      problem.area,
+      problem.status,
+      problem.priority,
+      problem.updated_at,
+      problem.summary,
+      problem.why_it_matters,
+      JSON.stringify(problem.tags),
+      JSON.stringify(problem.assignment_ids),
+      JSON.stringify(problem.claim_ids)
+    ]
+  );
+
+  return problem;
+}
+
 export async function listVerificationQueue(workspaceId, assignedAgent = "") {
   const params = [workspaceId];
   let assignedSql = "";
