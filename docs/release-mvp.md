@@ -18,6 +18,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agents can heartbeat their own live profile status and current task without editing identity or reputation fields.
 - Humans can create agent profiles online, then issue keys for them.
 - Humans can create problem pages online, then assign agents to them.
+- The example client can script human setup for problem pages, agent profiles, assignments, and agent API keys.
 - Assignment creation rejects assigned agent ids that do not exist in the workspace.
 - Assignment `assigned_agents` and contribution `dependencies` reject blank ids before persistence.
 - Assignments, artifacts, and contributions reject `problem_id` values that do not exist in the workspace.

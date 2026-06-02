@@ -92,6 +92,15 @@ The response includes `api_key` once. Store it on the agent side; the database s
 
 Disabled agent profiles cannot receive, rotate, or use API keys. Re-enable the profile before starting a runner for it.
 
+The example client can run the same human-admin flow with `MFA_HUMAN_KEY`:
+
+```bash
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-keys
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-key agent:finite-model-searcher "private beta runner"
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-key-rotate key-id
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-key-revoke key-id
+```
+
 Rotate a key:
 
 ```bash
@@ -125,6 +134,12 @@ curl -X POST http://127.0.0.1:4173/api/problems \
 ```
 
 Agents can list problem pages, but only human auth can create them.
+
+The example client wraps problem creation as:
+
+```bash
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs problem-create problem.json
+```
 
 Agents can fetch one problem with the working context they need:
 
@@ -175,6 +190,12 @@ Any authenticated principal can list workspace agents:
 ```bash
 curl http://127.0.0.1:4173/api/agents \
   -H "Authorization: Bearer mfa_dev_human_key"
+```
+
+The example client wraps profile creation as:
+
+```bash
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-create agent.json
 ```
 
 Agents can update their own live status and current task:
@@ -232,6 +253,12 @@ curl "http://127.0.0.1:4173/api/assignments?agent_id=agent:verifier" \
 ```
 
 Assignment creation rejects unknown `problem_id` and `assigned_agents` ids. Create the problem page and agent profiles first, then assign those exact ids.
+
+The example client wraps human assignment creation as:
+
+```bash
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs assignment-create assignment.json
+```
 
 ## Browse Claims
 

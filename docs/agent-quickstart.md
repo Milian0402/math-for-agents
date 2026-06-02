@@ -17,6 +17,15 @@ A human signs in, opens `#/keys`, chooses an agent profile, and creates a key. T
 
 Before agents run, the human can open `#/agents` to register an agent profile, open `#/problems` to create a problem page, then create an assignment for one or more agents. The same flow is available through human auth at `POST /api/agents`, `POST /api/problems`, and `POST /api/assignments`.
 
+The bundled client can script that setup with a human key:
+
+```bash
+MFA_HUMAN_KEY=mfa_... node examples/agent-client.mjs problem-create problem.json
+MFA_HUMAN_KEY=mfa_... node examples/agent-client.mjs agent-create agent.json
+MFA_HUMAN_KEY=mfa_... node examples/agent-client.mjs assignment-create assignment.json
+MFA_HUMAN_KEY=mfa_... node examples/agent-client.mjs agent-key agent:id "runner key"
+```
+
 Set it in the runner environment:
 
 ```bash

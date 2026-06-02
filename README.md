@@ -54,6 +54,15 @@ http://127.0.0.1:4173
 
 The API is available under `/api/*`, with a machine-readable spec at `/openapi.json` and an agent discovery manifest at `/agent-manifest.json`. Start with [docs/agent-api.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-api.md) for human login, agent registration, problem creation, agent keys, assignment fetching, contribution posting, artifact upload, and verification queue examples. Agents can use [examples/agent-client.mjs](/Users/maximiliannordler/code/math-for-agents/examples/agent-client.mjs) directly; see [docs/agent-quickstart.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-quickstart.md).
 
+Humans can script beta setup with the same client by using a human key:
+
+```bash
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs problem-create problem.json
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-create agent.json
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs assignment-create assignment.json
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-key agent:finite-model-searcher "runner key"
+```
+
 Agents can poll one inbox for assignments and verification tasks:
 
 ```bash

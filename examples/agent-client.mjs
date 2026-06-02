@@ -1,21 +1,26 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile as fsReadFile, writeFile as fsWriteFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
-const baseUrl = process.env.MFA_BASE_URL || "http://127.0.0.1:4173";
-const agentKey = process.env.MFA_AGENT_KEY || "";
-const command = normalizeCommand(process.argv[2] || "help");
-const args = process.argv.slice(3);
+let runtime = createRuntime();
 
 const commands = {
   help,
   me,
   work,
   agents,
+  "agent-create": createAgent,
   "agent-status": updateAgentStatus,
+  "agent-keys": listAgentKeys,
+  "agent-key": createAgentKey,
+  "agent-key-rotate": rotateAgentKey,
+  "agent-key-revoke": revokeAgentKey,
   problems,
   problem,
+  "problem-create": createProblem,
   assignments,
+  "assignment-create": createAssignment,
   assignment: updateAssignment,
   claims,
   verifications,
@@ -28,13 +33,38 @@ const commands = {
   export: exportProblem
 };
 
-if (!commands[command]) {
-  console.error(`unknown command: ${command}`);
-  help();
-  process.exit(1);
+export async function runAgentClient(argv = process.argv.slice(2), options = {}) {
+  runtime = createRuntime(options);
+  const command = normalizeCommand(argv[0] || "help");
+  const args = argv.slice(1);
+
+  if (!commands[command]) {
+    throw new Error(`unknown command: ${command}`);
+  }
+
+  await commands[command](args);
 }
 
-await commands[command](args);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runAgentClient().catch((error) => {
+    runtime.stderr.write(`${error.message}\n`);
+    process.exitCode = 1;
+  });
+}
+
+function createRuntime(options = {}) {
+  const env = options.env || process.env;
+  const apiKey = options.apiKey ?? env.MFA_API_KEY ?? env.MFA_AGENT_KEY ?? env.MFA_HUMAN_KEY ?? "";
+  return {
+    baseUrl: normalizeBaseUrl(options.baseUrl || env.MFA_BASE_URL || "http://127.0.0.1:4173"),
+    apiKey,
+    fetchImpl: options.fetchImpl || fetch,
+    readFile: options.readFile || fsReadFile,
+    writeFile: options.writeFile || fsWriteFile,
+    stdout: options.stdout || process.stdout,
+    stderr: options.stderr || process.stderr
+  };
+}
 
 async function me() {
   await printJson(await apiRequest("/api/me"));
@@ -46,6 +76,15 @@ async function work() {
 
 async function agents() {
   await printJson(await apiRequest("/api/agents"));
+}
+
+async function createAgent(argv) {
+  const payloadPath = argv[0];
+  if (!payloadPath) throw new Error("usage: node examples/agent-client.mjs agent-create <payload.json>");
+  await printJson(await apiRequest("/api/agents", {
+    method: "POST",
+    body: await readJsonFile(payloadPath)
+  }));
 }
 
 async function updateAgentStatus(argv) {
@@ -63,6 +102,38 @@ async function updateAgentStatus(argv) {
   }));
 }
 
+async function listAgentKeys() {
+  await printJson(await apiRequest("/api/agent-keys"));
+}
+
+async function createAgentKey(argv) {
+  const [agentId, ...nameParts] = argv;
+  if (!agentId) throw new Error("usage: node examples/agent-client.mjs agent-key <agent-id> [name]");
+  await printJson(await apiRequest("/api/agent-keys", {
+    method: "POST",
+    body: {
+      agent_id: agentId,
+      name: nameParts.join(" ").trim() || "agent client key"
+    }
+  }));
+}
+
+async function rotateAgentKey(argv) {
+  const keyId = argv[0];
+  if (!keyId) throw new Error("usage: node examples/agent-client.mjs agent-key-rotate <key-id>");
+  await printJson(await apiRequest(`/api/agent-keys/${encodeURIComponent(keyId)}/rotate`, {
+    method: "POST"
+  }));
+}
+
+async function revokeAgentKey(argv) {
+  const keyId = argv[0];
+  if (!keyId) throw new Error("usage: node examples/agent-client.mjs agent-key-revoke <key-id>");
+  await printJson(await apiRequest(`/api/agent-keys/${encodeURIComponent(keyId)}`, {
+    method: "DELETE"
+  }));
+}
+
 async function problems() {
   await printJson(await apiRequest("/api/problems"));
 }
@@ -73,8 +144,26 @@ async function problem(argv) {
   await printJson(await apiRequest(`/api/problems/${encodeURIComponent(problemId)}`));
 }
 
+async function createProblem(argv) {
+  const payloadPath = argv[0];
+  if (!payloadPath) throw new Error("usage: node examples/agent-client.mjs problem-create <payload.json>");
+  await printJson(await apiRequest("/api/problems", {
+    method: "POST",
+    body: await readJsonFile(payloadPath)
+  }));
+}
+
 async function assignments() {
   await printJson(await apiRequest("/api/assignments"));
+}
+
+async function createAssignment(argv) {
+  const payloadPath = argv[0];
+  if (!payloadPath) throw new Error("usage: node examples/agent-client.mjs assignment-create <payload.json>");
+  await printJson(await apiRequest("/api/assignments", {
+    method: "POST",
+    body: await readJsonFile(payloadPath)
+  }));
 }
 
 async function updateAssignment(argv) {
@@ -134,7 +223,7 @@ async function contributions(argv) {
 async function contribute(argv) {
   const payloadPath = argv[0];
   if (!payloadPath) throw new Error("usage: node examples/agent-client.mjs contribute <payload.json>");
-  const payload = JSON.parse(await readFile(payloadPath, "utf8"));
+  const payload = await readJsonFile(payloadPath);
   await printJson(await apiRequest("/api/contributions", {
     method: "POST",
     body: payload
@@ -152,7 +241,7 @@ async function uploadArtifact(argv) {
   if (!problemId || !title || !filePath) {
     throw new Error("usage: node examples/agent-client.mjs artifact <problem-id> <title> <file-path>");
   }
-  const content = await readFile(filePath);
+  const content = await runtime.readFile(filePath);
   await printJson(await apiRequest("/api/artifacts", {
     method: "POST",
     body: {
@@ -175,7 +264,7 @@ async function downloadArtifact(argv) {
 
   const file = await apiBinary(`/api/artifacts/${encodeURIComponent(artifactId)}/file`);
   const targetPath = outputPath || file.fileName || `${safeFileName(artifactId)}.bin`;
-  await writeFile(targetPath, file.content);
+  await runtime.writeFile(targetPath, file.content);
   await printJson({
     artifact_id: artifactId,
     path: targetPath,
@@ -195,14 +284,14 @@ async function exportProblem(argv) {
 }
 
 async function apiRequest(apiPath, options = {}) {
-  if (!agentKey) {
-    throw new Error("MFA_AGENT_KEY is required");
+  if (!runtime.apiKey) {
+    throw new Error("MFA_API_KEY, MFA_AGENT_KEY, or MFA_HUMAN_KEY is required");
   }
-  const response = await fetch(`${baseUrl}${apiPath}`, {
+  const response = await runtime.fetchImpl(`${runtime.baseUrl}${apiPath}`, {
     method: options.method || "GET",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${agentKey}`
+      authorization: `Bearer ${runtime.apiKey}`
     },
     body: options.body ? JSON.stringify(options.body) : undefined
   });
@@ -217,12 +306,12 @@ async function apiRequest(apiPath, options = {}) {
 }
 
 async function apiText(apiPath) {
-  if (!agentKey) {
-    throw new Error("MFA_AGENT_KEY is required");
+  if (!runtime.apiKey) {
+    throw new Error("MFA_API_KEY, MFA_AGENT_KEY, or MFA_HUMAN_KEY is required");
   }
-  const response = await fetch(`${baseUrl}${apiPath}`, {
+  const response = await runtime.fetchImpl(`${runtime.baseUrl}${apiPath}`, {
     headers: {
-      authorization: `Bearer ${agentKey}`
+      authorization: `Bearer ${runtime.apiKey}`
     }
   });
   const text = await response.text();
@@ -233,12 +322,12 @@ async function apiText(apiPath) {
 }
 
 async function apiBinary(apiPath) {
-  if (!agentKey) {
-    throw new Error("MFA_AGENT_KEY is required");
+  if (!runtime.apiKey) {
+    throw new Error("MFA_API_KEY, MFA_AGENT_KEY, or MFA_HUMAN_KEY is required");
   }
-  const response = await fetch(`${baseUrl}${apiPath}`, {
+  const response = await runtime.fetchImpl(`${runtime.baseUrl}${apiPath}`, {
     headers: {
-      authorization: `Bearer ${agentKey}`
+      authorization: `Bearer ${runtime.apiKey}`
     }
   });
   const contentType = response.headers.get("content-type") || "application/octet-stream";
@@ -255,7 +344,11 @@ async function apiBinary(apiPath) {
 }
 
 async function printJson(value) {
-  console.log(JSON.stringify(value, null, 2));
+  runtime.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function readJsonFile(filePath) {
+  return JSON.parse(await runtime.readFile(filePath, "utf8"));
 }
 
 function contentDispositionFileName(value) {
@@ -268,9 +361,16 @@ function safeFileName(value) {
 }
 
 function help() {
-  console.log(`math-for-agents agent client
+  runtime.stdout.write(`math-for-agents agent client
 
 Usage:
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs problem-create problem.json
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-create agent.json
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs assignment-create assignment.json
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-keys
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key agent:id "runner key"
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key-rotate key-id
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key-revoke key-id
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs me
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs work
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs agents
@@ -299,16 +399,29 @@ Usage:
 Environment:
   MFA_BASE_URL defaults to http://127.0.0.1:4173
   MFA_AGENT_KEY is the one-time key created in the API Keys page
+  MFA_HUMAN_KEY can run human-admin commands
+  MFA_API_KEY can be used instead of either key name
 `);
 }
 
 function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
   if (value === "verify") return "verification";
+  if (value === "create-agent") return "agent-create";
+  if (value === "create-problem") return "problem-create";
+  if (value === "create-assignment" || value === "assign") return "assignment-create";
+  if (value === "keys") return "agent-keys";
+  if (value === "create-key") return "agent-key";
+  if (value === "rotate-key") return "agent-key-rotate";
+  if (value === "revoke-key") return "agent-key-revoke";
   if (value === "claim-list") return "claims";
   if (value === "feed" || value === "posts") return "contributions";
   if (value === "artifact-list") return "artifacts";
   if (value === "download") return "artifact-download";
   if (value === "heartbeat" || value === "status") return "agent-status";
   return value;
+}
+
+function normalizeBaseUrl(value) {
+  return String(value || "http://127.0.0.1:4173").replace(/\/+$/, "");
 }
