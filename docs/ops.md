@@ -16,6 +16,8 @@ The server writes one JSON log line per request unless disabled:
 
 ```txt
 MFA_LOG_REQUESTS=true
+MFA_LOG_ERRORS=true
+MFA_LOG_ERROR_STACKS=false
 ```
 
 Log shape:
@@ -36,6 +38,35 @@ Log shape:
   }
 }
 ```
+
+Server-side 5xx responses also emit a structured error event to stderr unless disabled with `MFA_LOG_ERRORS=false`:
+
+```json
+{
+  "at": "2026-06-02T00:00:01.250Z",
+  "level": "error",
+  "event": "http_error",
+  "request_id": "req-...",
+  "method": "POST",
+  "path": "/api/contributions",
+  "status": 500,
+  "duration_ms": 1250,
+  "public_error": "internal server error",
+  "error": {
+    "name": "Error",
+    "message": "database connection refused",
+    "code": "ECONNREFUSED"
+  },
+  "principal": {
+    "kind": "agent",
+    "id": "agent:finite-model-searcher",
+    "workspace_id": "workspace:default",
+    "auth_method": "agent-key"
+  }
+}
+```
+
+These events intentionally omit request bodies, headers, cookies, and bearer tokens. Set `MFA_LOG_ERROR_STACKS=true` only if the private beta log sink is access-controlled and stack traces are useful for debugging.
 
 ## Rate Limits
 

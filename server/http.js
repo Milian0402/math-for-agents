@@ -8,7 +8,7 @@ import { materializeArtifactContent, openArtifactFile } from "./artifact-storage
 import { secureCookiesEnabled } from "./config.js";
 import { checkDatabaseHealth } from "./db.js";
 import { makeId } from "./ids.js";
-import { applyRateLimit, createRequestContext, errorPayload, rateLimitHeaders } from "./ops.js";
+import { applyRateLimit, createRequestContext, errorPayload, logErrorEvent, rateLimitHeaders } from "./ops.js";
 import { formatProblemExport } from "./problem-export.js";
 import {
   authenticateAgent,
@@ -583,6 +583,7 @@ function sendFile(res, file) {
 function sendError(res, error, context = {}) {
   const statusCode = error.statusCode || statusForDatabaseError(error) || (error instanceof RequestValidationError ? 422 : 500);
   const payload = errorPayload(error, statusCode, context.request_id, messageForError(error, statusCode));
+  logErrorEvent(context, error, statusCode, payload.error);
   sendJson(res, statusCode, payload, rateLimitHeaders(error));
 }
 

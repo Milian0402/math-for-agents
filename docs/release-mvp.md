@@ -38,6 +38,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Verification workers can execute replay, CAS, and Lean-kernel jobs with a configured local or Docker runner.
 - Worker runs store stdout/stderr logs as artifacts and attach them before promoting machine-checked claims.
 - API responses include request IDs, JSON errors carry `request_id`, and server logs emit structured request records.
+- Server-side 5xx responses emit structured error events with request IDs and principal metadata for a private error log sink.
 - `/api/health` checks Postgres reachability, not just process liveness.
 - `npm run healthcheck` verifies readiness, OpenAPI discovery, and optional authenticated agent access for uptime monitors.
 - Production web and worker processes fail fast on missing or unsafe runtime config.

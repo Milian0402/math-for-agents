@@ -53,6 +53,47 @@ export function errorPayload(error, statusCode, requestId, message) {
   return payload;
 }
 
+export function logErrorEvent(context = {}, error = {}, statusCode = 500, publicMessage = "", options = {}) {
+  const env = options.env || process.env;
+  if (env.MFA_LOG_ERRORS === "false") return null;
+  if (statusCode < 500) return null;
+
+  const entry = buildErrorLogEntry(context, error, statusCode, publicMessage, {
+    now: options.now,
+    includeStack: env.MFA_LOG_ERROR_STACKS === "true"
+  });
+  const sink = options.sink || console.error;
+  sink(JSON.stringify(entry));
+  return entry;
+}
+
+export function buildErrorLogEntry(context = {}, error = {}, statusCode = 500, publicMessage = "", options = {}) {
+  const now = options.now ? new Date(options.now) : new Date();
+  const entry = {
+    at: now.toISOString(),
+    level: "error",
+    event: "http_error",
+    request_id: context.request_id || null,
+    method: context.method || null,
+    path: context.path || null,
+    status: statusCode,
+    duration_ms: durationMs(context.started_at, now.getTime()),
+    public_error: publicMessage || "internal server error",
+    error: {
+      name: error.name || "Error",
+      message: String(error.message || publicMessage || "internal server error").slice(0, 1000),
+      code: error.code || null
+    },
+    principal: publicPrincipal(context.principal)
+  };
+
+  if (options.includeStack && error.stack) {
+    entry.error.stack = String(error.stack).split("\n").slice(0, 20).join("\n");
+  }
+
+  return entry;
+}
+
 export function clientIp(req, env = process.env) {
   const forwarded = req.headers["x-forwarded-for"];
   if (env.MFA_TRUST_PROXY === "true" && typeof forwarded === "string" && forwarded.trim()) {
@@ -118,4 +159,20 @@ function logRequest(context, res) {
       : null
   };
   console.log(JSON.stringify(entry));
+}
+
+function durationMs(startedAt, nowMs) {
+  const started = Number(startedAt);
+  if (!Number.isFinite(started)) return null;
+  return Math.max(0, nowMs - started);
+}
+
+function publicPrincipal(principal) {
+  if (!principal) return null;
+  return {
+    kind: principal.kind,
+    id: principal.id,
+    workspace_id: principal.workspace_id,
+    auth_method: principal.auth_method
+  };
 }

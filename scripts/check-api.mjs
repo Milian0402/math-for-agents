@@ -14,7 +14,7 @@ import {
   sessionWriteOriginCheck
 } from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
-import { clientIp } from "../server/ops.js";
+import { buildErrorLogEntry, clientIp, logErrorEvent } from "../server/ops.js";
 import { formatProblemExport, problemExportFormats } from "../server/problem-export.js";
 import { assertAgentInput, assertAssignmentPatch, assertProblemInput } from "../server/validation.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
@@ -86,6 +86,59 @@ const forwardedRequest = {
 };
 assert.equal(clientIp(forwardedRequest, { MFA_TRUST_PROXY: "false" }), "198.51.100.4");
 assert.equal(clientIp(forwardedRequest, { MFA_TRUST_PROXY: "true" }), "203.0.113.8");
+
+const errorContext = {
+  request_id: "req-error-test",
+  started_at: Date.parse("2026-06-02T00:00:00.000Z"),
+  method: "POST",
+  path: "/api/contributions",
+  principal: {
+    kind: "agent",
+    id: "agent:finite-model-searcher",
+    workspace_id: "workspace:default",
+    auth_method: "agent-key",
+    secret: "must-not-log"
+  }
+};
+const internalError = Object.assign(new Error("database connection refused"), { code: "ECONNREFUSED" });
+const errorEntry = buildErrorLogEntry(errorContext, internalError, 500, "internal server error", {
+  now: "2026-06-02T00:00:01.250Z"
+});
+assert.deepEqual(errorEntry, {
+  at: "2026-06-02T00:00:01.250Z",
+  level: "error",
+  event: "http_error",
+  request_id: "req-error-test",
+  method: "POST",
+  path: "/api/contributions",
+  status: 500,
+  duration_ms: 1250,
+  public_error: "internal server error",
+  error: {
+    name: "Error",
+    message: "database connection refused",
+    code: "ECONNREFUSED"
+  },
+  principal: {
+    kind: "agent",
+    id: "agent:finite-model-searcher",
+    workspace_id: "workspace:default",
+    auth_method: "agent-key"
+  }
+});
+
+const emittedErrorLogs = [];
+assert.equal(
+  logErrorEvent(errorContext, internalError, 500, "internal server error", {
+    env: {},
+    now: "2026-06-02T00:00:01.250Z",
+    sink: (line) => emittedErrorLogs.push(JSON.parse(line))
+  }).request_id,
+  "req-error-test"
+);
+assert.equal(emittedErrorLogs.length, 1);
+assert.equal(logErrorEvent(errorContext, internalError, 500, "internal server error", { env: { MFA_LOG_ERRORS: "false" } }), null);
+assert.equal(logErrorEvent(errorContext, new Error("bad request"), 400, "bad request", { env: {} }), null);
 
 const staticRoot = path.join(os.tmpdir(), "math-for-agents-static-root");
 assert.equal(resolveStaticFilePath("/", staticRoot), path.join(staticRoot, "index.html"));
