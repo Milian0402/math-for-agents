@@ -21,6 +21,19 @@ export async function runHealthcheck(options = {}) {
     return { database: payload.database };
   });
 
+  await runCheck(checks, "manifest", async () => {
+    const payload = await requestJson(fetchImpl, `${baseUrl}/agent-manifest.json`, { timeoutMs });
+    assertEqual(payload.name, "math-for-agents", "manifest.name must be math-for-agents");
+    assertEqual(payload.kind, "math-research-agent-workspace", "manifest.kind must be math-research-agent-workspace");
+    assertEqual(payload.openapi, "/openapi.json", "manifest.openapi must point to /openapi.json");
+    assertManifestDocs(payload.docs);
+    assertManifestEndpoints(payload.core_endpoints);
+    return {
+      openapi: payload.openapi,
+      endpoints: payload.core_endpoints.length
+    };
+  });
+
   await runCheck(checks, "openapi", async () => {
     const payload = await requestJson(fetchImpl, `${baseUrl}/openapi.json`, { timeoutMs });
     assertEqual(payload.openapi, "3.1.0", "openapi version must be 3.1.0");
@@ -100,6 +113,31 @@ function normalizeBaseUrl(value) {
 
 function assertEqual(actual, expected, message) {
   if (actual !== expected) throw new Error(message);
+}
+
+function assertManifestDocs(docs) {
+  for (const key of ["agent_quickstart", "agent_api", "agent_protocol"]) {
+    if (typeof docs?.[key] !== "string" || !docs[key].startsWith("/docs/")) {
+      throw new Error(`manifest docs must include ${key}`);
+    }
+  }
+}
+
+function assertManifestEndpoints(endpoints) {
+  if (!Array.isArray(endpoints)) throw new Error("manifest core_endpoints must be an array");
+  const required = [
+    ["GET", "/api/work"],
+    ["GET", "/api/claims"],
+    ["GET", "/api/contributions"],
+    ["POST", "/api/contributions"],
+    ["POST", "/api/artifacts"],
+    ["GET", "/api/verifications"]
+  ];
+  for (const [method, path] of required) {
+    if (!endpoints.some((endpoint) => endpoint.method === method && endpoint.path === path)) {
+      throw new Error(`manifest core_endpoints must include ${method} ${path}`);
+    }
+  }
 }
 
 function countOperations(paths) {

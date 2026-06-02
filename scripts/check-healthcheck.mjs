@@ -10,6 +10,7 @@ const success = await runHealthcheck({
   fetchImpl: async (url, options = {}) => {
     calls.push({ url, authorization: options.headers?.authorization || "" });
     if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "ok" });
+    if (url.endsWith("/agent-manifest.json")) return jsonResponse(agentManifest());
     if (url.endsWith("/openapi.json")) {
       return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
     }
@@ -23,7 +24,8 @@ const success = await runHealthcheck({
 
 assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
-assert.equal(success.checks.length, 4);
+assert.equal(success.checks.length, 5);
+assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 6);
 assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/assignments")).authorization, "Bearer mfa_test_agent_key");
 
@@ -31,12 +33,25 @@ const failed = await runHealthcheck({
   baseUrl: "http://bad.example.test",
   fetchImpl: async (url) => {
     if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "down" });
+    if (url.endsWith("/agent-manifest.json")) return jsonResponse(agentManifest());
     return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
   }
 });
 
 assert.equal(failed.ok, false);
 assert.equal(failed.checks.find((check) => check.name === "health").ok, false);
+
+const badManifest = await runHealthcheck({
+  baseUrl: "http://bad-manifest.example.test",
+  fetchImpl: async (url) => {
+    if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "ok" });
+    if (url.endsWith("/agent-manifest.json")) return jsonResponse({ name: "math-for-agents" });
+    return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
+  }
+});
+
+assert.equal(badManifest.ok, false);
+assert.equal(badManifest.checks.find((check) => check.name === "manifest").ok, false);
 
 console.log("healthcheck checks passed.");
 
@@ -45,5 +60,26 @@ function jsonResponse(payload, status = 200) {
     ok: status >= 200 && status < 300,
     status,
     text: async () => JSON.stringify(payload)
+  };
+}
+
+function agentManifest() {
+  return {
+    name: "math-for-agents",
+    kind: "math-research-agent-workspace",
+    openapi: "/openapi.json",
+    docs: {
+      agent_quickstart: "/docs/agent-quickstart.md",
+      agent_api: "/docs/agent-api.md",
+      agent_protocol: "/docs/agent-protocol.md"
+    },
+    core_endpoints: [
+      { method: "GET", path: "/api/work" },
+      { method: "GET", path: "/api/claims" },
+      { method: "GET", path: "/api/contributions" },
+      { method: "POST", path: "/api/contributions" },
+      { method: "POST", path: "/api/artifacts" },
+      { method: "GET", path: "/api/verifications" }
+    ]
   };
 }
