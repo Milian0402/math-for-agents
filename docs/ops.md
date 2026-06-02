@@ -49,7 +49,7 @@ Limits are in-memory per Node process and keyed by client IP. They are enough fo
 
 ## Backups
 
-Backups include a custom-format Postgres dump plus an artifact archive:
+Backups include a custom-format Postgres dump, an artifact archive, a manifest, and SHA-256 checksum sidecars:
 
 ```bash
 set -a; source .env; set +a
@@ -62,6 +62,12 @@ The command prints the backup directory, for example:
 backups/20260602T000000Z
 ```
 
+Verify a backup before trusting or moving it:
+
+```bash
+npm run backup:verify -- backups/20260602T000000Z
+```
+
 Restore is explicit:
 
 ```bash
@@ -69,7 +75,15 @@ set -a; source .env; set +a
 npm run restore -- backups/20260602T000000Z
 ```
 
-For a hosted private beta, run `npm run backup` on a schedule and copy the resulting directory to durable off-host storage. The app does not contact a storage provider by itself.
+`restore` verifies the checksum sidecars before touching the database or artifact directory.
+
+For a hosted private beta, run `npm run backup` on a schedule and copy the resulting directory to durable off-host storage. If you mount that storage on the VM, set:
+
+```txt
+BACKUP_REMOTE_DIR=/mnt/math-for-agents-backups
+```
+
+The backup script will copy the completed backup directory there after writing the manifest and checksums. The app does not contact a storage provider by itself.
 
 ## Single-VM Deploy
 

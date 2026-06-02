@@ -24,7 +24,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - `/api/health` checks Postgres reachability, not just process liveness.
 - Production web and worker processes fail fast on missing or unsafe runtime config.
 - App-level rate limits guard login, write, and read API traffic.
-- Backup and restore scripts cover Postgres plus artifact storage.
+- Backup and restore scripts cover Postgres plus artifact storage, checksum verification, and optional mounted off-host copies.
 - A production Docker Compose target exists for a single-VM private beta with web, worker, Postgres, and persistent volumes.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - A production Dockerfile runs the app as one Node container.
@@ -68,6 +68,7 @@ npm run check
 DATABASE_URL=postgres://math_for_agents:math_for_agents@127.0.0.1:55432/math_for_agents npm run smoke:release
 MFA_WORKER_RUNNER=local MFA_WORKER_ALLOW_LOCAL=true npm run worker:once
 npm run backup
+npm run backup:verify -- backups/20260602T000000Z
 ```
 
 See [deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md) for environment variables and first-deploy steps.

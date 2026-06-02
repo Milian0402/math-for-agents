@@ -15,6 +15,7 @@ backup_path="$1"
 artifact_dir="${ARTIFACT_STORAGE_DIR:-artifacts}"
 database_dump="${backup_path}/database.dump"
 artifact_archive="${backup_path}/artifacts.tar.gz"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ ! -f "$database_dump" ]]; then
   echo "missing ${database_dump}" >&2
@@ -25,6 +26,8 @@ if [[ ! -f "$artifact_archive" ]]; then
   echo "missing ${artifact_archive}" >&2
   exit 1
 fi
+
+"${script_dir}/verify-backup.sh" "$backup_path"
 
 if command -v pg_restore >/dev/null 2>&1; then
   pg_restore --clean --if-exists --no-owner --no-acl --dbname="$DATABASE_URL" "$database_dump"

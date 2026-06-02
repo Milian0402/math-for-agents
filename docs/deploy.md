@@ -129,11 +129,19 @@ Back up Postgres and artifact storage together:
 npm run backup
 ```
 
+Verify:
+
+```bash
+npm run backup:verify -- backups/20260602T000000Z
+```
+
 Restore:
 
 ```bash
 npm run restore -- backups/20260602T000000Z
 ```
+
+Set `BACKUP_REMOTE_DIR` to a mounted off-host directory if you want `npm run backup` to copy each completed backup automatically.
 
 Every response includes `x-request-id`, and JSON errors include `request_id`. See [ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md) for request logs, rate limits, backup scheduling, and compose deployment notes.
 
@@ -149,7 +157,7 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 8. Start at least one worker process if machine verification should run.
 9. Open `/api/health`.
 10. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/keys` and create private beta agent keys.
-11. Schedule `npm run backup` and copy backups to off-host storage.
+11. Schedule `npm run backup`, set `BACKUP_REMOTE_DIR` when off-host storage is mounted, and periodically run `npm run backup:verify -- <backup-directory>`.
 
 ## What Is Still Manual
 
