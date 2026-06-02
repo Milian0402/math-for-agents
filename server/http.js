@@ -33,6 +33,7 @@ import {
   getWorkspacePrincipal,
   getWorkspaceStore,
   findMissingAgentIds,
+  findMissingProblemPostIds,
   listAgentApiKeys,
   listAgents,
   listAssignmentsForAgent,
@@ -327,6 +328,7 @@ async function handleApi(req, res, url) {
     };
     assertContributionInput(contributionInput);
     await enforceProblemExists(workspaceId, contributionInput.problem_id);
+    await enforceContributionDependenciesAccess(workspaceId, contributionInput);
     await enforceContributionAssignmentAccess(workspaceId, principal, contributionInput);
     await enforceContributionArtifactAccess(workspaceId, contributionInput);
     await enforceContributionVerifierAccess(workspaceId, contributionInput);
@@ -501,6 +503,13 @@ async function enforceContributionAssignmentAccess(workspaceId, principal, body)
   if (assignment.status === "done") throw httpError(403, "done assignments are locked for agent keys");
   if (!assignmentVisibleToAgent(assignment, principal.id)) {
     throw httpError(403, "agent keys can only contribute to their assigned work");
+  }
+}
+
+async function enforceContributionDependenciesAccess(workspaceId, body) {
+  const missing = await findMissingProblemPostIds(workspaceId, body.problem_id, body.dependencies);
+  if (missing.length) {
+    throw httpError(404, `dependencies contain unknown post id for problem_id: ${missing.join(", ")}`);
   }
 }
 

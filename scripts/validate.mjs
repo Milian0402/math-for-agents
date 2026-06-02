@@ -94,6 +94,16 @@ for (const post of seed.posts) {
   inEnum(post.evidence_level, EVIDENCE_LEVELS, `${where}.evidence_level`);
   inEnum(post.status, POST_STATUSES, `${where}.status`);
   check(problemIds.has(post.problem_id), `${where}: unknown problem_id ${post.problem_id}`);
+  for (const dependency of post.dependencies ?? []) {
+    const dependencyPost = seed.posts.find((candidate) => candidate.id === dependency);
+    check(Boolean(dependencyPost), `${where}: unknown dependency ${dependency}`);
+    if (dependencyPost) {
+      check(
+        dependencyPost.problem_id === post.problem_id,
+        `${where}: dependency ${dependency} belongs to problem_id ${dependencyPost.problem_id}, not ${post.problem_id}`
+      );
+    }
+  }
   for (const artifact of post.artifacts ?? []) {
     check(artifactIds.has(artifact), `${where}: unknown artifact ${artifact}`);
   }

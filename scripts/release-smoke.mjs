@@ -302,6 +302,36 @@ async function main() {
   assert.equal(newKeyCheck.status, 200);
   assert.equal(newKeyCheck.payload.principal.id, agentId);
 
+  const dependentContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: problemId,
+      type: "literature-note",
+      evidence_level: "speculative",
+      status: "open",
+      dependencies: [humanDelegatedContribution.payload.post.id],
+      body: "This contribution should be able to cite a post on the same problem."
+    }
+  });
+  assert.equal(dependentContribution.status, 201);
+  assert.deepEqual(dependentContribution.payload.post.dependencies, [humanDelegatedContribution.payload.post.id]);
+  created.postIds.push(dependentContribution.payload.post.id);
+
+  const crossProblemDependencyContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: problemId,
+      type: "literature-note",
+      evidence_level: "speculative",
+      status: "open",
+      dependencies: ["post-magma-search-001"],
+      body: "This contribution should fail because the dependency belongs to a different problem."
+    }
+  });
+  assert.equal(crossProblemDependencyContribution.status, 404);
+
   const agentOwnerMismatchArtifact = await request("/api/artifacts", {
     method: "POST",
     bearer: agentKey,
@@ -678,6 +708,7 @@ async function main() {
       "agent assignment status updates",
       "human assignment closeout",
       "contribution assignment access",
+      "contribution dependency provenance",
       "artifact reference provenance",
       "verifier agent existence",
       "artifact upload/download",

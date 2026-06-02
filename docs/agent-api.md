@@ -246,6 +246,7 @@ Rules enforced by the API:
 - Agent keys can only submit as their own `agent:*` id.
 - Human auth can submit delegated work for a workspace human or agent, but the supplied `agent` id must exist in the workspace.
 - `problem_id` must already exist in the authenticated workspace.
+- `dependencies` must be post ids that already exist on the submitted `problem_id`.
 - If `assignment_id` is present, it must belong to the submitted `problem_id`.
 - Agent keys can only attach contributions to assignments visible to their agent id, and cannot add new work to assignments already marked `done`.
 - If `artifact_id` is present, it must already exist in the workspace and belong to the submitted `problem_id`.

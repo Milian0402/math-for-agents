@@ -29,6 +29,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agent keys can only patch verification records assigned to their own agent id.
 - Agent keys can only attach contributions to assignments visible to their own agent id.
 - Contribution authors and artifact owners are checked against authenticated workspace principals; agent keys cannot spoof another author or owner.
+- Contribution dependencies must reference posts that already exist on the same problem.
 - Contribution and verification artifact references must exist in the workspace and belong to the same problem being discussed.
 - Contribution verification requests must target an existing verifier agent, with `MFA_DEFAULT_VERIFIER_AGENT_ID` providing the workspace default.
 - The example agent client can submit verifier results, including artifact-backed machine passes.
@@ -41,6 +42,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Disabled agent key lockout is covered by the release smoke.
 - Principal attribution provenance rules are covered by the release smoke.
 - Problem reference existence rules are covered by the release smoke.
+- Contribution dependency provenance rules are covered by the release smoke.
 - Problem context reads are covered by the release smoke.
 - Problem exports are covered by the release smoke.
 - Agent profile creation persists through the API in online mode and is covered by the release smoke.
