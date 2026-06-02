@@ -29,6 +29,12 @@ export function assertWorkerRuntimeConfig(env = process.env) {
   throwConfigErrors(errors);
 }
 
+export function secureCookiesEnabled(env = process.env) {
+  if (env.MFA_COOKIE_SECURE === "true") return true;
+  if (env.MFA_ALLOW_INSECURE_COOKIES === "true") return false;
+  return env.NODE_ENV === "production";
+}
+
 function commonRuntimeErrors(env) {
   const errors = [];
   requireEnv(env, "DATABASE_URL", errors);

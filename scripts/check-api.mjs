@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { materializeArtifactContent, openArtifactFile } from "../server/artifact-storage.js";
 import { generateSessionToken, hashPassword, verifyPassword } from "../server/auth.js";
-import { assertWebRuntimeConfig, assertWorkerRuntimeConfig } from "../server/config.js";
+import { assertWebRuntimeConfig, assertWorkerRuntimeConfig, secureCookiesEnabled } from "../server/config.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
@@ -66,6 +66,10 @@ assert.throws(
     }),
   /must not be disabled/
 );
+
+assert.equal(secureCookiesEnabled({ NODE_ENV: "production", MFA_COOKIE_SECURE: "true" }), true);
+assert.equal(secureCookiesEnabled({ NODE_ENV: "production", MFA_ALLOW_INSECURE_COOKIES: "true" }), false);
+assert.equal(secureCookiesEnabled({ NODE_ENV: "development" }), false);
 
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },

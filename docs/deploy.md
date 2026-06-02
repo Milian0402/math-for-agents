@@ -38,8 +38,7 @@ MFA_RATE_LIMIT_READ_MAX=600
 ```
 
 Use `DATABASE_SSL=true` when your hosted Postgres provider requires TLS.
-Use `MFA_COOKIE_SECURE=true` when the app is served over HTTPS.
-Use `MFA_ALLOW_INSECURE_COOKIES=true` only for a trusted HTTP-only local or private deploy.
+Use `MFA_COOKIE_SECURE=true` when the app is served over HTTPS. Use `MFA_ALLOW_INSECURE_COOKIES=true` only for a trusted HTTP-only local or private deploy; that also tells the cookie writer not to add the `Secure` flag.
 
 ## Database Setup
 
@@ -89,7 +88,7 @@ Health:
 curl http://127.0.0.1:4173/api/health
 ```
 
-The health endpoint queries Postgres and returns `database: "ok"` only when the API can reach the database. In `NODE_ENV=production`, the web and worker processes also refuse to boot with dev defaults, missing database/artifact settings, insecure cookies, or a disabled worker runner.
+The health endpoint queries Postgres and returns `database: "ok"` only when the API can reach the database. In `NODE_ENV=production`, the web and worker processes also refuse to boot with dev defaults, missing database/artifact settings, unsafe cookie settings, or a disabled worker runner.
 
 ## Single-VM Compose Deploy
 

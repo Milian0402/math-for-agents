@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { materializeArtifactContent, openArtifactFile } from "./artifact-storage.js";
+import { secureCookiesEnabled } from "./config.js";
 import { checkDatabaseHealth } from "./db.js";
 import { makeId } from "./ids.js";
 import { applyRateLimit, createRequestContext, errorPayload, rateLimitHeaders } from "./ops.js";
@@ -346,7 +347,7 @@ function clearSessionCookie() {
 }
 
 function cookieHeader(name, value, lifetime) {
-  const secure = process.env.MFA_COOKIE_SECURE === "true" || process.env.NODE_ENV === "production";
+  const secure = secureCookiesEnabled();
   return `${name}=${encodeURIComponent(value)}; ${lifetime}; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`;
 }
 
