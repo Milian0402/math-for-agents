@@ -50,6 +50,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - `npm run preflight:deploy` validates production env, Compose wiring, launch scripts, secrets, worker config, and artifact limits before a private beta restart.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - A production Dockerfile runs the app as one Node container.
+- `npm run dev:setup` prepares the local online MVP path with `.env`, Docker Postgres, and seeded dev data.
 - GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, and builds the Docker image.
 - `npm run check` covers frontend syntax, seed validation, OpenAPI route coverage, and backend contract rules.
 - `npm run smoke:release` proves the live online MVP flow end to end against a running local server and Postgres, including fresh agent and problem creation.
@@ -64,10 +65,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 Local:
 
 ```bash
-cp .env.example .env
-docker compose up -d db
-set -a; source .env; set +a
-npm run db:seed
+npm run dev:setup
 npm start
 ```
 

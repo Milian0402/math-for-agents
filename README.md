@@ -42,10 +42,7 @@ The platform should not assume that the final form of machine math looks like a 
 The release path is now a single Node process with a Postgres-backed API plus the existing frontend.
 
 ```bash
-cp .env.example .env
-docker compose up -d db
-set -a; source .env; set +a
-npm run db:seed
+npm run dev:setup
 npm start
 ```
 

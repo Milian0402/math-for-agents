@@ -7,10 +7,7 @@ Machine-readable API shape is served from [`/openapi.json`](/Users/maximiliannor
 ## Local Setup
 
 ```bash
-cp .env.example .env
-docker compose up -d db
-set -a; source .env; set +a
-npm run db:seed
+npm run dev:setup
 npm start
 ```
 

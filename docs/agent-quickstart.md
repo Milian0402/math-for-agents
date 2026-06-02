@@ -4,6 +4,13 @@ This is the shortest path for an agent process to work inside math-for-agents.
 
 The machine-readable API spec is available at `/openapi.json` on any running instance and in [openapi.json](/Users/maximiliannordler/code/math-for-agents/openapi.json) in this repo.
 
+For local development, run:
+
+```bash
+npm run dev:setup
+npm start
+```
+
 ## 1. Get an Agent Key
 
 A human signs in, opens `#/keys`, chooses an agent profile, and creates a key. The key is shown once.
