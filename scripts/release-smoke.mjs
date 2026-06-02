@@ -54,6 +54,7 @@ async function main() {
   });
   assert.equal(login.status, 200);
   assert.equal(login.payload.principal.kind, "human");
+  const humanId = login.payload.principal.id;
   assert.match(cookie, /^mfa_session=/);
 
   const crossOriginWrite = await request("/api/problems", {
@@ -89,6 +90,37 @@ async function main() {
   problemId = createdProblem.payload.problem.id;
   created.problemIds.push(problemId);
 
+  const humanArtifactUpload = await request("/api/artifacts", {
+    method: "POST",
+    body: {
+      problem_id: problemId,
+      kind: "human-note",
+      title: `${smokeRunId} human artifact`,
+      summary: "Release smoke human-authored artifact content.",
+      file_name: `${smokeRunId}-human.txt`,
+      content_type: "text/plain",
+      content_text: "human artifact\n"
+    }
+  });
+  assert.equal(humanArtifactUpload.status, 201);
+  assert.equal(humanArtifactUpload.payload.artifact.owner, humanId);
+  created.artifactIds.push(humanArtifactUpload.payload.artifact.id);
+
+  const unknownOwnerArtifact = await request("/api/artifacts", {
+    method: "POST",
+    body: {
+      problem_id: problemId,
+      owner: `agent:missing-owner-${smokeRunId}`,
+      kind: "human-note",
+      title: `${smokeRunId} unknown owner artifact`,
+      summary: "This artifact should fail because the owner is not a workspace principal.",
+      file_name: `${smokeRunId}-unknown-owner.txt`,
+      content_type: "text/plain",
+      content_text: "unknown owner artifact\n"
+    }
+  });
+  assert.equal(unknownOwnerArtifact.status, 404);
+
   const createdAgent = await request("/api/agents", {
     method: "POST",
     body: {
@@ -110,6 +142,34 @@ async function main() {
   const listedAgents = await request("/api/agents");
   assert.equal(listedAgents.status, 200);
   assert.ok(listedAgents.payload.agents.some((agent) => agent.id === agentId));
+
+  const humanDelegatedContribution = await request("/api/contributions", {
+    method: "POST",
+    body: {
+      agent: agentId,
+      problem_id: problemId,
+      type: "literature-note",
+      evidence_level: "speculative",
+      status: "open",
+      body: "Human-authenticated smoke ingest on behalf of a real workspace agent."
+    }
+  });
+  assert.equal(humanDelegatedContribution.status, 201);
+  assert.equal(humanDelegatedContribution.payload.post.agent, agentId);
+  created.postIds.push(humanDelegatedContribution.payload.post.id);
+
+  const unknownAuthorContribution = await request("/api/contributions", {
+    method: "POST",
+    body: {
+      agent: `agent:missing-author-${smokeRunId}`,
+      problem_id: problemId,
+      type: "literature-note",
+      evidence_level: "speculative",
+      status: "open",
+      body: "This contribution should fail because the author is not a workspace principal."
+    }
+  });
+  assert.equal(unknownAuthorContribution.status, 404);
 
   const disabledAgent = await request("/api/agents", {
     method: "POST",
@@ -241,6 +301,36 @@ async function main() {
   });
   assert.equal(newKeyCheck.status, 200);
   assert.equal(newKeyCheck.payload.principal.id, agentId);
+
+  const agentOwnerMismatchArtifact = await request("/api/artifacts", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: problemId,
+      owner: seedAgentId,
+      kind: "smoke-log",
+      title: `${smokeRunId} agent owner mismatch artifact`,
+      summary: "Agent auth should not be able to upload artifacts as a different agent.",
+      file_name: `${smokeRunId}-owner-mismatch.txt`,
+      content_type: "text/plain",
+      content_text: "owner mismatch artifact\n"
+    }
+  });
+  assert.equal(agentOwnerMismatchArtifact.status, 403);
+
+  const agentAuthorMismatchContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      agent: seedAgentId,
+      problem_id: problemId,
+      type: "attempt",
+      evidence_level: "speculative",
+      status: "needs-review",
+      body: "Agent auth should not be able to submit as a different agent."
+    }
+  });
+  assert.equal(agentAuthorMismatchContribution.status, 403);
 
   await setAgentStatus(agentId, "disabled");
 
@@ -580,6 +670,7 @@ async function main() {
       "agent profile creation",
       "agent key create/rotate/revoke",
       "disabled agent key lockout",
+      "principal attribution provenance",
       "assignment creation",
       "problem reference existence",
       "assignment agent existence",

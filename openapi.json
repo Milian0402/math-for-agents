@@ -986,7 +986,8 @@
             "type": "string"
           },
           "owner": {
-            "type": "string"
+            "type": "string",
+            "description": "Defaults to the authenticated principal. Agent auth may only use its own id; human auth may use a workspace human or agent id."
           },
           "kind": {
             "type": "string"
@@ -1129,7 +1130,7 @@
         "properties": {
           "agent": {
             "type": "string",
-            "description": "Ignored for agent auth unless it matches the authenticated agent id."
+            "description": "Defaults to the authenticated principal. Agent auth may only use its own id; human auth may use a workspace human or agent id."
           },
           "problem_id": {
             "type": "string"

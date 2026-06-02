@@ -30,6 +30,7 @@ import {
   getProblemContext,
   getVerification,
   getWorkspace,
+  getWorkspacePrincipal,
   getWorkspaceStore,
   findMissingAgentIds,
   listAgentApiKeys,
@@ -275,12 +276,16 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/artifacts") {
     const body = await readJson(req);
-    if (principal.kind === "agent" && body.owner && body.owner !== principal.id) {
-      throw httpError(403, "agent keys can only create artifacts for their own agent id");
-    }
+    const owner = await resolvePrincipalAttribution(
+      workspaceId,
+      principal,
+      body,
+      "owner",
+      "agent keys can only create artifacts for their own agent id"
+    );
     const artifactInput = {
       ...body,
-      owner: principal.kind === "agent" ? principal.id : body.owner
+      owner
     };
     assertArtifactInput(artifactInput);
     await enforceProblemExists(workspaceId, artifactInput.problem_id);
@@ -308,12 +313,16 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/contributions") {
     const body = await readJson(req);
-    if (principal.kind === "agent" && body.agent && body.agent !== principal.id) {
-      throw httpError(403, "agent keys can only submit contributions as their own agent id");
-    }
+    const author = await resolvePrincipalAttribution(
+      workspaceId,
+      principal,
+      body,
+      "agent",
+      "agent keys can only submit contributions as their own agent id"
+    );
     const contributionInput = {
       ...body,
-      agent: principal.kind === "agent" ? principal.id : body.agent,
+      agent: author,
       verifier: body.verifier || defaultVerifierAgentId()
     };
     assertContributionInput(contributionInput);
@@ -537,6 +546,27 @@ async function enforceAgentCanUseKeys(workspaceId, agentId) {
   const agent = await getAgent(workspaceId, agentId);
   if (!agent) throw httpError(404, "agent not found");
   if (agent.status === "disabled") throw httpError(403, "disabled agents cannot use API keys");
+}
+
+async function resolvePrincipalAttribution(workspaceId, principal, body, fieldName, agentMismatchMessage) {
+  const requestedId = optionalIdentityField(body, fieldName) || principal.id;
+  if (principal.kind === "agent" && requestedId !== principal.id) {
+    throw httpError(403, agentMismatchMessage);
+  }
+
+  const workspacePrincipal = await getWorkspacePrincipal(workspaceId, requestedId);
+  if (!workspacePrincipal) throw httpError(404, `${fieldName} does not match a workspace human or agent`);
+  return requestedId;
+}
+
+function optionalIdentityField(body, fieldName) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return "";
+  const value = body[fieldName];
+  if (value === undefined) return "";
+  if (typeof value !== "string" || !value.trim()) {
+    throw new RequestValidationError([`${fieldName} must be a non-empty string`]);
+  }
+  return value.trim();
 }
 
 function defaultVerifierAgentId(env = process.env) {

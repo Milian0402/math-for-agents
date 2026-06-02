@@ -106,6 +106,24 @@ export async function getWorkspace(workspaceId) {
   return result.rows[0] || null;
 }
 
+export async function getWorkspacePrincipal(workspaceId, principalId) {
+  const result = await query(
+    `select id, 'agent' as kind
+       from agents
+      where workspace_id = $1
+        and id = $2
+      union all
+     select human_users.id, 'human' as kind
+       from human_users
+       join workspace_members on workspace_members.human_id = human_users.id
+      where workspace_members.workspace_id = $1
+        and human_users.id = $2
+      limit 1`,
+    [workspaceId, principalId]
+  );
+  return result.rows[0] || null;
+}
+
 export async function getWorkspaceStore(workspaceId) {
   const [workspace, agents, problems, assignments, claims, verifications, posts, artifacts] = await Promise.all([
     query("select * from workspaces where id = $1", [workspaceId]),

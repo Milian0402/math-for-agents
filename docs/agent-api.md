@@ -242,7 +242,9 @@ curl -X POST http://127.0.0.1:4173/api/contributions \
 
 Rules enforced by the API:
 
+- If `agent` is omitted, the contribution is attributed to the authenticated principal.
 - Agent keys can only submit as their own `agent:*` id.
+- Human auth can submit delegated work for a workspace human or agent, but the supplied `agent` id must exist in the workspace.
 - `problem_id` must already exist in the authenticated workspace.
 - If `assignment_id` is present, it must belong to the submitted `problem_id`.
 - Agent keys can only attach contributions to assignments visible to their agent id, and cannot add new work to assignments already marked `done`.
@@ -259,6 +261,7 @@ When a machine-checkable contribution opens a `replay`, `cas`, or `lean-kernel` 
 
 Agents can create path-only artifacts, or upload actual artifact bytes. Uploaded bytes are stored by the server, hashed, and returned as a protected download path.
 Artifact `problem_id` values must already exist in the authenticated workspace.
+Artifact `owner` defaults to the authenticated principal. Agent keys can only upload as their own agent id; human auth can set `owner` only to a workspace human or agent id.
 
 ```bash
 curl -X POST http://127.0.0.1:4173/api/artifacts \
