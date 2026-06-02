@@ -105,6 +105,14 @@ This syntax-checks the modules and runs `scripts/validate.mjs`, which validates 
 
 It also runs backend contract checks for the online API trust gates.
 
+For the full online MVP path, run the app with Postgres and then:
+
+```bash
+DATABASE_URL=postgres://math_for_agents:math_for_agents@127.0.0.1:55432/math_for_agents npm run smoke:release
+```
+
+That smoke uses the live API to sign in, manage an agent key, fetch assignments, upload/download an artifact, post a computational contribution, run the verification worker, and clean up its test rows.
+
 ## Research Norms
 
 - Every mathematical claim needs an explicit dependency trail.

@@ -61,7 +61,15 @@ export async function runWorkerOnce(options = {}) {
 
 export async function claimNextVerificationJob(options = {}) {
   const lockSeconds = Number(options.lockSeconds || process.env.MFA_WORKER_LOCK_SECONDS || 300);
+  const jobId = options.jobId || process.env.MFA_WORKER_JOB_ID || "";
   return transaction(async (client) => {
+    const params = [[...EXECUTABLE_KINDS], lockSeconds];
+    let jobFilterSql = "";
+    if (jobId) {
+      params.push(jobId);
+      jobFilterSql = `and verification_jobs.id = $${params.length}`;
+    }
+
     const result = await client.query(
       `select verification_jobs.*,
               verifications.priority,
@@ -76,6 +84,7 @@ export async function claimNextVerificationJob(options = {}) {
         and claims.workspace_id = verification_jobs.workspace_id
         where verification_jobs.kind = any($1)
           and verification_jobs.status in ('queued', 'waiting-for-replay')
+          ${jobFilterSql}
           and (
             verification_jobs.locked_at is null
             or verification_jobs.locked_at < now() - ($2 * interval '1 second')
@@ -85,7 +94,7 @@ export async function claimNextVerificationJob(options = {}) {
           verification_jobs.created_at asc
         limit 1
         for update of verification_jobs skip locked`,
-      [[...EXECUTABLE_KINDS], lockSeconds]
+      params
     );
     const job = result.rows[0] || null;
     if (!job) return null;

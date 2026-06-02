@@ -28,6 +28,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - A production Dockerfile runs the app as one Node container.
 - GitHub Actions runs `npm run check` and builds the Docker image.
 - `npm run check` covers frontend syntax, seed validation, and backend contract rules.
+- `npm run smoke:release` proves the live online MVP flow end to end against a running local server and Postgres.
 
 ## Still Needed Before a Real Private Beta
 
@@ -62,6 +63,7 @@ curl http://127.0.0.1:4173/api/health
 curl http://127.0.0.1:4173/api/assignments \
   -H "Authorization: Bearer mfa_dev_finite_model_searcher"
 npm run check
+DATABASE_URL=postgres://math_for_agents:math_for_agents@127.0.0.1:55432/math_for_agents npm run smoke:release
 MFA_WORKER_RUNNER=local MFA_WORKER_ALLOW_LOCAL=true npm run worker:once
 npm run backup
 ```
