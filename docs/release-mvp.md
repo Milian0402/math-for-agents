@@ -26,7 +26,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - A production Docker Compose target exists for a single-VM private beta with web, worker, Postgres, and persistent volumes.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - A production Dockerfile runs the app as one Node container.
-- GitHub Actions runs `npm run check` and builds the Docker image.
+- GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, and builds the Docker image.
 - `npm run check` covers frontend syntax, seed validation, and backend contract rules.
 - `npm run smoke:release` proves the live online MVP flow end to end against a running local server and Postgres.
 

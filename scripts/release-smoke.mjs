@@ -260,6 +260,10 @@ async function cleanup() {
 
 main()
   .finally(async () => {
+    await logout().catch((error) => {
+      console.error("release smoke logout failed", error);
+      process.exitCode = 1;
+    });
     await cleanup().catch((error) => {
       console.error("release smoke cleanup failed", error);
       process.exitCode = 1;
@@ -270,3 +274,11 @@ main()
     console.error(error);
     process.exitCode = 1;
   });
+
+async function logout() {
+  if (!cookie) return;
+  await request("/api/auth/logout", {
+    method: "POST"
+  });
+  cookie = "";
+}
