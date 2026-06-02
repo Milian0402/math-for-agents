@@ -27,6 +27,7 @@ async function main() {
     auth: false
   });
   assert.equal(health.status, 200);
+  assert.equal(health.payload.database, "ok");
   assert.equal(health.headers.get("x-request-id"), `${smokeRunId}-health`);
 
   const missing = await request("/api/store", {

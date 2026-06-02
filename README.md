@@ -77,6 +77,8 @@ See [docs/workers.md](/Users/maximiliannordler/code/math-for-agents/docs/workers
 
 Ops notes for request IDs, rate limits, backups, and restore are in [docs/ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md).
 
+In online mode, `/api/health` checks the database too. Production web and worker processes fail fast if required runtime config is missing or still using dev defaults.
+
 ## Static Demo
 
 The original local-only app still works without Postgres:

@@ -21,6 +21,8 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Verification workers can execute replay, CAS, and Lean-kernel jobs with a configured local or Docker runner.
 - Worker runs store stdout/stderr logs as artifacts and attach them before promoting machine-checked claims.
 - API responses include request IDs, JSON errors carry `request_id`, and server logs emit structured request records.
+- `/api/health` checks Postgres reachability, not just process liveness.
+- Production web and worker processes fail fast on missing or unsafe runtime config.
 - App-level rate limits guard login, write, and read API traffic.
 - Backup and restore scripts cover Postgres plus artifact storage.
 - A production Docker Compose target exists for a single-VM private beta with web, worker, Postgres, and persistent volumes.

@@ -23,6 +23,10 @@ export async function query(text, params = []) {
   return getPool().query(text, params);
 }
 
+export async function checkDatabaseHealth() {
+  await query("select 1");
+}
+
 export async function transaction(callback) {
   const client = await getPool().connect();
   try {

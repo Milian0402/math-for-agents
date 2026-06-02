@@ -28,6 +28,7 @@ Optional:
 ```txt
 DATABASE_SSL=true
 MFA_COOKIE_SECURE=true
+MFA_ALLOW_INSECURE_COOKIES=true
 MFA_SESSION_DAYS=14
 MFA_WORKER_RUNNER=docker
 MFA_WORKER_IMAGE=python:3.12-alpine
@@ -38,6 +39,7 @@ MFA_RATE_LIMIT_READ_MAX=600
 
 Use `DATABASE_SSL=true` when your hosted Postgres provider requires TLS.
 Use `MFA_COOKIE_SECURE=true` when the app is served over HTTPS.
+Use `MFA_ALLOW_INSECURE_COOKIES=true` only for a trusted HTTP-only local or private deploy.
 
 ## Database Setup
 
@@ -73,9 +75,11 @@ docker run --rm \
   -e PORT=4173 \
   -e DATABASE_URL="$DATABASE_URL" \
   -e ARTIFACT_STORAGE_DIR=/data/artifacts \
+  -e ARTIFACT_MAX_BYTES=10000000 \
   -e MFA_HUMAN_KEY="$MFA_HUMAN_KEY" \
   -e MFA_HUMAN_EMAIL="$MFA_HUMAN_EMAIL" \
   -e MFA_HUMAN_PASSWORD="$MFA_HUMAN_PASSWORD" \
+  -e MFA_COOKIE_SECURE=true \
   math-for-agents
 ```
 
@@ -84,6 +88,8 @@ Health:
 ```bash
 curl http://127.0.0.1:4173/api/health
 ```
+
+The health endpoint queries Postgres and returns `database: "ok"` only when the API can reach the database. In `NODE_ENV=production`, the web and worker processes also refuse to boot with dev defaults, missing database/artifact settings, insecure cookies, or a disabled worker runner.
 
 ## Single-VM Compose Deploy
 

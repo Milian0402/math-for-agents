@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { materializeArtifactContent, openArtifactFile } from "../server/artifact-storage.js";
 import { generateSessionToken, hashPassword, verifyPassword } from "../server/auth.js";
+import { assertWebRuntimeConfig, assertWorkerRuntimeConfig } from "../server/config.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
@@ -17,6 +18,54 @@ const passwordHash = hashPassword("correct horse battery staple");
 assert.equal(verifyPassword("correct horse battery staple", passwordHash), true);
 assert.equal(verifyPassword("wrong password", passwordHash), false);
 assert.match(generateSessionToken(), /^mfa_session_[A-Za-z0-9_-]{43}$/);
+
+assert.doesNotThrow(() =>
+  assertWebRuntimeConfig({
+    NODE_ENV: "production",
+    DATABASE_URL: "postgres://math_for_agents:strong-password@db:5432/math_for_agents",
+    ARTIFACT_STORAGE_DIR: "/data/artifacts",
+    ARTIFACT_MAX_BYTES: "10000000",
+    MFA_COOKIE_SECURE: "true",
+    MFA_HUMAN_KEY: "mfa_private_beta_key_32_chars",
+    MFA_HUMAN_PASSWORD: "long-private-beta-password"
+  })
+);
+
+assert.throws(
+  () =>
+    assertWebRuntimeConfig({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://math_for_agents:math_for_agents@127.0.0.1:55432/math_for_agents",
+      ARTIFACT_STORAGE_DIR: "artifacts",
+      ARTIFACT_MAX_BYTES: "10000000",
+      MFA_COOKIE_SECURE: "false",
+      MFA_HUMAN_KEY: "mfa_dev_human_key",
+      MFA_HUMAN_PASSWORD: "mfa_dev_password"
+    }),
+  /Runtime config is invalid/
+);
+
+assert.doesNotThrow(() =>
+  assertWorkerRuntimeConfig({
+    NODE_ENV: "production",
+    DATABASE_URL: "postgres://math_for_agents:strong-password@db:5432/math_for_agents",
+    ARTIFACT_STORAGE_DIR: "/data/artifacts",
+    ARTIFACT_MAX_BYTES: "10000000",
+    MFA_WORKER_RUNNER: "docker"
+  })
+);
+
+assert.throws(
+  () =>
+    assertWorkerRuntimeConfig({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://math_for_agents:strong-password@db:5432/math_for_agents",
+      ARTIFACT_STORAGE_DIR: "/data/artifacts",
+      ARTIFACT_MAX_BYTES: "10000000",
+      MFA_WORKER_RUNNER: "disabled"
+    }),
+  /must not be disabled/
+);
 
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },

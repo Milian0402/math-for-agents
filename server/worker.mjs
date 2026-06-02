@@ -1,9 +1,12 @@
 import { closePool } from "./db.js";
+import { assertWorkerRuntimeConfig } from "./config.js";
 import { runWorkerOnce } from "./verification-worker.js";
 
 const once = process.argv.includes("--once") || process.env.MFA_WORKER_ONCE === "true";
 const pollMs = Number(process.env.MFA_WORKER_POLL_MS || 5_000);
 let stopping = false;
+
+assertWorkerRuntimeConfig();
 
 process.on("SIGINT", () => {
   stopping = true;

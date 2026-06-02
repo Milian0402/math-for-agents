@@ -6,6 +6,8 @@ This is the private beta ops layer for math-for-agents.
 
 Every HTTP response includes `x-request-id`. Error responses also include `request_id` in the JSON body, so a user-visible failure can be matched to server logs.
 
+`/api/health` is a readiness check. It returns OK only after the API can query Postgres, so it is safe for compose health checks and external uptime probes that need to catch database outages.
+
 The server writes one JSON log line per request unless disabled:
 
 ```txt

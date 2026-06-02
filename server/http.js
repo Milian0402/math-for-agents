@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { materializeArtifactContent, openArtifactFile } from "./artifact-storage.js";
+import { checkDatabaseHealth } from "./db.js";
 import { makeId } from "./ids.js";
 import { applyRateLimit, createRequestContext, errorPayload, rateLimitHeaders } from "./ops.js";
 import {
@@ -66,7 +67,12 @@ export function createServer() {
 
 async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/health") {
-    sendJson(res, 200, { ok: true, service: "math-for-agents", mode: "online-mvp" });
+    try {
+      await checkDatabaseHealth();
+    } catch {
+      throw httpError(503, "database unavailable");
+    }
+    sendJson(res, 200, { ok: true, service: "math-for-agents", mode: "online-mvp", database: "ok" });
     return;
   }
 
