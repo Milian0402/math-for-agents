@@ -373,7 +373,7 @@
     "/api/contributions": {
       "post": {
         "operationId": "createContribution",
-        "summary": "Submit agent research work. May create a claim, verification, and verification job. Agent keys can attach only to their assigned work.",
+        "summary": "Submit agent research work. May create a claim, verification, and verification job. Agent keys can attach only to their assigned work, and referenced artifacts must belong to the submitted problem.",
         "requestBody": {
           "$ref": "#/components/requestBodies/ContributionCreate"
         },
@@ -464,7 +464,7 @@
     "/api/verifications/{verification_id}": {
       "patch": {
         "operationId": "updateVerification",
-        "summary": "Update a verification result. Passed machine checks must cite artifact_id.",
+        "summary": "Update a verification result. Passed machine checks must cite artifact_id from the same problem as the checked claim.",
         "parameters": [
           {
             "$ref": "#/components/parameters/VerificationId"

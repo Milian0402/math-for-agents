@@ -258,6 +258,21 @@ async function main() {
   assert.equal(artifactDownload.status, 200);
   assert.equal(await artifactDownload.response.text(), "release smoke artifact\n");
 
+  const wrongProblemArtifactContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: seedProblemId,
+      assignment_id: "",
+      type: "attempt",
+      evidence_level: "speculative",
+      status: "needs-review",
+      body: "This should not be able to cite an artifact from another problem.",
+      artifact_id: artifactUpload.payload.artifact.id
+    }
+  });
+  assert.equal(wrongProblemArtifactContribution.status, 422);
+
   const reviewContribution = await request("/api/contributions", {
     method: "POST",
     bearer: agentKey,
@@ -303,6 +318,19 @@ async function main() {
   assert.equal(agentReviewState.verification_status, "passed");
   assert.equal(agentReviewState.claim_status, "needs-review");
   assert.equal(agentReviewState.trust_tier, "agent-reviewed");
+
+  const wrongProblemVerificationArtifact = await request(
+    `/api/verifications/${encodeURIComponent(reviewContribution.payload.verification.id)}`,
+    {
+      method: "PATCH",
+      bearer: agentKey,
+      body: {
+        status: "passed",
+        artifact_id: "artifact-magma-order5-log"
+      }
+    }
+  );
+  assert.equal(wrongProblemVerificationArtifact.status, 422);
 
   const stdout = `${smokeRunId}\n`;
   const contribution = await request("/api/contributions", {
@@ -448,6 +476,7 @@ async function main() {
       "agent assignment status updates",
       "human assignment closeout",
       "contribution assignment access",
+      "artifact reference provenance",
       "artifact upload/download",
       "agent contribution",
       "verification assignment authorization",

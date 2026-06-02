@@ -451,6 +451,11 @@ export async function getArtifact(workspaceId, artifactId) {
   return result.rows[0] || null;
 }
 
+export async function getClaim(workspaceId, claimId) {
+  const result = await query("select * from claims where workspace_id = $1 and id = $2", [workspaceId, claimId]);
+  return result.rows[0] || null;
+}
+
 export async function getVerification(workspaceId, verificationId) {
   const result = await query("select * from verifications where workspace_id = $1 and id = $2", [workspaceId, verificationId]);
   return result.rows[0] || null;

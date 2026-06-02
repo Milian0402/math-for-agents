@@ -22,6 +22,7 @@ import {
   deleteAgentApiKey,
   getAssignment,
   getArtifact,
+  getClaim,
   getProblemContext,
   getVerification,
   getWorkspace,
@@ -298,6 +299,7 @@ async function handleApi(req, res, url) {
       throw httpError(403, "agent keys can only submit contributions as their own agent id");
     }
     await enforceContributionAssignmentAccess(workspaceId, principal, body);
+    await enforceContributionArtifactAccess(workspaceId, body);
     const contribution = await createContribution(workspaceId, {
       ...body,
       agent: principal.kind === "agent" ? principal.id : body.agent
@@ -311,12 +313,18 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     assertVerificationPatch(body);
     const verificationId = verificationMatch[1];
+    let verification = null;
     if (principal.kind === "agent") {
-      const verification = await getVerification(workspaceId, verificationId);
+      verification = await getVerification(workspaceId, verificationId);
       if (!verification) throw httpError(404, "verification not found");
       if (verification.assigned_agent !== principal.id) {
         throw httpError(403, "agent keys can only update verifications assigned to their own agent id");
       }
+    }
+    if (body.artifact_id) {
+      verification ||= await getVerification(workspaceId, verificationId);
+      if (!verification) throw httpError(404, "verification not found");
+      await enforceVerificationArtifactAccess(workspaceId, verification, body.artifact_id);
     }
     const result = await updateVerification(workspaceId, verificationId, body);
     if (!result) throw httpError(404, "verification not found");
@@ -466,6 +474,28 @@ async function enforceContributionAssignmentAccess(workspaceId, principal, body)
   if (assignment.status === "done") throw httpError(403, "done assignments are locked for agent keys");
   if (!assignmentVisibleToAgent(assignment, principal.id)) {
     throw httpError(403, "agent keys can only contribute to their assigned work");
+  }
+}
+
+async function enforceContributionArtifactAccess(workspaceId, body) {
+  const artifactId = body.artifact_id?.trim?.() || "";
+  if (!artifactId) return;
+
+  const artifact = await getArtifact(workspaceId, artifactId);
+  if (!artifact) throw httpError(404, "artifact not found");
+  if (artifact.problem_id !== body.problem_id) {
+    throw httpError(422, "artifact_id must belong to problem_id");
+  }
+}
+
+async function enforceVerificationArtifactAccess(workspaceId, verification, artifactId) {
+  const artifact = await getArtifact(workspaceId, artifactId);
+  if (!artifact) throw httpError(404, "artifact not found");
+
+  const claim = await getClaim(workspaceId, verification.claim_id);
+  if (!claim) throw httpError(404, "claim not found");
+  if (artifact.problem_id !== claim.problem_id) {
+    throw httpError(422, "artifact_id must belong to the verification claim problem");
   }
 }
 
