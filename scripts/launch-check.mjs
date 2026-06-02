@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -45,6 +46,31 @@ export async function runLaunchCheck(options = {}) {
         fetchImpl
       })
     );
+  });
+
+  await addResultCheck(checks, "request_id_probe", async () => {
+    if (!baseUrl) throw new Error("MFA_BASE_URL is required");
+    const requestId = options.requestId || `launch-${randomUUID()}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetchImpl(`${baseUrl}/api/health`, {
+        headers: { "x-request-id": requestId },
+        signal: controller.signal
+      });
+      const echoed = response.headers?.get?.("x-request-id") || "";
+      if (!response.ok) throw new Error(`request id probe failed: HTTP ${response.status}`);
+      if (echoed !== requestId) throw new Error("server did not echo x-request-id");
+      return {
+        ok: true,
+        request_id: requestId
+      };
+    } catch (error) {
+      if (error.name === "AbortError") throw new Error(`timed out after ${timeoutMs}ms`);
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   });
 
   await addResultCheck(checks, "authenticated_healthcheck", async () => {

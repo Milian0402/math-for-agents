@@ -212,7 +212,7 @@ MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
 npm run agent:check
 ```
 
-For the final go/no-go pass, run the bundled launch check. It combines production env preflight, public healthcheck, authenticated healthcheck, and the agent launch contract:
+For the final go/no-go pass, run the bundled launch check. It combines production env preflight, public healthcheck, request-id echo probing, authenticated healthcheck, and the agent launch contract:
 
 ```bash
 MFA_AGENT_KEY=mfa_... \

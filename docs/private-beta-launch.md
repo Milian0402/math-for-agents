@@ -82,7 +82,7 @@ MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> npm run launch:check
 | Machine verification can run | A replay/CAS/Lean contribution creates a verification job and the worker stores a log artifact |
 | Backups are real | `npm run backup`, `npm run backup:verify -- <backup-dir>`, and `npm run restore:drill -- <backup-dir>` all pass |
 | Monitoring exists | The healthcheck timer or external uptime monitor alerts on nonzero exit |
-| Logs are findable | A request `x-request-id` can be matched to the private log sink |
+| Logs are findable | `npm run launch:check` reports `request_id_probe.request_id`, and that id can be matched to the private log sink |
 
 If any row is missing, do not call the beta launch complete.
 

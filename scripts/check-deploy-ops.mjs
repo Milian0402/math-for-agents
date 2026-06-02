@@ -96,6 +96,7 @@ includesAll(
     "node examples/agent-client.mjs claims",
     "npm run backup:verify",
     "npm run restore:drill",
+    "request_id_probe.request_id",
     "Rollback and Recovery",
     "Alerting and external error aggregation are operator-owned"
   ],

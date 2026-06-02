@@ -135,6 +135,8 @@ MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
 npm run launch:check
 ```
 
+The `request_id_probe.request_id` in that output should appear in the private log sink. If it does not, log collection is not launch-ready.
+
 The app does not send alerts by itself. Point your uptime tool at `/api/health`, or run `npm run healthcheck` on a schedule and alert on nonzero exit.
 
 ## Backups

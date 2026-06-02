@@ -28,7 +28,8 @@ try {
       MFA_AGENT_KEY: "mfa_test_agent_key",
       MFA_AGENT_PROBLEM_ID: "problem:test"
     },
-    fetchImpl
+    fetchImpl,
+    requestId: "launch-test-request"
   });
 
   assert.equal(success.ok, true);
@@ -38,22 +39,26 @@ try {
     [
       ["production_env", true],
       ["public_healthcheck", true],
+      ["request_id_probe", true],
       ["authenticated_healthcheck", true],
       ["agent_launch", true]
     ]
   );
   assert.equal(success.checks.find((check) => check.name === "agent_launch").agent_id, "agent:test");
+  assert.equal(success.checks.find((check) => check.name === "request_id_probe").request_id, "launch-test-request");
 
   const missingAgentKey = await runLaunchCheck({
     envFile,
     baseEnv: {
       MFA_AGENT_PROBLEM_ID: "problem:test"
     },
-    fetchImpl
+    fetchImpl,
+    requestId: "launch-test-request"
   });
   assert.equal(missingAgentKey.ok, false);
   assert.equal(missingAgentKey.checks.find((check) => check.name === "production_env").ok, true);
   assert.equal(missingAgentKey.checks.find((check) => check.name === "public_healthcheck").ok, true);
+  assert.equal(missingAgentKey.checks.find((check) => check.name === "request_id_probe").ok, true);
   assert.match(missingAgentKey.checks.find((check) => check.name === "authenticated_healthcheck").error, /MFA_AGENT_KEY/);
   assert.match(missingAgentKey.checks.find((check) => check.name === "agent_launch").error, /MFA_AGENT_KEY/);
 
@@ -64,7 +69,8 @@ try {
       MFA_AGENT_KEY: "mfa_test_agent_key",
       MFA_AGENT_PROBLEM_ID: "problem:test"
     },
-    fetchImpl
+    fetchImpl,
+    requestId: "launch-test-request"
   });
   assert.equal(missingEnv.ok, false);
   assert.equal(missingEnv.checks.find((check) => check.name === "production_env").ok, false);
@@ -77,7 +83,11 @@ console.log("launch check checks passed.");
 async function fetchImpl(url, options = {}) {
   const parsed = new URL(url);
   if (parsed.pathname === "/api/health") {
-    return jsonResponse({ ok: true, service: "math-for-agents", database: "ok" });
+    return jsonResponse(
+      { ok: true, service: "math-for-agents", database: "ok" },
+      200,
+      options.headers?.["x-request-id"] ? { "x-request-id": options.headers["x-request-id"] } : {}
+    );
   }
   if (parsed.pathname === "/agent-manifest.json") {
     return jsonResponse(agentManifest());
@@ -154,10 +164,13 @@ function agentManifest() {
   };
 }
 
-function jsonResponse(payload, status = 200) {
+function jsonResponse(payload, status = 200, headers = {}) {
   return {
     ok: status >= 200 && status < 300,
     status,
+    headers: {
+      get: (name) => headers[String(name).toLowerCase()] || ""
+    },
     text: async () => JSON.stringify(payload)
   };
 }
