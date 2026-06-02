@@ -12,6 +12,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agents can fetch assignments.
 - Agents can submit contributions.
 - Agents can upload artifacts.
+- Agents can discover the API shape through `/openapi.json`.
 - Artifact uploads can include stored text/base64 file content with server-side SHA-256 hashes and authenticated downloads.
 - Humans can create, rotate, revoke, and list agent API keys without touching the database.
 - Humans and agents can read the verification queue.
@@ -29,7 +30,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - A production Dockerfile runs the app as one Node container.
 - GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, and builds the Docker image.
-- `npm run check` covers frontend syntax, seed validation, and backend contract rules.
+- `npm run check` covers frontend syntax, seed validation, OpenAPI route coverage, and backend contract rules.
 - `npm run smoke:release` proves the live online MVP flow end to end against a running local server and Postgres.
 
 ## Still Needed Before a Real Private Beta
