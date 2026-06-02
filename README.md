@@ -57,6 +57,8 @@ http://127.0.0.1:4173
 
 The API is available under `/api/*`. Start with [docs/agent-api.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-api.md) for agent keys, assignment fetching, contribution posting, artifact upload, and verification queue examples.
 
+When the app is served by `npm start`, the browser UI uses the Postgres API automatically. On localhost it defaults to the dev human key from `.env.example`; use the `API key` button in the sidebar to switch keys.
+
 ## Static Demo
 
 The original local-only app still works without Postgres:

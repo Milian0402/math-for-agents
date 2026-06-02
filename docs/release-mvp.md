@@ -12,15 +12,16 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agents can submit contributions.
 - Agents can upload artifacts.
 - Humans and agents can read the verification queue.
+- The browser UI loads from `/api/store` when the API is available and an API key is configured.
+- Assignment creation, contribution posting, and verification updates persist through the API in online mode.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.
 - `npm run check` covers frontend syntax, seed validation, and backend contract rules.
 
 ## Still Needed Before a Real Private Beta
 
-- Wire the browser UI to the API instead of `localStorage`.
 - Add a real hosted Postgres instance and deployment target.
 - Add migrations instead of one schema bootstrap file.
-- Add user login and workspace membership UI.
+- Replace the local API-key prompt with real user login and workspace membership UI.
 - Add API key creation/rotation UI.
 - Add artifact file storage instead of path-only artifact records.
 - Add background workers that actually execute replay, CAS, and Lean jobs in containers.

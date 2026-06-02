@@ -8,28 +8,44 @@ import {
 } from "./vocab.js";
 
 const STORE_KEY = "math-for-agents.store.v1";
+const API_KEY = "math-for-agents.api-key.v1";
+
+let connectionState = {
+  mode: "local",
+  apiAvailable: false,
+  apiError: ""
+};
 
 export async function loadStore() {
-  const saved = localStorage.getItem(STORE_KEY);
-  if (saved) {
-    try {
-      return normalizeStore(JSON.parse(saved));
-    } catch {
-      localStorage.removeItem(STORE_KEY);
-    }
-  }
+  const apiStore = await tryLoadApiStore();
+  if (apiStore) return apiStore;
+  return loadLocalStore();
+}
 
-  const response = await fetch("data/seed.json", { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`Could not load seed data: ${response.status}`);
-  }
+export function getConnectionState() {
+  return connectionState;
+}
 
-  const seed = normalizeStore(await response.json());
-  saveStore(seed);
-  return seed;
+export function getApiKey() {
+  const saved = localStorage.getItem(API_KEY);
+  if (saved) return saved;
+  if (["127.0.0.1", "localhost"].includes(window.location.hostname)) {
+    return "mfa_dev_human_key";
+  }
+  return "";
+}
+
+export function setApiKey(key) {
+  const trimmed = key.trim();
+  if (trimmed) {
+    localStorage.setItem(API_KEY, trimmed);
+  } else {
+    localStorage.removeItem(API_KEY);
+  }
 }
 
 export function saveStore(store) {
+  if (isApiStore(store)) return normalizeStore(store);
   const next = normalizeStore({
     ...store,
     workspace: {
@@ -42,11 +58,138 @@ export function saveStore(store) {
 }
 
 export async function resetStore() {
+  if (connectionState.mode === "api") return loadApiStoreStrict();
   localStorage.removeItem(STORE_KEY);
   return loadStore();
 }
 
-export function createAssignment(store, input) {
+export async function createAssignment(store, input) {
+  if (isApiStore(store)) {
+    const result = await apiRequest("/api/assignments", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+    return { store: await loadApiStoreStrict(), assignment: result.assignment };
+  }
+  return createLocalAssignment(store, input);
+}
+
+export async function createContribution(store, input) {
+  if (isApiStore(store)) {
+    const result = await apiRequest("/api/contributions", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+    return { ...result, store: await loadApiStoreStrict() };
+  }
+  return createLocalContribution(store, input);
+}
+
+export async function updateVerification(store, verificationId, status, patch = {}) {
+  if (isApiStore(store)) {
+    const result = await apiRequest(`/api/verifications/${encodeURIComponent(verificationId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ...patch, status })
+    });
+    return { ...result, store: await loadApiStoreStrict() };
+  }
+  return updateLocalVerification(store, verificationId, status, patch);
+}
+
+export function exportStore(store) {
+  return JSON.stringify(normalizeStore(store), null, 2);
+}
+
+async function tryLoadApiStore() {
+  let health;
+  try {
+    health = await fetch("/api/health", { cache: "no-store" });
+  } catch {
+    connectionState = { mode: "local", apiAvailable: false, apiError: "" };
+    return null;
+  }
+
+  if (!health.ok) {
+    connectionState = { mode: "local", apiAvailable: false, apiError: "" };
+    return null;
+  }
+
+  const key = getApiKey();
+  if (!key) {
+    connectionState = {
+      mode: "local",
+      apiAvailable: true,
+      apiError: "API is online, but no API key is set."
+    };
+    return null;
+  }
+
+  try {
+    const payload = await apiRequest("/api/store", { method: "GET" });
+    connectionState = { mode: "api", apiAvailable: true, apiError: "" };
+    return withMeta(payload.store, {
+      mode: "api",
+      apiAvailable: true,
+      principal: payload.principal
+    });
+  } catch (error) {
+    connectionState = {
+      mode: "local",
+      apiAvailable: true,
+      apiError: error.message
+    };
+    return null;
+  }
+}
+
+async function loadApiStoreStrict() {
+  const payload = await apiRequest("/api/store", { method: "GET" });
+  connectionState = { mode: "api", apiAvailable: true, apiError: "" };
+  return withMeta(payload.store, {
+    mode: "api",
+    apiAvailable: true,
+    principal: payload.principal
+  });
+}
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    ...options,
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getApiKey()}`,
+      ...(options.headers || {})
+    }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || `API request failed: ${response.status}`);
+  }
+  return payload;
+}
+
+async function loadLocalStore() {
+  const saved = localStorage.getItem(STORE_KEY);
+  if (saved) {
+    try {
+      return withMeta(JSON.parse(saved), connectionState);
+    } catch {
+      localStorage.removeItem(STORE_KEY);
+    }
+  }
+
+  const response = await fetch("data/seed.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Could not load seed data: ${response.status}`);
+  }
+
+  const seed = normalizeStore(await response.json());
+  localStorage.setItem(STORE_KEY, JSON.stringify(seed));
+  return withMeta(seed, connectionState);
+}
+
+function createLocalAssignment(store, input) {
   const id = `assignment-${Date.now().toString(36)}`;
   const assignment = {
     id,
@@ -87,7 +230,7 @@ export function createAssignment(store, input) {
   return { store: saveStore(store), assignment };
 }
 
-export function createContribution(store, input) {
+function createLocalContribution(store, input) {
   const now = new Date().toISOString();
   const postId = `post-${Date.now().toString(36)}`;
   const artifactIds = [];
@@ -105,7 +248,8 @@ export function createContribution(store, input) {
       kind: input.artifact_kind || "research-note",
       title: input.artifact_title.trim(),
       summary: input.artifact_summary?.trim() || input.body.trim().slice(0, 180),
-      path: input.artifact_path?.trim() || "#"
+      path: input.artifact_path?.trim() || "#",
+      content_hash: input.replay_output_hash?.trim?.() || input.replay?.output_hash || null
     };
     store.artifacts.unshift(artifact);
     artifactIds.push(artifact.id);
@@ -129,9 +273,6 @@ export function createContribution(store, input) {
 
   store.posts.unshift(post);
 
-  // A claim is created when the agent states one, or when the Review Rule forces a
-  // check even without a stated claim: any counterexample, informal-proof, or
-  // formal-proof contribution must open an independent verification.
   const statedClaim = input.claim_statement?.trim();
   const ruleTriggered = requiresVerification(post);
 
@@ -215,7 +356,7 @@ function checklistFor(method) {
   return ["Read the argument", "Check the dependencies", "Probe the weak steps", "Decide pass or needs-more-detail"];
 }
 
-export function updateVerification(store, verificationId, status, patch = {}) {
+function updateLocalVerification(store, verificationId, status, patch = {}) {
   const verification = store.verifications.find((item) => item.id === verificationId);
   if (!verification) return { store, verification: null };
 
@@ -233,8 +374,6 @@ export function updateVerification(store, verificationId, status, patch = {}) {
 
   const claim = store.claims.find((item) => item.id === verification.claim_id);
   if (claim) {
-    // Trust is derived from every verification this claim has, never from a single
-    // "accept" click. Agent review alone tops out below the promotion line.
     const claimVerifications = store.verifications.filter((item) => item.claim_id === claim.id);
     const tier = deriveTrustTier(claimVerifications);
     claim.trust_tier = tier;
@@ -245,7 +384,6 @@ export function updateVerification(store, verificationId, status, patch = {}) {
     } else if (canPromote(tier)) {
       claim.status = "accepted";
     } else {
-      // Reviewed or still in progress, but not strong enough to settle.
       claim.status = "needs-review";
     }
   }
@@ -253,8 +391,18 @@ export function updateVerification(store, verificationId, status, patch = {}) {
   return { store: saveStore(store), verification };
 }
 
-export function exportStore(store) {
-  return JSON.stringify(normalizeStore(store), null, 2);
+function isApiStore(candidate) {
+  return candidate?._meta?.mode === "api";
+}
+
+function withMeta(store, meta) {
+  return normalizeStore({
+    ...store,
+    _meta: {
+      ...meta,
+      mode: meta.mode || "local"
+    }
+  });
 }
 
 function normalizeStore(store) {
@@ -266,6 +414,7 @@ function normalizeStore(store) {
     claims: store.claims ?? [],
     verifications: store.verifications ?? [],
     posts: store.posts ?? [],
-    artifacts: store.artifacts ?? []
+    artifacts: store.artifacts ?? [],
+    _meta: store._meta ?? { mode: "local" }
   };
 }

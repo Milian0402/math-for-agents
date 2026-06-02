@@ -1,5 +1,5 @@
 import { query, transaction } from "./db.js";
-import { stableKeyHash } from "./ids.js";
+import { makeId, stableKeyHash } from "./ids.js";
 import { applyVerificationPatch, buildContribution } from "./domain.js";
 
 export async function authenticateAgent(apiKey) {
@@ -25,6 +25,30 @@ export async function authenticateAgent(apiKey) {
 export async function getWorkspace(workspaceId) {
   const result = await query("select * from workspaces where id = $1", [workspaceId]);
   return result.rows[0] || null;
+}
+
+export async function getWorkspaceStore(workspaceId) {
+  const [workspace, agents, problems, assignments, claims, verifications, posts, artifacts] = await Promise.all([
+    query("select * from workspaces where id = $1", [workspaceId]),
+    query("select * from agents where workspace_id = $1 order by reputation desc, name asc", [workspaceId]),
+    query("select * from problems where workspace_id = $1 order by updated_at desc nulls last, id asc", [workspaceId]),
+    query("select * from assignments where workspace_id = $1 order by created_at desc", [workspaceId]),
+    query("select * from claims where workspace_id = $1 order by id asc", [workspaceId]),
+    query("select * from verifications where workspace_id = $1 order by created_at desc", [workspaceId]),
+    query("select * from posts where workspace_id = $1 order by created_at desc", [workspaceId]),
+    query("select * from artifacts where workspace_id = $1 order by created_at desc, id asc", [workspaceId])
+  ]);
+
+  return {
+    workspace: workspace.rows[0] || {},
+    agents: agents.rows,
+    problems: problems.rows,
+    assignments: assignments.rows,
+    claims: claims.rows,
+    verifications: verifications.rows,
+    posts: posts.rows,
+    artifacts: artifacts.rows
+  };
 }
 
 export async function listAssignmentsForAgent(workspaceId, agentId) {
@@ -103,6 +127,65 @@ export async function createArtifact(workspaceId, input) {
     ]
   );
   return artifact;
+}
+
+export async function createAssignment(workspaceId, owner, input) {
+  const now = new Date().toISOString();
+  const assignment = {
+    id: makeId("assignment"),
+    created_at: now,
+    owner,
+    problem_id: input.problem_id,
+    task: input.task,
+    prompt: input.prompt.trim(),
+    desired_output: input.desired_output,
+    assigned_agents: input.assigned_agents,
+    status: input.status || "open"
+  };
+  const post = {
+    id: makeId("post"),
+    created_at: now,
+    agent: owner,
+    problem_id: assignment.problem_id,
+    assignment_id: assignment.id,
+    type: "question",
+    body: assignment.prompt,
+    dependencies: [],
+    artifacts: [],
+    evidence_level: "speculative",
+    status: "open"
+  };
+
+  await transaction(async (client) => {
+    await client.query(
+      `insert into assignments
+        (id, workspace_id, created_at, owner, problem_id, task, prompt, desired_output, assigned_agents, status)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [
+        assignment.id,
+        workspaceId,
+        assignment.created_at,
+        assignment.owner,
+        assignment.problem_id,
+        assignment.task,
+        assignment.prompt,
+        JSON.stringify(assignment.desired_output),
+        JSON.stringify(assignment.assigned_agents),
+        assignment.status
+      ]
+    );
+    await insertPost(client, workspaceId, post);
+    await client.query(
+      `update problems
+          set assignment_ids = coalesce(assignment_ids, '[]'::jsonb) || to_jsonb($3::text),
+              status = case when status = 'open' then 'active' else status end,
+              updated_at = now()
+        where workspace_id = $1 and id = $2 and not (coalesce(assignment_ids, '[]'::jsonb) ? $3)`,
+      [workspaceId, assignment.problem_id, assignment.id]
+    );
+  });
+
+  return { assignment, post };
 }
 
 export async function createContribution(workspaceId, input) {

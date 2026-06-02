@@ -2,8 +2,10 @@ import {
   createAssignment,
   createContribution,
   exportStore,
+  getApiKey,
   loadStore,
   resetStore,
+  setApiKey,
   updateVerification
 } from "./store.js";
 import { MACHINE_METHODS, tierRank } from "./vocab.js";
@@ -44,7 +46,7 @@ function render() {
         <span class="brand-mark">mfa</span>
         <span>
           <strong>math-for-agents</strong>
-          <small>local research workspace</small>
+          <small>${escapeHtml(connectionLabel())}</small>
         </span>
       </a>
       <nav class="nav-list" aria-label="Primary">
@@ -57,8 +59,9 @@ function render() {
         ${navLink("contribute", "Contribute", "#/contribute", route)}
       </nav>
       <div class="side-actions">
+        <button class="secondary-button" type="button" data-action="configure-api-key">API key</button>
         <button class="secondary-button" type="button" data-action="export-store">Export JSON</button>
-        <button class="quiet-button" type="button" data-action="reset-store">Reset local data</button>
+        <button class="quiet-button" type="button" data-action="reset-store">${isApiMode() ? "Reload API data" : "Reset local data"}</button>
       </div>
     </aside>
     <main class="workspace">
@@ -68,12 +71,12 @@ function render() {
         <span>Agents</span>
         <span>Verifier</span>
         <span>Contribute</span>
-        <span>Local</span>
+        <span>${isApiMode() ? "Postgres" : "Local"}</span>
       </div>
       ${topbar(route)}
       ${renderRoute(route)}
       <div class="chrome-statusbar" aria-label="Workspace status">
-        <span>local store ready</span>
+        <span>${escapeHtml(connectionStatus())}</span>
         <span>${store.agents.filter((agent) => agent.status === "running").length} agents online</span>
         <span>${pendingVerifications().length} reviews pending</span>
       </div>
@@ -88,6 +91,25 @@ function getRoute() {
   if (!hash) return { view: "dashboard" };
   const [view, id] = hash.split("/");
   return { view, id };
+}
+
+function isApiMode() {
+  return store?._meta?.mode === "api";
+}
+
+function connectionLabel() {
+  if (isApiMode()) return "Postgres research workspace";
+  if (store?._meta?.apiAvailable) return "local demo, API key needed";
+  return "local research workspace";
+}
+
+function connectionStatus() {
+  if (isApiMode()) {
+    const principal = store._meta?.principal;
+    return principal ? `API ready as ${principal.id}` : "Postgres API ready";
+  }
+  if (store?._meta?.apiError) return store._meta.apiError;
+  return "local store ready";
 }
 
 function navLink(id, label, href, route) {
@@ -116,7 +138,7 @@ function topbar(route) {
         <h1>${escapeHtml(title)}</h1>
       </div>
       <div class="topbar-actions">
-        <span class="store-pill">Local JSON store</span>
+        <span class="store-pill">${isApiMode() ? "Postgres API" : "Local JSON store"}</span>
         <span class="mini-stat">${runningAgents} agents running</span>
         <span class="mini-stat">${openVerifications} reviews open</span>
         <button class="primary-button" type="button" data-action="open-assignment">+ New assignment</button>
@@ -1199,10 +1221,21 @@ async function handleClick(event) {
   }
 
   if (action === "reset-store") {
-    const ok = window.confirm("Reset local data back to the seed workspace?");
-    if (!ok) return;
+    if (!isApiMode()) {
+      const ok = window.confirm("Reset local data back to the seed workspace?");
+      if (!ok) return;
+    }
     store = await resetStore();
-    showToast("Local data reset");
+    showToast(isApiMode() ? "API data reloaded" : "Local data reset");
+    render();
+  }
+
+  if (action === "configure-api-key") {
+    const nextKey = window.prompt("API key", getApiKey());
+    if (nextKey === null) return;
+    setApiKey(nextKey);
+    store = await loadStore();
+    showToast(isApiMode() ? "Connected to API" : "Using local demo data");
     render();
   }
 
@@ -1214,7 +1247,7 @@ async function handleClick(event) {
     const card = actionTarget.closest(".verification-card");
     const artifactId = card?.querySelector("[name='artifact_id']")?.value || "";
     try {
-      const result = updateVerification(
+      const result = await updateVerification(
         store,
         actionTarget.dataset.id,
         actionTarget.dataset.status,
@@ -1229,17 +1262,17 @@ async function handleClick(event) {
   }
 }
 
-function handleSubmit(event) {
+async function handleSubmit(event) {
   if (!["assignment-form", "contribution-form", "contribution-json-form"].includes(event.target.id)) return;
   event.preventDefault();
 
   if (event.target.id === "contribution-form") {
-    handleContributionForm(event.target);
+    await handleContributionForm(event.target);
     return;
   }
 
   if (event.target.id === "contribution-json-form") {
-    handleContributionJson(event.target);
+    await handleContributionJson(event.target);
     return;
   }
 
@@ -1254,25 +1287,29 @@ function handleSubmit(event) {
     return;
   }
 
-  const result = createAssignment(store, {
-    problem_id: formData.get("problem_id"),
-    task: formData.get("task"),
-    prompt: formData.get("prompt"),
-    desired_output: desiredOutput,
-    assigned_agents: assignedAgents
-  });
+  try {
+    const result = await createAssignment(store, {
+      problem_id: formData.get("problem_id"),
+      task: formData.get("task"),
+      prompt: formData.get("prompt"),
+      desired_output: desiredOutput,
+      assigned_agents: assignedAgents
+    });
 
-  store = result.store;
-  ui.modal = null;
-  showToast("Assignment created");
-  window.location.hash = "#/assignments";
+    store = result.store;
+    ui.modal = null;
+    showToast("Assignment created");
+    window.location.hash = "#/assignments";
+  } catch (error) {
+    showToast(`Assignment rejected: ${error.message}`);
+  }
   render();
 }
 
-function handleContributionForm(form) {
+async function handleContributionForm(form) {
   const formData = new FormData(form);
   try {
-    const result = createContribution(store, {
+    const result = await createContribution(store, {
       agent: formData.get("agent"),
       problem_id: formData.get("problem_id"),
       assignment_id: formData.get("assignment_id"),
@@ -1302,11 +1339,11 @@ function handleContributionForm(form) {
   render();
 }
 
-function handleContributionJson(form) {
+async function handleContributionJson(form) {
   const formData = new FormData(form);
   try {
     const payload = JSON.parse(formData.get("payload"));
-    const result = createContribution(store, payload);
+    const result = await createContribution(store, payload);
     store = result.store;
     showToast(result.claim ? "JSON ingested; claim queued" : "JSON ingested");
     window.location.hash = "#/feed";

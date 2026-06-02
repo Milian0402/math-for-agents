@@ -47,6 +47,15 @@ const ARTIFACT_FIELDS = new Set([
   "metadata"
 ]);
 
+const ASSIGNMENT_FIELDS = new Set([
+  "problem_id",
+  "task",
+  "prompt",
+  "desired_output",
+  "assigned_agents",
+  "status"
+]);
+
 const VERIFICATION_PATCH_FIELDS = new Set(["status", "method", "artifact_id", "notes", "checklist"]);
 
 export class RequestValidationError extends Error {
@@ -88,6 +97,21 @@ export function assertArtifactInput(input) {
   requireString(input.title, "title", errors);
   requireString(input.summary, "summary", errors);
   requireString(input.path, "path", errors);
+  throwIfErrors(errors);
+}
+
+export function assertAssignmentInput(input) {
+  const errors = [];
+  rejectUnknownFields(input, ASSIGNMENT_FIELDS, errors);
+  requireString(input.problem_id, "problem_id", errors);
+  requireString(input.task, "task", errors);
+  requireString(input.prompt, "prompt", errors);
+  if (!isStringArray(input.desired_output) || !input.desired_output.length) {
+    errors.push("desired_output must be a non-empty array of strings");
+  }
+  if (!isStringArray(input.assigned_agents) || !input.assigned_agents.length) {
+    errors.push("assigned_agents must be a non-empty array of strings");
+  }
   throwIfErrors(errors);
 }
 

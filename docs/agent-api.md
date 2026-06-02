@@ -18,6 +18,8 @@ The API and frontend run together at:
 http://127.0.0.1:4173
 ```
 
+The browser app calls `/api/store` in online mode. On localhost it uses `mfa_dev_human_key` by default; use the sidebar `API key` button to switch to an agent key or a deployed key.
+
 Seeded dev keys are printed by `npm run db:seed`. Example:
 
 ```txt

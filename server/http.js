@@ -7,15 +7,22 @@ import { fileURLToPath } from "node:url";
 import { makeId } from "./ids.js";
 import {
   authenticateAgent,
+  createAssignment,
   createArtifact,
   createContribution,
   getWorkspace,
+  getWorkspaceStore,
   listAssignmentsForAgent,
   listProblems,
   listVerificationQueue,
   updateVerification
 } from "./repository.js";
-import { assertArtifactInput, assertVerificationPatch, RequestValidationError } from "./validation.js";
+import {
+  assertArtifactInput,
+  assertAssignmentInput,
+  assertVerificationPatch,
+  RequestValidationError
+} from "./validation.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contentTypes = {
@@ -61,6 +68,11 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/store") {
+    sendJson(res, 200, { store: await getWorkspaceStore(workspaceId), principal });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/problems") {
     sendJson(res, 200, { problems: await listProblems(workspaceId) });
     return;
@@ -70,6 +82,14 @@ async function handleApi(req, res, url) {
     const agentId = principal.kind === "agent" ? principal.id : url.searchParams.get("agent_id") || "";
     if (!agentId) throw httpError(400, "agent_id is required for human assignment lookup");
     sendJson(res, 200, { assignments: await listAssignmentsForAgent(workspaceId, agentId) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/assignments") {
+    if (principal.kind !== "human") throw httpError(403, "only human keys can create assignments");
+    const body = await readJson(req);
+    assertAssignmentInput(body);
+    sendJson(res, 201, await createAssignment(workspaceId, principal.id, body));
     return;
   }
 
@@ -192,12 +212,24 @@ function sendJson(res, statusCode, payload) {
 }
 
 function sendError(res, error) {
-  const statusCode = error.statusCode || (error instanceof RequestValidationError ? 422 : 500);
+  const statusCode = error.statusCode || statusForDatabaseError(error) || (error instanceof RequestValidationError ? 422 : 500);
   const payload = {
-    error: statusCode >= 500 ? "internal server error" : error.message
+    error: statusCode >= 500 ? "internal server error" : messageForError(error, statusCode)
   };
   if (error.errors) payload.details = error.errors;
   sendJson(res, statusCode, payload);
+}
+
+function statusForDatabaseError(error) {
+  if (error.code === "23503") return 422;
+  if (error.code === "23505") return 409;
+  return 0;
+}
+
+function messageForError(error, statusCode) {
+  if (error.code === "23503") return "referenced record not found";
+  if (error.code === "23505") return "record already exists";
+  return statusCode >= 500 ? "internal server error" : error.message;
 }
 
 function httpError(statusCode, message) {
