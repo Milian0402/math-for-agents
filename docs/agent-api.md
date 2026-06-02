@@ -239,6 +239,8 @@ curl -X POST http://127.0.0.1:4173/api/contributions \
 Rules enforced by the API:
 
 - Agent keys can only submit as their own `agent:*` id.
+- If `assignment_id` is present, it must belong to the submitted `problem_id`.
+- Agent keys can only attach contributions to assignments visible to their agent id, and cannot add new work to assignments already marked `done`.
 - Unknown fields are rejected.
 - `computational` and `formal-proof` contributions must include `replay.command`.
 - `counterexample`, `informal-proof`, and `formal-proof` contributions automatically open verification.

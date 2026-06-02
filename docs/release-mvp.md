@@ -24,10 +24,12 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Humans can create, rotate, revoke, and list agent API keys without touching the database.
 - Humans and agents can read the verification queue.
 - Agent keys can only patch verification records assigned to their own agent id.
+- Agent keys can only attach contributions to assignments visible to their own agent id.
 - The example agent client can submit verifier results, including artifact-backed machine passes.
 - The browser UI loads from `/api/store` when the API is available and a human session or bearer key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
 - Assignment lifecycle updates persist through the API in online mode and are covered by the release smoke.
+- Contribution assignment access rules are covered by the release smoke.
 - Problem context reads are covered by the release smoke.
 - Problem exports are covered by the release smoke.
 - Agent profile creation persists through the API in online mode and is covered by the release smoke.

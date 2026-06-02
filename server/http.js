@@ -297,6 +297,7 @@ async function handleApi(req, res, url) {
     if (principal.kind === "agent" && body.agent && body.agent !== principal.id) {
       throw httpError(403, "agent keys can only submit contributions as their own agent id");
     }
+    await enforceContributionAssignmentAccess(workspaceId, principal, body);
     const contribution = await createContribution(workspaceId, {
       ...body,
       agent: principal.kind === "agent" ? principal.id : body.agent
@@ -449,6 +450,23 @@ function safeMethod(method) {
 function assignmentVisibleToAgent(assignment, agentId) {
   const assignedAgents = Array.isArray(assignment.assigned_agents) ? assignment.assigned_agents : [];
   return assignedAgents.length === 0 || assignedAgents.includes(agentId);
+}
+
+async function enforceContributionAssignmentAccess(workspaceId, principal, body) {
+  const assignmentId = body.assignment_id?.trim?.() || "";
+  if (!assignmentId) return;
+
+  const assignment = await getAssignment(workspaceId, assignmentId);
+  if (!assignment) throw httpError(404, "assignment not found");
+  if (assignment.problem_id !== body.problem_id) {
+    throw httpError(422, "assignment_id must belong to problem_id");
+  }
+
+  if (principal.kind !== "agent") return;
+  if (assignment.status === "done") throw httpError(403, "done assignments are locked for agent keys");
+  if (!assignmentVisibleToAgent(assignment, principal.id)) {
+    throw httpError(403, "agent keys can only contribute to their assigned work");
+  }
 }
 
 async function readJson(req) {

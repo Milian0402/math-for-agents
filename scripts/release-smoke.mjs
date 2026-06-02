@@ -193,6 +193,48 @@ async function main() {
   assert.equal(newKeyCheck.status, 200);
   assert.equal(newKeyCheck.payload.principal.id, agentId);
 
+  const foreignAssignment = await request("/api/assignments", {
+    method: "POST",
+    body: {
+      problem_id: problemId,
+      task: "independent-review",
+      prompt: "Assignment owned by a different seeded agent.",
+      desired_output: ["review"],
+      assigned_agents: [seedAgentId]
+    }
+  });
+  assert.equal(foreignAssignment.status, 201);
+  created.assignmentIds.push(foreignAssignment.payload.assignment.id);
+  created.postIds.push(foreignAssignment.payload.post.id);
+
+  const foreignAssignmentContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: problemId,
+      assignment_id: foreignAssignment.payload.assignment.id,
+      type: "attempt",
+      evidence_level: "speculative",
+      status: "needs-review",
+      body: "This agent should not be able to attach work to another agent's assignment."
+    }
+  });
+  assert.equal(foreignAssignmentContribution.status, 403);
+
+  const mismatchedAssignmentContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: seedProblemId,
+      assignment_id: assignmentId,
+      type: "attempt",
+      evidence_level: "speculative",
+      status: "needs-review",
+      body: "Assignment and problem mismatch should be rejected."
+    }
+  });
+  assert.equal(mismatchedAssignmentContribution.status, 422);
+
   const artifactUpload = await request("/api/artifacts", {
     method: "POST",
     bearer: agentKey,
@@ -405,6 +447,7 @@ async function main() {
       "agent assignment fetch",
       "agent assignment status updates",
       "human assignment closeout",
+      "contribution assignment access",
       "artifact upload/download",
       "agent contribution",
       "verification assignment authorization",
