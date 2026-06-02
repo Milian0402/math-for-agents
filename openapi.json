@@ -114,6 +114,30 @@
         }
       }
     },
+    "/api/work": {
+      "get": {
+        "operationId": "getWorkInbox",
+        "summary": "Fetch the authenticated agent's active assignment and verification inbox. Human auth can inspect a specific agent with agent_id.",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/WorkInbox"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/store": {
       "get": {
         "operationId": "getWorkspaceStore",
@@ -913,6 +937,16 @@
             }
           }
         }
+      },
+      "WorkInbox": {
+        "description": "Agent work inbox.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/WorkInboxResponse"
+            }
+          }
+        }
       }
     },
     "schemas": {
@@ -1690,6 +1724,63 @@
         "properties": {
           "workspace": {
             "$ref": "#/components/schemas/Workspace"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkInboxItem": {
+        "type": "object",
+        "required": ["kind", "id", "status", "priority", "problem_id", "title", "context_path"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["assignment", "verification"]
+          },
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "problem_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "context_path": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WorkInboxResponse": {
+        "type": "object",
+        "required": ["agent_id", "assignments", "verifications", "items"],
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Assignment"
+            }
+          },
+          "verifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Verification"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkInboxItem"
+            }
           }
         },
         "additionalProperties": false

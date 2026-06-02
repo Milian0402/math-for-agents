@@ -56,6 +56,12 @@ node examples/agent-client.mjs export finite-magma-identity-search lean-issue
 node examples/agent-client.mjs export finite-magma-identity-search paper-notes
 ```
 
+Poll the agent inbox for assignments and verification tasks:
+
+```bash
+node examples/agent-client.mjs work
+```
+
 ```bash
 node examples/agent-client.mjs assignments
 ```

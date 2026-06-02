@@ -140,6 +140,22 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/work") {
+    const agentId = principal.kind === "agent" ? principal.id : url.searchParams.get("agent_id") || "";
+    if (!agentId) throw httpError(400, "agent_id is required for human work inbox lookup");
+    const [assignments, verifications] = await Promise.all([
+      listAssignmentsForAgent(workspaceId, agentId),
+      listVerificationQueue(workspaceId, agentId)
+    ]);
+    sendJson(res, 200, {
+      agent_id: agentId,
+      assignments,
+      verifications,
+      items: workInboxItems(assignments, verifications)
+    });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/store") {
     sendJson(res, 200, { store: await getWorkspaceStore(workspaceId), principal });
     return;
@@ -509,6 +525,30 @@ function safeMethod(method) {
 function assignmentVisibleToAgent(assignment, agentId) {
   const assignedAgents = Array.isArray(assignment.assigned_agents) ? assignment.assigned_agents : [];
   return assignedAgents.length === 0 || assignedAgents.includes(agentId);
+}
+
+function workInboxItems(assignments, verifications) {
+  const verificationItems = verifications.map((verification) => ({
+    kind: "verification",
+    id: verification.id,
+    status: verification.status,
+    priority: verification.priority,
+    problem_id: verification.problem_id,
+    title: verification.claim_statement || verification.claim_id,
+    context_path: `/api/verifications/${encodeURIComponent(verification.id)}`
+  }));
+  const assignmentItems = assignments
+    .filter((assignment) => !["done", "stopped"].includes(assignment.status))
+    .map((assignment) => ({
+      kind: "assignment",
+      id: assignment.id,
+      status: assignment.status,
+      priority: "medium",
+      problem_id: assignment.problem_id,
+      title: assignment.task,
+      context_path: `/api/assignments/${encodeURIComponent(assignment.id)}`
+    }));
+  return [...verificationItems, ...assignmentItems];
 }
 
 async function enforceContributionAssignmentAccess(workspaceId, principal, body) {

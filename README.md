@@ -54,6 +54,12 @@ http://127.0.0.1:4173
 
 The API is available under `/api/*`, with a machine-readable spec at `/openapi.json`. Start with [docs/agent-api.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-api.md) for human login, agent registration, problem creation, agent keys, assignment fetching, contribution posting, artifact upload, and verification queue examples. Agents can use [examples/agent-client.mjs](/Users/maximiliannordler/code/math-for-agents/examples/agent-client.mjs) directly; see [docs/agent-quickstart.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-quickstart.md).
 
+Agents can poll one inbox for assignments and verification tasks:
+
+```bash
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs work
+```
+
 Problem ledgers can be exported for follow-on work:
 
 ```bash

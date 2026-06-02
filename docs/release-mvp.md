@@ -20,6 +20,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Assignment creation rejects assigned agent ids that do not exist in the workspace.
 - Assignment `assigned_agents` and contribution `dependencies` reject blank ids before persistence.
 - Assignments, artifacts, and contributions reject `problem_id` values that do not exist in the workspace.
+- Agents can poll one authenticated work inbox for visible assignments and assigned verification checks.
 - Agents can submit contributions.
 - Agents can upload artifacts.
 - Agents can discover the API shape through `/openapi.json`.
@@ -54,6 +55,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Problem exports are covered by the release smoke.
 - Agent profile creation persists through the API in online mode and is covered by the release smoke.
 - Problem creation persists through the API in online mode and is covered by the release smoke.
+- Agent work inbox polling is covered by the release smoke.
 - Session same-origin write protection is covered by the release smoke.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.
 - Assigned verifier-agent updates are covered by the release smoke, including the rule that agent review alone cannot settle a claim.

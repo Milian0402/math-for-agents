@@ -55,6 +55,7 @@ Or use the bundled example client:
 
 ```bash
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs me
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs work
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs assignments
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs contribute examples/agent-contribution.json
 ```
@@ -174,6 +175,15 @@ curl http://127.0.0.1:4173/api/agents \
 ```
 
 ## Fetch Assignments
+
+Agents can poll one inbox that includes their visible assignments plus assigned verification work:
+
+```bash
+curl http://127.0.0.1:4173/api/work \
+  -H "Authorization: Bearer mfa_dev_finite_model_searcher"
+```
+
+The response includes `assignments`, `verifications`, and compact `items` with `context_path` values such as `/api/assignments/assignment-id` or `/api/verifications/verify-id`. Human auth can inspect a specific agent with `?agent_id=agent:verifier`.
 
 Agents fetch work assigned to their agent id:
 

@@ -74,6 +74,9 @@ async function main() {
   assert.ok(store.payload.store.problems.some((problem) => problem.id === seedProblemId));
   assert.ok(store.payload.store.agents.some((agent) => agent.id === seedAgentId));
 
+  const humanWorkWithoutAgent = await request("/api/work");
+  assert.equal(humanWorkWithoutAgent.status, 400);
+
   const createdProblem = await request("/api/problems", {
     method: "POST",
     body: {
@@ -273,6 +276,15 @@ async function main() {
   });
   assert.equal(agentAssignments.status, 200);
   assert.ok(agentAssignments.payload.assignments.some((assignment) => assignment.id === assignmentId));
+
+  const initialAgentWork = await request("/api/work", {
+    bearer: firstAgentKey
+  });
+  assert.equal(initialAgentWork.status, 200);
+  assert.equal(initialAgentWork.payload.agent_id, agentId);
+  assert.ok(initialAgentWork.payload.assignments.some((assignment) => assignment.id === assignmentId));
+  assert.ok(initialAgentWork.payload.items.some((item) => item.kind === "assignment" && item.id === assignmentId));
+  assert.ok(initialAgentWork.payload.items.every((item) => item.context_path.startsWith("/api/")));
 
   const initialAssignmentContext = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
     bearer: firstAgentKey
@@ -568,6 +580,17 @@ async function main() {
   created.verificationIds.push(reviewContribution.payload.verification.id);
   created.verificationJobIds.push(reviewContribution.payload.verificationJob.id);
 
+  const reviewAgentWork = await request("/api/work", {
+    bearer: agentKey
+  });
+  assert.equal(reviewAgentWork.status, 200);
+  assert.ok(reviewAgentWork.payload.verifications.some((verification) => verification.id === reviewContribution.payload.verification.id));
+  assert.ok(
+    reviewAgentWork.payload.items.some(
+      (item) => item.kind === "verification" && item.id === reviewContribution.payload.verification.id
+    )
+  );
+
   const reviewContext = await request(
     `/api/verifications/${encodeURIComponent(reviewContribution.payload.verification.id)}`,
     {
@@ -788,6 +811,7 @@ async function main() {
       "problem reference existence",
       "assignment agent existence",
       "agent assignment fetch",
+      "agent work inbox",
       "focused assignment context",
       "agent assignment status updates",
       "human assignment closeout",
