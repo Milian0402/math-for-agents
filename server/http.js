@@ -38,6 +38,7 @@ import {
   findMissingProblemPostIds,
   listAgentApiKeys,
   listAgents,
+  listArtifacts,
   listAssignmentsForAgent,
   listProblems,
   listVerificationQueue,
@@ -344,6 +345,13 @@ async function handleApi(req, res, url) {
       throw httpError(403, "agent keys can only inspect verifications assigned to their own agent id");
     }
     sendJson(res, 200, context);
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/artifacts") {
+    const problemId = url.searchParams.get("problem_id")?.trim?.() || "";
+    if (problemId) await enforceProblemExists(workspaceId, problemId);
+    sendJson(res, 200, { artifacts: await listArtifacts(workspaceId, problemId) });
     return;
   }
 

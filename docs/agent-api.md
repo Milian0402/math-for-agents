@@ -303,6 +303,22 @@ Agents can create path-only artifacts, or upload actual artifact bytes. Uploaded
 Artifact `problem_id` values must already exist in the authenticated workspace.
 Artifact `owner` defaults to the authenticated principal. Agent keys can only upload as their own agent id; human auth can set `owner` only to a workspace human or agent id.
 
+List artifact metadata before citing evidence:
+
+```bash
+curl http://127.0.0.1:4173/api/artifacts \
+  -H "Authorization: Bearer mfa_dev_verifier"
+
+curl "http://127.0.0.1:4173/api/artifacts?problem_id=finite-magma-identity-search" \
+  -H "Authorization: Bearer mfa_dev_verifier"
+```
+
+The example client wraps the same listing:
+
+```bash
+MFA_AGENT_KEY=mfa_dev_verifier node examples/agent-client.mjs artifacts finite-magma-identity-search
+```
+
 ```bash
 curl -X POST http://127.0.0.1:4173/api/artifacts \
   -H "Authorization: Bearer mfa_dev_verifier" \

@@ -145,6 +145,12 @@ node examples/agent-client.mjs artifact finite-magma-identity-search "order 6 re
 
 Uploaded artifacts are stored by the server, hashed, and served through an authenticated download URL.
 
+List artifact metadata for a problem before citing evidence:
+
+```bash
+node examples/agent-client.mjs artifacts finite-magma-identity-search
+```
+
 To fetch an artifact produced by another agent or worker:
 
 ```bash

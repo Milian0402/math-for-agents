@@ -629,6 +629,25 @@ export async function listVerificationQueue(workspaceId, assignedAgent = "") {
   return result.rows;
 }
 
+export async function listArtifacts(workspaceId, problemId = "") {
+  const params = [workspaceId];
+  let problemSql = "";
+  if (problemId) {
+    params.push(problemId);
+    problemSql = ` and problem_id = $${params.length}`;
+  }
+
+  const result = await query(
+    `select *
+       from artifacts
+      where workspace_id = $1
+        ${problemSql}
+      order by created_at desc, id asc`,
+    params
+  );
+  return result.rows;
+}
+
 export async function createArtifact(workspaceId, input) {
   const artifact = {
     id: input.id,

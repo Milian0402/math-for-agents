@@ -31,6 +31,7 @@ const expectedOperations = [
   ["GET", "/api/assignments/{assignment_id}", "getAssignmentContext", true],
   ["PATCH", "/api/assignments/{assignment_id}", "updateAssignment", true],
   ["POST", "/api/contributions", "createContribution", true],
+  ["GET", "/api/artifacts", "listArtifacts", true],
   ["POST", "/api/artifacts", "createArtifact", true],
   ["GET", "/api/artifacts/{artifact_id}/file", "downloadArtifactFile", true],
   ["GET", "/api/verifications", "listVerifications", true],
@@ -68,6 +69,7 @@ const serverRouteMarkers = [
   ["/api/assignments", "GET"],
   ["/api/assignments", "POST"],
   ["/api/verifications", "GET"],
+  ["/api/artifacts", "GET"],
   ["/api/artifacts", "POST"],
   ["/api/contributions", "POST"]
 ];

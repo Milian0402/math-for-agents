@@ -20,6 +20,7 @@ const commands = {
   verifications,
   verification: updateVerification,
   contribute,
+  artifacts,
   artifact: uploadArtifact,
   "artifact-download": downloadArtifact,
   export: exportProblem
@@ -124,6 +125,12 @@ async function contribute(argv) {
     method: "POST",
     body: payload
   }));
+}
+
+async function artifacts(argv) {
+  const problemId = argv[0] || "";
+  const query = problemId ? `?problem_id=${encodeURIComponent(problemId)}` : "";
+  await printJson(await apiRequest(`/api/artifacts${query}`));
 }
 
 async function uploadArtifact(argv) {
@@ -266,6 +273,7 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> needs-more-detail - "missing replay seed"
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> passed <artifact-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs contribute examples/agent-contribution.json
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifacts [problem-id]
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact <problem-id> <title> <file-path>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact-download <artifact-id> [output-path]
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> markdown
@@ -281,6 +289,7 @@ Environment:
 function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
   if (value === "verify") return "verification";
+  if (value === "artifact-list") return "artifacts";
   if (value === "download") return "artifact-download";
   if (value === "heartbeat" || value === "status") return "agent-status";
   return value;

@@ -469,6 +469,23 @@
       }
     },
     "/api/artifacts": {
+      "get": {
+        "operationId": "listArtifacts",
+        "summary": "List artifact metadata for the workspace, optionally scoped to one problem.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProblemIdQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Artifacts"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "post": {
         "operationId": "createArtifact",
         "summary": "Create a path-only artifact or upload artifact bytes. Problem ids must exist in the workspace.",
@@ -638,6 +655,14 @@
         "name": "problem_id",
         "in": "path",
         "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ProblemIdQuery": {
+        "name": "problem_id",
+        "in": "query",
+        "required": false,
         "schema": {
           "type": "string"
         }
@@ -830,6 +855,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ArtifactResponse"
+            }
+          }
+        }
+      },
+      "Artifacts": {
+        "description": "Artifact metadata.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ArtifactsResponse"
             }
           }
         }
@@ -1219,6 +1254,19 @@
         "properties": {
           "artifact": {
             "$ref": "#/components/schemas/Artifact"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArtifactsResponse": {
+        "type": "object",
+        "required": ["artifacts"],
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
           }
         },
         "additionalProperties": false

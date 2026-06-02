@@ -548,6 +548,24 @@ async function main() {
   assert.equal(artifactUpload.status, 201);
   created.artifactIds.push(artifactUpload.payload.artifact.id);
 
+  const listedArtifacts = await request("/api/artifacts", {
+    bearer: agentKey
+  });
+  assert.equal(listedArtifacts.status, 200);
+  assert.ok(listedArtifacts.payload.artifacts.some((artifact) => artifact.id === artifactUpload.payload.artifact.id));
+
+  const listedProblemArtifacts = await request(`/api/artifacts?problem_id=${encodeURIComponent(problemId)}`, {
+    bearer: agentKey
+  });
+  assert.equal(listedProblemArtifacts.status, 200);
+  assert.ok(listedProblemArtifacts.payload.artifacts.every((artifact) => artifact.problem_id === problemId));
+  assert.ok(listedProblemArtifacts.payload.artifacts.some((artifact) => artifact.id === artifactUpload.payload.artifact.id));
+
+  const unknownProblemArtifacts = await request(`/api/artifacts?problem_id=${encodeURIComponent(`problem:missing-${smokeRunId}`)}`, {
+    bearer: agentKey
+  });
+  assert.equal(unknownProblemArtifacts.status, 404);
+
   const artifactDownload = await request(`/api/artifacts/${encodeURIComponent(artifactUpload.payload.artifact.id)}/file`, {
     bearer: agentKey,
     parseJson: false
@@ -851,6 +869,7 @@ async function main() {
       "contribution dependency provenance",
       "artifact reference provenance",
       "verifier agent existence",
+      "artifact discovery",
       "artifact upload/download",
       "agent contribution",
       "verification assignment authorization",
