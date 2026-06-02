@@ -43,9 +43,12 @@ MFA_RATE_LIMIT_WINDOW_MS=60000
 MFA_RATE_LIMIT_LOGIN_MAX=10
 MFA_RATE_LIMIT_WRITE_MAX=120
 MFA_RATE_LIMIT_READ_MAX=600
+MFA_TRUST_PROXY=false
 ```
 
-Limits are in-memory per Node process and keyed by client IP. They are enough for private beta guardrails, but production should still use host or edge rate limiting.
+Limits are in-memory per Node process and keyed by client IP. By default the app ignores `x-forwarded-for`, because direct clients can spoof it. Set `MFA_TRUST_PROXY=true` only when the app is behind a trusted reverse proxy that overwrites `x-forwarded-for`.
+
+These limits are enough for private beta guardrails, but production should still use host or edge rate limiting.
 
 ## Healthcheck and Alerting
 

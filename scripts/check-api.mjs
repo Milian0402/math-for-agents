@@ -8,6 +8,7 @@ import { generateSessionToken, hashPassword, verifyPassword } from "../server/au
 import { assertWebRuntimeConfig, assertWorkerRuntimeConfig, secureCookiesEnabled } from "../server/config.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
+import { clientIp } from "../server/ops.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
 
 const generatedKey = generateAgentApiKey();
@@ -70,6 +71,13 @@ assert.throws(
 assert.equal(secureCookiesEnabled({ NODE_ENV: "production", MFA_COOKIE_SECURE: "true" }), true);
 assert.equal(secureCookiesEnabled({ NODE_ENV: "production", MFA_ALLOW_INSECURE_COOKIES: "true" }), false);
 assert.equal(secureCookiesEnabled({ NODE_ENV: "development" }), false);
+
+const forwardedRequest = {
+  headers: { "x-forwarded-for": "203.0.113.8, 10.0.0.1" },
+  socket: { remoteAddress: "198.51.100.4" }
+};
+assert.equal(clientIp(forwardedRequest, { MFA_TRUST_PROXY: "false" }), "198.51.100.4");
+assert.equal(clientIp(forwardedRequest, { MFA_TRUST_PROXY: "true" }), "203.0.113.8");
 
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },

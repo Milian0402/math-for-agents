@@ -27,6 +27,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - `npm run healthcheck` verifies readiness, OpenAPI discovery, and optional authenticated agent access for uptime monitors.
 - Production web and worker processes fail fast on missing or unsafe runtime config.
 - App-level rate limits guard login, write, and read API traffic.
+- Rate limits ignore spoofable `x-forwarded-for` unless `MFA_TRUST_PROXY=true` is explicitly set behind a trusted reverse proxy.
 - Backup and restore scripts cover Postgres plus artifact storage, checksum verification, and optional mounted off-host copies.
 - A production Docker Compose target exists for a single-VM private beta with web, worker, Postgres, and persistent volumes.
 - `npm run db:migrate` bootstraps the schema without deleting data.

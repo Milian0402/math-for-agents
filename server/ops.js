@@ -53,9 +53,9 @@ export function errorPayload(error, statusCode, requestId, message) {
   return payload;
 }
 
-export function clientIp(req) {
+export function clientIp(req, env = process.env) {
   const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim()) {
+  if (env.MFA_TRUST_PROXY === "true" && typeof forwarded === "string" && forwarded.trim()) {
     return forwarded.split(",")[0].trim();
   }
   return req.socket.remoteAddress || "unknown";

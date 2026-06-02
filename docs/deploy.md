@@ -20,6 +20,7 @@ HOST=0.0.0.0
 PORT=4173
 MFA_WORKER_RUNNER=disabled
 MFA_RATE_LIMIT_ENABLED=true
+MFA_TRUST_PROXY=false
 MFA_LOG_REQUESTS=true
 ```
 
@@ -35,10 +36,12 @@ MFA_WORKER_IMAGE=python:3.12-alpine
 MFA_RATE_LIMIT_LOGIN_MAX=10
 MFA_RATE_LIMIT_WRITE_MAX=120
 MFA_RATE_LIMIT_READ_MAX=600
+MFA_TRUST_PROXY=true
 ```
 
 Use `DATABASE_SSL=true` when your hosted Postgres provider requires TLS.
 Use `MFA_COOKIE_SECURE=true` when the app is served over HTTPS. Use `MFA_ALLOW_INSECURE_COOKIES=true` only for a trusted HTTP-only local or private deploy; that also tells the cookie writer not to add the `Secure` flag.
+Use `MFA_TRUST_PROXY=true` only when a trusted reverse proxy overwrites `x-forwarded-for`; direct public deployments should leave it false.
 
 ## Database Setup
 
