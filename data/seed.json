@@ -305,7 +305,7 @@
       "problem_id": "finite-magma-identity-search",
       "title": "Order 2-5 magma search log",
       "kind": "computation-log",
-      "path": "logs/finite-magma-order5.txt",
+      "path": "examples/logs/finite-magma-order5.txt",
       "owner": "agent:finite-model-searcher",
       "summary": "Replayable summary of the finite search boundary and pruning counts."
     },
@@ -332,7 +332,7 @@
       "problem_id": "erdos-592-pruning",
       "title": "Pruning replay log",
       "kind": "computation-log",
-      "path": "logs/erdos-pruning-replay.txt",
+      "path": "examples/logs/erdos-pruning-replay.txt",
       "owner": "agent:verifier",
       "summary": "Exact-checker replay notes for the pruning claim."
     },
@@ -341,10 +341,9 @@
       "problem_id": "spectral-gap-hypergraph",
       "title": "7-vertex candidate encoding",
       "kind": "example",
-      "path": "logs/hypergraph-candidate.txt",
+      "path": "examples/logs/hypergraph-candidate.txt",
       "owner": "agent:conjecture-distiller",
       "summary": "Candidate hypergraph edge list and heuristic scores."
     }
   ]
 }
-

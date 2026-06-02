@@ -146,9 +146,14 @@ assert.equal(logErrorEvent(errorContext, new Error("bad request"), 400, "bad req
 const staticRoot = path.join(os.tmpdir(), "math-for-agents-static-root");
 assert.equal(resolveStaticFilePath("/", staticRoot), path.join(staticRoot, "index.html"));
 assert.equal(resolveStaticFilePath("/src/app.js", staticRoot), path.join(staticRoot, "src/app.js"));
+assert.equal(
+  resolveStaticFilePath("/examples/logs/finite-magma-order5.txt", staticRoot),
+  path.join(staticRoot, "examples/logs/finite-magma-order5.txt")
+);
 assert.equal(resolveStaticFilePath("/agent-manifest.json", staticRoot), path.join(staticRoot, "agent-manifest.json"));
 assert.equal(resolveStaticFilePath("/openapi.json", staticRoot), path.join(staticRoot, "openapi.json"));
 assert.throws(() => resolveStaticFilePath("/.env", staticRoot), /not found/);
+assert.throws(() => resolveStaticFilePath("/logs/finite-magma-order5.txt", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/server/db.js", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/docs/.env", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/%2e%2e/math-for-agents-evil/.env", staticRoot), /forbidden/);

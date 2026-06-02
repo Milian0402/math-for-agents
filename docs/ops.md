@@ -10,7 +10,7 @@ Every HTTP response includes `x-request-id`. Error responses also include `reque
 
 `/api/health` is a readiness check. It returns OK only after the API can query Postgres, so it is safe for compose health checks and external uptime probes that need to catch database outages.
 
-The web process serves only the frontend, public docs/spec files, schemas, examples, and bundled sample logs. Dotfiles, runtime env files, server code, scripts, packages, and dependency directories are not served as static files.
+The web process serves only the frontend, public docs/spec files, schemas, and examples. Dotfiles, runtime env files, runtime logs, server code, scripts, packages, and dependency directories are not served as static files.
 
 Every JSON, static, export, and artifact-download response also carries baseline browser hardening headers: no MIME sniffing, no framing, no referrer leakage, same-origin opener/resource policy, and a CSP that keeps scripts and API connections same-origin while allowing the current local stylesheet/UI behavior.
 
