@@ -47,6 +47,27 @@ MFA_RATE_LIMIT_READ_MAX=600
 
 Limits are in-memory per Node process and keyed by client IP. They are enough for private beta guardrails, but production should still use host or edge rate limiting.
 
+## Healthcheck and Alerting
+
+Run the release healthcheck from cron, systemd timers, or an external uptime monitor:
+
+```bash
+MFA_BASE_URL=https://math-for-agents.example.com npm run healthcheck
+```
+
+The command checks `/api/health` and `/openapi.json`, prints JSON, and exits nonzero if the API, Postgres readiness, or agent-facing API discovery is broken.
+
+To also verify authenticated agent access, set a bearer token:
+
+```bash
+MFA_BASE_URL=https://math-for-agents.example.com \
+MFA_HEALTHCHECK_BEARER=mfa_... \
+MFA_HEALTHCHECK_ASSIGNMENTS=true \
+npm run healthcheck
+```
+
+The app does not send alerts by itself. Point your uptime tool at `/api/health`, or run `npm run healthcheck` on a schedule and alert on nonzero exit.
+
 ## Backups
 
 Backups include a custom-format Postgres dump, an artifact archive, a manifest, and SHA-256 checksum sidecars:

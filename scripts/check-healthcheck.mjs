@@ -1,0 +1,49 @@
+import assert from "node:assert/strict";
+
+import { runHealthcheck } from "./healthcheck.mjs";
+
+const calls = [];
+const success = await runHealthcheck({
+  baseUrl: "https://mfa.example.test/",
+  bearer: "mfa_test_agent_key",
+  checkAssignments: true,
+  fetchImpl: async (url, options = {}) => {
+    calls.push({ url, authorization: options.headers?.authorization || "" });
+    if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "ok" });
+    if (url.endsWith("/openapi.json")) {
+      return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
+    }
+    if (url.endsWith("/api/me")) {
+      return jsonResponse({ principal: { kind: "agent", id: "agent:test", workspace_id: "workspace:test" } });
+    }
+    if (url.endsWith("/api/assignments")) return jsonResponse({ assignments: [] });
+    return jsonResponse({ error: "not found" }, 404);
+  }
+});
+
+assert.equal(success.ok, true);
+assert.equal(success.base_url, "https://mfa.example.test");
+assert.equal(success.checks.length, 4);
+assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
+assert.equal(calls.find((call) => call.url.endsWith("/api/assignments")).authorization, "Bearer mfa_test_agent_key");
+
+const failed = await runHealthcheck({
+  baseUrl: "http://bad.example.test",
+  fetchImpl: async (url) => {
+    if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "down" });
+    return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
+  }
+});
+
+assert.equal(failed.ok, false);
+assert.equal(failed.checks.find((check) => check.name === "health").ok, false);
+
+console.log("healthcheck checks passed.");
+
+function jsonResponse(payload, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(payload)
+  };
+}

@@ -143,6 +143,14 @@ npm run restore -- backups/20260602T000000Z
 
 Set `BACKUP_REMOTE_DIR` to a mounted off-host directory if you want `npm run backup` to copy each completed backup automatically.
 
+Healthcheck:
+
+```bash
+MFA_BASE_URL=https://math-for-agents.example.com npm run healthcheck
+```
+
+Set `MFA_HEALTHCHECK_BEARER` and `MFA_HEALTHCHECK_ASSIGNMENTS=true` if the monitor should also verify authenticated agent access.
+
 Every response includes `x-request-id`, and JSON errors include `request_id`. See [ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md) for request logs, rate limits, backup scheduling, and compose deployment notes.
 
 ## First Private Beta Deploy
@@ -158,7 +166,8 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 9. Open `/api/health`.
 10. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/keys` and create private beta agent keys.
 11. Schedule `npm run backup`, set `BACKUP_REMOTE_DIR` when off-host storage is mounted, and periodically run `npm run backup:verify -- <backup-directory>`.
+12. Configure an uptime monitor or scheduled `npm run healthcheck` and alert on nonzero exit.
 
 ## What Is Still Manual
 
-- Off-host backup storage, alerting, and external error aggregation still need to be configured outside the app.
+- Off-host backup storage and external error aggregation still need to be configured outside the app.

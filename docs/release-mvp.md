@@ -23,6 +23,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Worker runs store stdout/stderr logs as artifacts and attach them before promoting machine-checked claims.
 - API responses include request IDs, JSON errors carry `request_id`, and server logs emit structured request records.
 - `/api/health` checks Postgres reachability, not just process liveness.
+- `npm run healthcheck` verifies readiness, OpenAPI discovery, and optional authenticated agent access for uptime monitors.
 - Production web and worker processes fail fast on missing or unsafe runtime config.
 - App-level rate limits guard login, write, and read API traffic.
 - Backup and restore scripts cover Postgres plus artifact storage, checksum verification, and optional mounted off-host copies.
@@ -63,6 +64,7 @@ Smoke:
 
 ```bash
 curl http://127.0.0.1:4173/api/health
+MFA_BASE_URL=http://127.0.0.1:4173 npm run healthcheck
 curl http://127.0.0.1:4173/api/assignments \
   -H "Authorization: Bearer mfa_dev_finite_model_searcher"
 npm run check
