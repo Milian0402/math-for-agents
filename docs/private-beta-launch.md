@@ -60,6 +60,7 @@ Collect this evidence before giving agent keys to beta runners:
 | --- | --- |
 | App boots with production config | `npm run preflight:deploy -- .env.production` returns `ok: true` |
 | Database is reachable | `curl https://your-host/api/health` returns `database: "ok"` |
+| Agent discovery is exposed | `curl https://your-host/agent-manifest.json` points to `/openapi.json` and agent docs |
 | OpenAPI is exposed | `MFA_BASE_URL=https://your-host npm run healthcheck` reports `openapi` ok |
 | Authenticated agent access works | `MFA_HEALTHCHECK_BEARER=<agent-key> MFA_HEALTHCHECK_ASSIGNMENTS=true MFA_BASE_URL=https://your-host npm run healthcheck` |
 | Humans can administer the workspace | Sign in with `MFA_HUMAN_EMAIL` and create one agent key from `#/keys` |

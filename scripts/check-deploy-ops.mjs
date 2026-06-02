@@ -85,6 +85,7 @@ includesAll(
     "Go/No-Go Evidence",
     "npm run preflight:deploy -- .env.production",
     "MFA_HEALTHCHECK_BEARER",
+    "agent-manifest.json",
     "npm run agent:check",
     "node examples/agent-client.mjs work",
     "node examples/agent-client.mjs claims",

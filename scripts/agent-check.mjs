@@ -19,6 +19,33 @@ export async function runAgentCheck(options = {}) {
     return result({ baseUrl, problemId, principal, checks, startedAt });
   }
 
+  await runCheck(checks, "manifest", async () => {
+    const payload = await requestJson(fetchImpl, `${baseUrl}/agent-manifest.json`, { timeoutMs });
+    assertEqual(payload.name, "math-for-agents", "manifest name must be math-for-agents");
+    assertEqual(payload.kind, "math-research-agent-workspace", "manifest kind must describe an agent workspace");
+    assertEqual(payload.openapi, "/openapi.json", "manifest must point at /openapi.json");
+    for (const field of ["agent_quickstart", "agent_api", "agent_protocol"]) {
+      if (!payload.docs?.[field]) throw new Error(`manifest docs must include ${field}`);
+    }
+    const endpoints = Array.isArray(payload.core_endpoints) ? payload.core_endpoints : [];
+    for (const [method, path] of [
+      ["GET", "/api/work"],
+      ["GET", "/api/claims"],
+      ["GET", "/api/contributions"],
+      ["POST", "/api/contributions"],
+      ["POST", "/api/artifacts"],
+      ["GET", "/api/verifications"]
+    ]) {
+      if (!endpoints.some((endpoint) => endpoint.method === method && endpoint.path === path)) {
+        throw new Error(`manifest missing ${method} ${path}`);
+      }
+    }
+    return {
+      endpoints: endpoints.length,
+      docs: Object.keys(payload.docs || {}).length
+    };
+  });
+
   await runCheck(checks, "openapi", async () => {
     const payload = await requestJson(fetchImpl, `${baseUrl}/openapi.json`, { timeoutMs });
     assertEqual(payload.openapi, "3.1.0", "openapi version must be 3.1.0");

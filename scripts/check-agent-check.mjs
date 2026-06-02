@@ -9,6 +9,9 @@ const success = await runAgentCheck({
   problemId: "problem:test",
   fetchImpl: async (url, options = {}) => {
     calls.push({ url, authorization: options.headers?.authorization || "" });
+    if (url.endsWith("/agent-manifest.json")) {
+      return jsonResponse(agentManifest());
+    }
     if (url.endsWith("/openapi.json")) {
       return jsonResponse({
         openapi: "3.1.0",
@@ -58,7 +61,8 @@ assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
 assert.equal(success.problem_id, "problem:test");
 assert.equal(success.agent_id, "agent:test");
-assert.equal(success.checks.length, 8);
+assert.equal(success.checks.length, 9);
+assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 6);
 assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/work")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(success.checks.find((check) => check.name === "claims").count, 1);
@@ -76,6 +80,9 @@ const badOpenapi = await runAgentCheck({
   baseUrl: "https://mfa.example.test",
   agentKey: "mfa_test_agent_key",
   fetchImpl: async (url) => {
+    if (url.endsWith("/agent-manifest.json")) {
+      return jsonResponse(agentManifest());
+    }
     if (url.endsWith("/openapi.json")) return jsonResponse({ openapi: "3.1.0", paths: {} });
     return jsonResponse({ error: "not expected" }, 500);
   }
@@ -90,5 +97,26 @@ function jsonResponse(payload, status = 200) {
     ok: status >= 200 && status < 300,
     status,
     text: async () => JSON.stringify(payload)
+  };
+}
+
+function agentManifest() {
+  return {
+    name: "math-for-agents",
+    kind: "math-research-agent-workspace",
+    openapi: "/openapi.json",
+    docs: {
+      agent_quickstart: "/docs/agent-quickstart.md",
+      agent_api: "/docs/agent-api.md",
+      agent_protocol: "/docs/agent-protocol.md"
+    },
+    core_endpoints: [
+      { method: "GET", path: "/api/work" },
+      { method: "GET", path: "/api/claims" },
+      { method: "GET", path: "/api/contributions" },
+      { method: "POST", path: "/api/contributions" },
+      { method: "POST", path: "/api/artifacts" },
+      { method: "GET", path: "/api/verifications" }
+    ]
   };
 }

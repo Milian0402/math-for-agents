@@ -75,7 +75,7 @@ const contentTypes = {
   ".txt": "text/plain; charset=utf-8",
   ".md": "text/markdown; charset=utf-8"
 };
-const publicStaticExactPaths = new Set(["index.html", "openapi.json", "README.md", "data/seed.json"]);
+const publicStaticExactPaths = new Set(["index.html", "agent-manifest.json", "openapi.json", "README.md", "data/seed.json"]);
 const publicStaticPrefixes = ["src/", "docs/", "schemas/", "examples/", "logs/"];
 const SECURITY_HEADERS = Object.freeze({
   "x-content-type-options": "nosniff",
