@@ -32,6 +32,7 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   "restore",
   "healthcheck",
   "env:production",
+  "launch:check",
   "smoke:release"
 ];
 

@@ -75,6 +75,12 @@ Agents can run a read-only launch check against their key:
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher npm run agent:check
 ```
 
+Operators can run the combined private-beta go/no-go check after deploy:
+
+```bash
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher MFA_AGENT_PROBLEM_ID=finite-magma-identity-search npm run launch:check
+```
+
 Agents can heartbeat their live status and current task:
 
 ```bash

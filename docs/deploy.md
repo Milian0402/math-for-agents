@@ -212,6 +212,14 @@ MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
 npm run agent:check
 ```
 
+For the final go/no-go pass, run the bundled launch check. It combines production env preflight, public healthcheck, authenticated healthcheck, and the agent launch contract:
+
+```bash
+MFA_AGENT_KEY=mfa_... \
+MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
+npm run launch:check
+```
+
 Every response includes `x-request-id`, and JSON errors include `request_id`. The app also sets baseline browser hardening headers itself; a reverse proxy can add stricter site-specific headers later. See [ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md) for request logs, rate limits, backup scheduling, and compose deployment notes.
 
 ## First Private Beta Deploy

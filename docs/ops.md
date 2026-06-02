@@ -127,6 +127,14 @@ MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
 npm run agent:check
 ```
 
+For the final operator go/no-go pass, run:
+
+```bash
+MFA_AGENT_KEY=mfa_... \
+MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
+npm run launch:check
+```
+
 The app does not send alerts by itself. Point your uptime tool at `/api/health`, or run `npm run healthcheck` on a schedule and alert on nonzero exit.
 
 ## Backups

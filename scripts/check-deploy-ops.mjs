@@ -68,7 +68,8 @@ includesAll(
     "--profile ops run --rm healthcheck",
     "--profile ops run --rm backup",
     "private-beta-launch.md",
-    "npm run agent:check"
+    "npm run agent:check",
+    "npm run launch:check"
   ],
   "deploy docs"
 );
@@ -90,6 +91,7 @@ includesAll(
     "MFA_HEALTHCHECK_BEARER",
     "agent-manifest.json",
     "npm run agent:check",
+    "npm run launch:check",
     "node examples/agent-client.mjs work",
     "node examples/agent-client.mjs claims",
     "npm run backup:verify",
