@@ -15,17 +15,18 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - The browser UI loads from `/api/store` when the API is available and an API key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.
+- `npm run db:migrate` bootstraps the schema without deleting data.
+- A production Dockerfile runs the app as one Node container.
+- GitHub Actions runs `npm run check` and builds the Docker image.
 - `npm run check` covers frontend syntax, seed validation, and backend contract rules.
 
 ## Still Needed Before a Real Private Beta
 
 - Add a real hosted Postgres instance and deployment target.
-- Add migrations instead of one schema bootstrap file.
 - Replace the local API-key prompt with real user login and workspace membership UI.
 - Add API key creation/rotation UI.
 - Add artifact file storage instead of path-only artifact records.
 - Add background workers that actually execute replay, CAS, and Lean jobs in containers.
-- Add CI that runs `npm run check` on every push.
 - Add backups, rate limits, error reporting, and basic abuse controls.
 
 ## Release Command Path
@@ -40,6 +41,13 @@ npm run db:seed
 npm start
 ```
 
+Production/private beta:
+
+```bash
+npm run db:migrate
+docker build -t math-for-agents .
+```
+
 Smoke:
 
 ```bash
@@ -48,3 +56,5 @@ curl http://127.0.0.1:4173/api/assignments \
   -H "Authorization: Bearer mfa_dev_finite_model_searcher"
 npm run check
 ```
+
+See [deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md) for environment variables and first-deploy steps.

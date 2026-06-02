@@ -59,6 +59,8 @@ The API is available under `/api/*`. Start with [docs/agent-api.md](/Users/maxim
 
 When the app is served by `npm start`, the browser UI uses the Postgres API automatically. On localhost it defaults to the dev human key from `.env.example`; use the `API key` button in the sidebar to switch keys.
 
+For deployment, run `npm run db:migrate` against Postgres and use the included Dockerfile. See [docs/deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md).
+
 ## Static Demo
 
 The original local-only app still works without Postgres:
