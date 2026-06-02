@@ -134,7 +134,9 @@ function agentManifest() {
     docs: {
       agent_quickstart: "/docs/agent-quickstart.md",
       agent_api: "/docs/agent-api.md",
-      agent_protocol: "/docs/agent-protocol.md"
+      agent_protocol: "/docs/agent-protocol.md",
+      contributing: "/docs/AGENT_CONTRIBUTING.md",
+      launch_check: "/docs/private-beta-launch.md"
     },
     core_endpoints: [
       { method: "GET", path: "/api/work" },

@@ -39,8 +39,9 @@ export async function runHealthcheck(options = {}) {
 
   await runCheck(checks, "docs", async () => {
     const docs = {};
-    for (const key of REQUIRED_DOCS) {
-      const docPath = manifestDocs[key];
+    const docEntries = Object.entries(manifestDocs);
+    if (!docEntries.length) throw new Error("manifest docs must not be empty");
+    for (const [key, docPath] of docEntries) {
       const text = await requestText(fetchImpl, `${baseUrl}${docPath}`, { timeoutMs });
       if (!text.includes("# ")) throw new Error(`${docPath} must contain a markdown heading`);
       docs[key] = text.length;
@@ -162,6 +163,11 @@ function assertManifestDocs(docs) {
   for (const key of REQUIRED_DOCS) {
     if (typeof docs?.[key] !== "string" || !docs[key].startsWith("/docs/")) {
       throw new Error(`manifest docs must include ${key}`);
+    }
+  }
+  for (const [key, value] of Object.entries(docs || {})) {
+    if (typeof value !== "string" || !value.startsWith("/docs/")) {
+      throw new Error(`manifest docs must include a /docs/ path for ${key}`);
     }
   }
 }

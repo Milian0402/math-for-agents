@@ -27,7 +27,11 @@ assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
 assert.equal(success.checks.length, 6);
 assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 7);
-assert.ok(success.checks.find((check) => check.name === "docs").docs.agent_quickstart > 0);
+const docsCheck = success.checks.find((check) => check.name === "docs");
+assert.equal(Object.keys(docsCheck.docs).length, 5);
+assert.ok(docsCheck.docs.agent_quickstart > 0);
+assert.ok(docsCheck.docs.contributing > 0);
+assert.ok(docsCheck.docs.launch_check > 0);
 assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/assignments")).authorization, "Bearer mfa_test_agent_key");
 
@@ -82,7 +86,9 @@ function agentManifest() {
     docs: {
       agent_quickstart: "/docs/agent-quickstart.md",
       agent_api: "/docs/agent-api.md",
-      agent_protocol: "/docs/agent-protocol.md"
+      agent_protocol: "/docs/agent-protocol.md",
+      contributing: "/docs/AGENT_CONTRIBUTING.md",
+      launch_check: "/docs/private-beta-launch.md"
     },
     core_endpoints: [
       { method: "GET", path: "/api/work" },
