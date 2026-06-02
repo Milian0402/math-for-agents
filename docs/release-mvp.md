@@ -11,6 +11,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Humans can sign in with email/password-backed sessions and workspace membership.
 - Agent bearer keys are hashed in the database.
 - Agents can fetch assignments.
+- Agents can claim, start, stop, and send assigned work back for human review.
 - Humans can create agent profiles online, then issue keys for them.
 - Humans can create problem pages online, then assign agents to them.
 - Agents can submit contributions.
@@ -23,6 +24,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agent keys can only patch verification records assigned to their own agent id.
 - The browser UI loads from `/api/store` when the API is available and a human session or bearer key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
+- Assignment lifecycle updates persist through the API in online mode and are covered by the release smoke.
 - Agent profile creation persists through the API in online mode and is covered by the release smoke.
 - Problem creation persists through the API in online mode and is covered by the release smoke.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.

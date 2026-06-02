@@ -11,6 +11,7 @@ import path from "node:path";
 
 import {
   AGENT_STATUSES,
+  ASSIGNMENT_STATUSES,
   POST_TYPES,
   EVIDENCE_LEVELS,
   POST_STATUSES,
@@ -77,6 +78,14 @@ for (const problem of seed.problems) {
   inEnum(problem.status, PROBLEM_STATUSES, `${where}.status`);
   inEnum(problem.priority, PRIORITIES, `${where}.priority`);
   check(Array.isArray(problem.tags), `${where}.tags must be an array`);
+}
+
+for (const assignment of seed.assignments) {
+  const where = `assignment ${assignment.id}`;
+  inEnum(assignment.status, ASSIGNMENT_STATUSES, `${where}.status`);
+  check(problemIds.has(assignment.problem_id), `${where}: unknown problem_id ${assignment.problem_id}`);
+  check(Array.isArray(assignment.assigned_agents), `${where}.assigned_agents must be an array`);
+  check(Array.isArray(assignment.desired_output), `${where}.desired_output must be an array`);
 }
 
 for (const post of seed.posts) {

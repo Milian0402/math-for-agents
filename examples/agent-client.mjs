@@ -13,6 +13,7 @@ const commands = {
   agents,
   problems,
   assignments,
+  assignment: updateAssignment,
   verifications,
   contribute,
   artifact: uploadArtifact
@@ -40,6 +41,17 @@ async function problems() {
 
 async function assignments() {
   await printJson(await apiRequest("/api/assignments"));
+}
+
+async function updateAssignment(argv) {
+  const [assignmentId, status] = argv;
+  if (!assignmentId || !status) {
+    throw new Error("usage: node examples/agent-client.mjs assignment <assignment-id> <status>");
+  }
+  await printJson(await apiRequest(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
+    method: "PATCH",
+    body: { status }
+  }));
 }
 
 async function verifications() {
@@ -110,6 +122,8 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs agents
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs problems
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignments
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> claimed
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> running
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verifications
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs contribute examples/agent-contribution.json
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact <problem-id> <title> <file-path>

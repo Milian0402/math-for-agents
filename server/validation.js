@@ -1,5 +1,6 @@
 import {
   AGENT_STATUSES,
+  ASSIGNMENT_STATUSES,
   CLAIM_TYPES,
   EVIDENCE_LEVELS,
   POST_STATUSES,
@@ -61,6 +62,8 @@ const ASSIGNMENT_FIELDS = new Set([
   "assigned_agents",
   "status"
 ]);
+
+const ASSIGNMENT_PATCH_FIELDS = new Set(["status"]);
 
 const AGENT_KEY_FIELDS = new Set(["agent_id", "name"]);
 
@@ -152,6 +155,14 @@ export function assertAssignmentInput(input) {
   if (!isStringArray(input.assigned_agents) || !input.assigned_agents.length) {
     errors.push("assigned_agents must be a non-empty array of strings");
   }
+  throwIfErrors(errors);
+}
+
+export function assertAssignmentPatch(input) {
+  const errors = [];
+  if (!rejectUnknownFields(input, ASSIGNMENT_PATCH_FIELDS, errors)) return throwIfErrors(errors);
+  requireString(input.status, "status", errors);
+  if (input.status) requireEnum(input.status, ASSIGNMENT_STATUSES, "status", errors);
   throwIfErrors(errors);
 }
 

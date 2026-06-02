@@ -24,6 +24,7 @@ const expectedOperations = [
   ["POST", "/api/problems", "createProblem", true],
   ["GET", "/api/assignments", "listAssignments", true],
   ["POST", "/api/assignments", "createAssignment", true],
+  ["PATCH", "/api/assignments/{assignment_id}", "updateAssignment", true],
   ["POST", "/api/contributions", "createContribution", true],
   ["POST", "/api/artifacts", "createArtifact", true],
   ["GET", "/api/artifacts/{artifact_id}/file", "downloadArtifactFile", true],
@@ -68,6 +69,9 @@ for (const [path, method] of serverRouteMarkers) {
   assert.ok(server.includes(`url.pathname === "${path}"`), `server route marker missing: ${method} ${path}`);
   assert.ok(server.includes(`req.method === "${method}"`), `server method marker missing: ${method} ${path}`);
 }
+
+assert.ok(server.includes("const assignmentMatch = url.pathname.match"), "server route marker missing: PATCH /api/assignments/{assignment_id}");
+assert.ok(server.includes('assignmentMatch && req.method === "PATCH"'), "server method marker missing: PATCH /api/assignments/{assignment_id}");
 
 for (const schema of ["Agent", "Problem", "Assignment", "Claim", "Post", "Verification"]) {
   assert.ok(spec.components.schemas[schema]?.$ref, `${schema} should reference the shared JSON schema`);

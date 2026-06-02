@@ -19,6 +19,7 @@ import {
   createContribution,
   createProblem,
   deleteAgentApiKey,
+  getAssignment,
   getArtifact,
   getVerification,
   getWorkspace,
@@ -31,6 +32,7 @@ import {
   loginHuman,
   revokeHumanSession,
   rotateAgentApiKey,
+  updateAssignment,
   updateVerification
 } from "./repository.js";
 import {
@@ -38,6 +40,7 @@ import {
   assertAgentKeyInput,
   assertArtifactInput,
   assertAssignmentInput,
+  assertAssignmentPatch,
   assertLoginInput,
   assertProblemInput,
   assertVerificationPatch,
@@ -202,6 +205,28 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  const assignmentMatch = url.pathname.match(/^\/api\/assignments\/([^/]+)$/);
+  if (assignmentMatch && req.method === "PATCH") {
+    const assignmentId = assignmentMatch[1];
+    const body = await readJson(req);
+    assertAssignmentPatch(body);
+
+    if (principal.kind === "agent") {
+      if (body.status === "done") throw httpError(403, "agent keys cannot mark assignments done");
+      const assignment = await getAssignment(workspaceId, assignmentId);
+      if (!assignment) throw httpError(404, "assignment not found");
+      if (assignment.status === "done") throw httpError(403, "done assignments are locked for agent keys");
+      if (!assignmentVisibleToAgent(assignment, principal.id)) {
+        throw httpError(403, "agent keys can only update their assigned work");
+      }
+    }
+
+    const assignment = await updateAssignment(workspaceId, assignmentId, body);
+    if (!assignment) throw httpError(404, "assignment not found");
+    sendJson(res, 200, { assignment });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/verifications") {
     const assignedAgent = principal.kind === "agent" ? principal.id : url.searchParams.get("assigned_agent") || "";
     sendJson(res, 200, { verifications: await listVerificationQueue(workspaceId, assignedAgent) });
@@ -318,7 +343,12 @@ async function requirePrincipal(req) {
 }
 
 function requireHuman(principal) {
-  if (principal.kind !== "human") throw httpError(403, "only human keys can manage agent API keys");
+  if (principal.kind !== "human") throw httpError(403, "only human auth can perform this action");
+}
+
+function assignmentVisibleToAgent(assignment, agentId) {
+  const assignedAgents = Array.isArray(assignment.assigned_agents) ? assignment.assigned_agents : [];
+  return assignedAgents.length === 0 || assignedAgents.includes(agentId);
 }
 
 async function readJson(req) {

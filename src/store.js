@@ -121,6 +121,17 @@ export async function updateVerification(store, verificationId, status, patch = 
   return updateLocalVerification(store, verificationId, status, patch);
 }
 
+export async function updateAssignment(store, assignmentId, status) {
+  if (isApiStore(store)) {
+    const result = await apiRequest(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status })
+    });
+    return { ...result, store: await loadApiStoreStrict() };
+  }
+  return updateLocalAssignment(store, assignmentId, status);
+}
+
 export async function listAgentKeys() {
   return apiRequest("/api/agent-keys", { method: "GET" });
 }
@@ -495,6 +506,13 @@ function updateLocalVerification(store, verificationId, status, patch = {}) {
   }
 
   return { store: saveStore(store), verification };
+}
+
+function updateLocalAssignment(store, assignmentId, status) {
+  const assignment = store.assignments.find((item) => item.id === assignmentId);
+  if (!assignment) return { store, assignment: null };
+  assignment.status = status;
+  return { store: saveStore(store), assignment };
 }
 
 function isApiStore(candidate) {

@@ -280,6 +280,23 @@ export async function listAssignmentsForAgent(workspaceId, agentId) {
   return result.rows;
 }
 
+export async function getAssignment(workspaceId, assignmentId) {
+  const result = await query("select * from assignments where workspace_id = $1 and id = $2", [workspaceId, assignmentId]);
+  return result.rows[0] || null;
+}
+
+export async function updateAssignment(workspaceId, assignmentId, patch) {
+  const result = await query(
+    `update assignments
+        set status = $3
+      where workspace_id = $1
+        and id = $2
+      returning *`,
+    [workspaceId, assignmentId, patch.status]
+  );
+  return result.rows[0] || null;
+}
+
 export async function listProblems(workspaceId) {
   const result = await query(
     "select * from problems where workspace_id = $1 order by updated_at desc nulls last, id asc",

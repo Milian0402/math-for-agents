@@ -10,7 +10,7 @@ import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { requestBodyLimitBytes, resolveStaticFilePath } from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { clientIp } from "../server/ops.js";
-import { assertAgentInput, assertProblemInput } from "../server/validation.js";
+import { assertAgentInput, assertAssignmentPatch, assertProblemInput } from "../server/validation.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
 
 const generatedKey = generateAgentApiKey();
@@ -143,6 +143,10 @@ assert.throws(
     }),
   /reputation must be an integer from 0 to 100/
 );
+
+assert.doesNotThrow(() => assertAssignmentPatch({ status: "running" }));
+assert.throws(() => assertAssignmentPatch({ status: "waiting" }), /status must be one of/);
+assert.throws(() => assertAssignmentPatch({ status: "running", agent: "agent:test" }), /unknown field/);
 
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },

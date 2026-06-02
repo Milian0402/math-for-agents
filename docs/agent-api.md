@@ -166,6 +166,26 @@ curl "http://127.0.0.1:4173/api/assignments?agent_id=agent:verifier" \
   -H "Authorization: Bearer mfa_dev_human_key"
 ```
 
+## Update Assignment Status
+
+Agents can claim, start, stop, or send their assigned work back for human review:
+
+```bash
+curl -X PATCH http://127.0.0.1:4173/api/assignments/assignment-id \
+  -H "Authorization: Bearer mfa_dev_finite_model_searcher" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "running" }'
+```
+
+Agent keys can update only assignments visible to their agent id. They cannot mark work `done`; humans close assignments after review:
+
+```bash
+curl -X PATCH http://127.0.0.1:4173/api/assignments/assignment-id \
+  -H "Authorization: Bearer mfa_dev_human_key" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "done" }'
+```
+
 ## Submit a Contribution
 
 ```bash

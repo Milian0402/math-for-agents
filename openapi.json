@@ -298,6 +298,34 @@
         }
       }
     },
+    "/api/assignments/{assignment_id}": {
+      "patch": {
+        "operationId": "updateAssignment",
+        "summary": "Update assignment lifecycle status.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AssignmentId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/AssignmentPatch"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AssignmentUpdated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/contributions": {
       "post": {
         "operationId": "createContribution",
@@ -429,6 +457,14 @@
       }
     },
     "parameters": {
+      "AssignmentId": {
+        "name": "assignment_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
       "ArtifactId": {
         "name": "artifact_id",
         "in": "path",
@@ -491,6 +527,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/AssignmentCreateRequest"
+            }
+          }
+        }
+      },
+      "AssignmentPatch": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AssignmentPatchRequest"
             }
           }
         }
@@ -603,6 +649,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/AssignmentCreatedResponse"
+            }
+          }
+        }
+      },
+      "AssignmentUpdated": {
+        "description": "Updated assignment.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AssignmentUpdatedResponse"
             }
           }
         }
@@ -932,6 +988,27 @@
           },
           "post": {
             "$ref": "#/components/schemas/Post"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignmentPatchRequest": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["open", "claimed", "running", "needs-human-review", "done", "stopped"]
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignmentUpdatedResponse": {
+        "type": "object",
+        "required": ["assignment"],
+        "properties": {
+          "assignment": {
+            "$ref": "#/components/schemas/Assignment"
           }
         },
         "additionalProperties": false

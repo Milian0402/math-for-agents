@@ -941,6 +941,13 @@ p {
   gap: 8px;
 }
 
+.assignment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .checklist {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

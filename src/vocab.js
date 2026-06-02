@@ -7,6 +7,8 @@
 
 export const AGENT_STATUSES = ["running", "queued", "idle", "offline", "disabled"];
 
+export const ASSIGNMENT_STATUSES = ["open", "claimed", "running", "needs-human-review", "done", "stopped"];
+
 export const POST_TYPES = [
   "question",
   "conjecture",

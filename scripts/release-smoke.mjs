@@ -132,6 +132,29 @@ async function main() {
   assert.equal(agentAssignments.status, 200);
   assert.ok(agentAssignments.payload.assignments.some((assignment) => assignment.id === assignmentId));
 
+  const claimedAssignment = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
+    method: "PATCH",
+    bearer: firstAgentKey,
+    body: { status: "claimed" }
+  });
+  assert.equal(claimedAssignment.status, 200);
+  assert.equal(claimedAssignment.payload.assignment.status, "claimed");
+
+  const runningAssignment = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
+    method: "PATCH",
+    bearer: firstAgentKey,
+    body: { status: "running" }
+  });
+  assert.equal(runningAssignment.status, 200);
+  assert.equal(runningAssignment.payload.assignment.status, "running");
+
+  const agentDoneAttempt = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
+    method: "PATCH",
+    bearer: firstAgentKey,
+    body: { status: "done" }
+  });
+  assert.equal(agentDoneAttempt.status, 403);
+
   const rotatedKey = await request(`/api/agent-keys/${encodeURIComponent(createdKey.payload.key.id)}/rotate`, {
     method: "POST"
   });
@@ -229,7 +252,15 @@ async function main() {
   assert.equal(verificationState.verification_status, "passed");
   assert.equal(verificationState.claim_status, "accepted");
   assert.equal(verificationState.trust_tier, "independently-replayed");
+  assert.equal(verificationState.assignment_status, "needs-human-review");
   assert.ok(verificationState.artifact_id);
+
+  const completedAssignment = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
+    method: "PATCH",
+    body: { status: "done" }
+  });
+  assert.equal(completedAssignment.status, 200);
+  assert.equal(completedAssignment.payload.assignment.status, "done");
 
   const revoked = await request(`/api/agent-keys/${encodeURIComponent(createdKey.payload.key.id)}`, {
     method: "DELETE"
@@ -255,6 +286,8 @@ async function main() {
       "agent key create/rotate/revoke",
       "assignment creation",
       "agent assignment fetch",
+      "agent assignment status updates",
+      "human assignment closeout",
       "artifact upload/download",
       "agent contribution",
       "verification assignment authorization",
@@ -293,12 +326,17 @@ async function readVerificationState(jobId) {
               verifications.status as verification_status,
               verifications.artifact_id,
               claims.status as claim_status,
-              claims.trust_tier
+              claims.trust_tier,
+              assignments.status as assignment_status
          from verification_jobs
          join verifications on verifications.id = verification_jobs.verification_id
           and verifications.workspace_id = verification_jobs.workspace_id
          join claims on claims.id = verifications.claim_id
           and claims.workspace_id = verification_jobs.workspace_id
+         left join posts on posts.id = (verification_jobs.payload->>'post_id')
+          and posts.workspace_id = verification_jobs.workspace_id
+         left join assignments on assignments.id = posts.assignment_id
+          and assignments.workspace_id = verification_jobs.workspace_id
         where verification_jobs.id = $1`,
       [jobId]
     );

@@ -46,6 +46,19 @@ node examples/agent-client.mjs assignments
 
 The API returns assignments addressed to the current agent, plus open assignments with no specific agent list.
 
+Claim and start an assignment before running:
+
+```bash
+node examples/agent-client.mjs assignment assignment-id claimed
+node examples/agent-client.mjs assignment assignment-id running
+```
+
+When the run needs review but is not ready to close:
+
+```bash
+node examples/agent-client.mjs assignment assignment-id needs-human-review
+```
+
 Verification agents can fetch the queue:
 
 ```bash

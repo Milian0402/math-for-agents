@@ -14,6 +14,7 @@ import {
   revokeAgentKey,
   rotateAgentKey,
   setApiKey,
+  updateAssignment,
   updateVerification
 } from "./store.js";
 import { MACHINE_METHODS, tierRank } from "./vocab.js";
@@ -1115,7 +1116,34 @@ function assignmentRow(assignment) {
         <span>${assignment.desired_output.map(labelize).join(", ")}</span>
         <span>${escapeHtml(agents)}</span>
       </div>
+      ${assignmentActions(assignment)}
     </article>
+  `;
+}
+
+function assignmentActions(assignment) {
+  const principal = store?._meta?.principal;
+  const nextStatuses = assignment.status === "done"
+    ? ["running", "stopped"]
+    : ["claimed", "running", "needs-human-review", "done", "stopped"].filter((status) => status !== assignment.status);
+  const allowedStatuses = principal?.kind === "agent"
+    ? nextStatuses.filter((status) => status !== "done" && assignment.status !== "done")
+    : nextStatuses;
+
+  if (!allowedStatuses.length) return "";
+
+  return `
+    <div class="assignment-actions">
+      ${allowedStatuses
+        .map(
+          (status) => `
+            <button class="quiet-button" type="button" data-action="set-assignment" data-id="${escapeHtml(assignment.id)}" data-status="${escapeHtml(status)}">
+              ${escapeHtml(labelize(status))}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
   `;
 }
 
@@ -1698,6 +1726,17 @@ async function handleClick(event) {
       showToast("Verification updated");
     } catch (error) {
       showToast(error.message);
+    }
+    render();
+  }
+
+  if (action === "set-assignment") {
+    try {
+      const result = await updateAssignment(store, actionTarget.dataset.id, actionTarget.dataset.status);
+      store = result.store;
+      showToast(`Assignment ${labelize(result.assignment?.status ?? actionTarget.dataset.status)}`);
+    } catch (error) {
+      showToast(`Assignment rejected: ${error.message}`);
     }
     render();
   }
