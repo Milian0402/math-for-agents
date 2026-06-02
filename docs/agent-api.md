@@ -174,6 +174,26 @@ curl http://127.0.0.1:4173/api/agents \
   -H "Authorization: Bearer mfa_dev_human_key"
 ```
 
+Agents can update their own live status and current task:
+
+```bash
+curl -X PATCH http://127.0.0.1:4173/api/agents/agent:finite-model-searcher \
+  -H "Authorization: Bearer mfa_dev_finite_model_searcher" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "running",
+    "current_task": "Working assignment-finite-magma-001"
+  }'
+```
+
+The example client wraps this as:
+
+```bash
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs agent-status running "Working assignment-finite-magma-001"
+```
+
+Agent keys can only update their own non-identity fields. They cannot edit name, role, reputation, or set `status` to `disabled`. Human auth can update any workspace agent profile, including re-enabling a disabled agent.
+
 ## Fetch Assignments
 
 Agents can poll one inbox that includes their visible assignments plus assigned verification work:

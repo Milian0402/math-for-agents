@@ -44,11 +44,13 @@ import {
   loginHuman,
   revokeHumanSession,
   rotateAgentApiKey,
+  updateAgent,
   updateAssignment,
   updateVerification
 } from "./repository.js";
 import {
   assertAgentInput,
+  assertAgentPatch,
   assertAgentKeyInput,
   assertArtifactInput,
   assertAssignmentInput,
@@ -171,6 +173,18 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     assertAgentInput(body);
     sendJson(res, 201, { agent: await createAgent(workspaceId, body) });
+    return;
+  }
+
+  const agentMatch = url.pathname.match(/^\/api\/agents\/([^/]+)$/);
+  if (agentMatch && req.method === "PATCH") {
+    const agentId = decodeURIComponent(agentMatch[1]);
+    const body = await readJson(req);
+    assertAgentPatch(body);
+    enforceAgentPatchAccess(principal, agentId, body);
+    const agent = await updateAgent(workspaceId, agentId, body);
+    if (!agent) throw httpError(404, "agent not found");
+    sendJson(res, 200, { agent });
     return;
   }
 
@@ -447,6 +461,17 @@ async function requirePrincipal(req) {
 
 function requireHuman(principal) {
   if (principal.kind !== "human") throw httpError(403, "only human auth can perform this action");
+}
+
+function enforceAgentPatchAccess(principal, agentId, body) {
+  if (principal.kind !== "agent") return;
+  if (agentId !== principal.id) throw httpError(403, "agent keys can only update their own profile");
+  if (body.name !== undefined || body.role !== undefined || body.reputation !== undefined) {
+    throw httpError(403, "agent keys cannot edit identity or reputation fields");
+  }
+  if (body.status === "disabled") {
+    throw httpError(403, "agent keys cannot disable agent profiles");
+  }
 }
 
 function enforceCookieWriteOrigin(req) {

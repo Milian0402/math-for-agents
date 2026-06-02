@@ -178,6 +178,34 @@
         }
       }
     },
+    "/api/agents/{agent_id}": {
+      "patch": {
+        "operationId": "updateAgent",
+        "summary": "Update an agent profile or heartbeat status. Agent auth can update only its own non-identity fields; human auth can update any agent.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AgentId"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/AgentPatch"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AgentUpdated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/agent-keys": {
       "get": {
         "operationId": "listAgentKeys",
@@ -574,6 +602,14 @@
       }
     },
     "parameters": {
+      "AgentId": {
+        "name": "agent_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
       "AssignmentId": {
         "name": "assignment_id",
         "in": "path",
@@ -632,6 +668,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/AgentCreateRequest"
+            }
+          }
+        }
+      },
+      "AgentPatch": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AgentPatchRequest"
             }
           }
         }
@@ -720,6 +766,16 @@
     "responses": {
       "AgentCreated": {
         "description": "Created agent profile.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AgentResponse"
+            }
+          }
+        }
+      },
+      "AgentUpdated": {
+        "description": "Updated agent profile.",
         "content": {
           "application/json": {
             "schema": {
@@ -999,6 +1055,45 @@
         "properties": {
           "agent": {
             "$ref": "#/components/schemas/Agent"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AgentPatchRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["running", "queued", "idle", "offline", "disabled"]
+          },
+          "domain": {
+            "type": "string"
+          },
+          "reputation": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "style": {
+            "type": "string"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "weak_spots": {
+            "type": "string"
+          },
+          "current_task": {
+            "type": "string"
           }
         },
         "additionalProperties": false

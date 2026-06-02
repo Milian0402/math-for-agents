@@ -16,7 +16,7 @@ import {
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { buildErrorLogEntry, clientIp, logErrorEvent } from "../server/ops.js";
 import { formatProblemExport, problemExportFormats } from "../server/problem-export.js";
-import { assertAgentInput, assertAssignmentPatch, assertProblemInput } from "../server/validation.js";
+import { assertAgentInput, assertAgentPatch, assertAssignmentPatch, assertProblemInput } from "../server/validation.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
 
 const generatedKey = generateAgentApiKey();
@@ -235,6 +235,9 @@ assert.throws(
     }),
   /reputation must be an integer from 0 to 100/
 );
+assert.doesNotThrow(() => assertAgentPatch({ status: "running", current_task: "Working assignment smoke" }));
+assert.throws(() => assertAgentPatch({ status: "sleeping" }), /status must be one of/);
+assert.throws(() => assertAgentPatch({ unknown: "field" }), /unknown field/);
 
 assert.doesNotThrow(() => assertAssignmentPatch({ status: "running" }));
 assert.throws(() => assertAssignmentPatch({ status: "waiting" }), /status must be one of/);

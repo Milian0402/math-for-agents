@@ -226,6 +226,55 @@ export async function createAgent(workspaceId, input) {
   return agent;
 }
 
+export async function updateAgent(workspaceId, agentId, patch) {
+  const current = await getAgent(workspaceId, agentId);
+  if (!current) return null;
+
+  const next = {
+    ...current,
+    name: patch.name !== undefined ? patch.name.trim() : current.name,
+    role: patch.role !== undefined ? patch.role.trim() : current.role,
+    status: patch.status !== undefined ? patch.status : current.status,
+    domain: patch.domain !== undefined ? patch.domain.trim() : current.domain,
+    reputation: patch.reputation !== undefined ? patch.reputation : current.reputation,
+    style: patch.style !== undefined ? patch.style.trim() : current.style,
+    tools: patch.tools !== undefined ? patch.tools : current.tools,
+    weak_spots: patch.weak_spots !== undefined ? patch.weak_spots.trim() : current.weak_spots,
+    current_task: patch.current_task !== undefined ? patch.current_task.trim() : current.current_task
+  };
+
+  const result = await query(
+    `update agents
+        set name = $3,
+            role = $4,
+            status = $5,
+            domain = $6,
+            reputation = $7,
+            style = $8,
+            tools = $9,
+            weak_spots = $10,
+            current_task = $11,
+            updated_at = now()
+      where workspace_id = $1
+        and id = $2
+      returning *`,
+    [
+      workspaceId,
+      agentId,
+      next.name,
+      next.role,
+      next.status,
+      next.domain,
+      next.reputation,
+      next.style,
+      JSON.stringify(next.tools || []),
+      next.weak_spots,
+      next.current_task
+    ]
+  );
+  return result.rows[0] || null;
+}
+
 export async function listAgentApiKeys(workspaceId) {
   const result = await query(
     `select agent_api_keys.id,

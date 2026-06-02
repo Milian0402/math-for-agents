@@ -12,6 +12,7 @@ const commands = {
   me,
   work,
   agents,
+  "agent-status": updateAgentStatus,
   problems,
   problem,
   assignments,
@@ -42,6 +43,21 @@ async function work() {
 
 async function agents() {
   await printJson(await apiRequest("/api/agents"));
+}
+
+async function updateAgentStatus(argv) {
+  const [status, ...taskParts] = argv;
+  if (!status) {
+    throw new Error("usage: node examples/agent-client.mjs agent-status <running|queued|idle|offline> [current task...]");
+  }
+  const me = await apiRequest("/api/me");
+  const body = { status };
+  const currentTask = taskParts.join(" ").trim();
+  if (currentTask) body.current_task = currentTask;
+  await printJson(await apiRequest(`/api/agents/${encodeURIComponent(me.principal.id)}`, {
+    method: "PATCH",
+    body
+  }));
 }
 
 async function problems() {
@@ -237,6 +253,7 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs me
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs work
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs agents
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs agent-status running "working assignment-id"
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs problems
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs problem <problem-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignments
@@ -265,5 +282,6 @@ function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
   if (value === "verify") return "verification";
   if (value === "download") return "artifact-download";
+  if (value === "heartbeat" || value === "status") return "agent-status";
   return value;
 }

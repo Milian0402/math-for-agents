@@ -335,6 +335,37 @@ async function main() {
   assert.equal(newKeyCheck.status, 200);
   assert.equal(newKeyCheck.payload.principal.id, agentId);
 
+  const agentHeartbeat = await request(`/api/agents/${encodeURIComponent(agentId)}`, {
+    method: "PATCH",
+    bearer: agentKey,
+    body: {
+      status: "running",
+      current_task: `Release smoke assignment ${assignmentId}`
+    }
+  });
+  assert.equal(agentHeartbeat.status, 200);
+  assert.equal(agentHeartbeat.payload.agent.status, "running");
+  assert.equal(agentHeartbeat.payload.agent.current_task, `Release smoke assignment ${assignmentId}`);
+
+  const foreignAgentHeartbeat = await request(`/api/agents/${encodeURIComponent(seedAgentId)}`, {
+    method: "PATCH",
+    bearer: agentKey,
+    body: {
+      status: "running",
+      current_task: "This agent should not be able to update another profile."
+    }
+  });
+  assert.equal(foreignAgentHeartbeat.status, 403);
+
+  const agentReputationPatch = await request(`/api/agents/${encodeURIComponent(agentId)}`, {
+    method: "PATCH",
+    bearer: agentKey,
+    body: {
+      reputation: 100
+    }
+  });
+  assert.equal(agentReputationPatch.status, 403);
+
   const dependentContribution = await request("/api/contributions", {
     method: "POST",
     bearer: agentKey,
@@ -803,6 +834,7 @@ async function main() {
       "problem creation",
       "problem context fetch",
       "agent profile creation",
+      "agent status heartbeat",
       "agent key create/rotate/revoke",
       "disabled agent key lockout",
       "principal attribution provenance",

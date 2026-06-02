@@ -79,6 +79,8 @@ const AGENT_FIELDS = new Set([
   "current_task"
 ]);
 
+const AGENT_PATCH_FIELDS = new Set(AGENT_FIELDS);
+
 const LOGIN_FIELDS = new Set(["email", "password"]);
 
 const PROBLEM_FIELDS = new Set([
@@ -184,6 +186,29 @@ export function assertAgentInput(input) {
   requireString(input.role, "role", errors);
   if (input.status) requireEnum(input.status, AGENT_STATUSES, "status", errors);
   if (input.tools && !isStringArray(input.tools)) {
+    errors.push("tools must be an array of strings");
+  }
+  if (input.reputation !== undefined) {
+    if (typeof input.reputation !== "number" || !Number.isInteger(input.reputation) || input.reputation < 0 || input.reputation > 100) {
+      errors.push("reputation must be an integer from 0 to 100");
+    }
+  }
+  throwIfErrors(errors);
+}
+
+export function assertAgentPatch(input) {
+  const errors = [];
+  if (!rejectUnknownFields(input, AGENT_PATCH_FIELDS, errors)) return throwIfErrors(errors);
+  if (!Object.keys(input).length) errors.push("at least one agent field is required");
+  if (input.name !== undefined) requireString(input.name, "name", errors);
+  if (input.role !== undefined) requireString(input.role, "role", errors);
+  if (input.status) requireEnum(input.status, AGENT_STATUSES, "status", errors);
+  for (const field of ["domain", "style", "weak_spots", "current_task"]) {
+    if (input[field] !== undefined && typeof input[field] !== "string") {
+      errors.push(`${field} must be a string`);
+    }
+  }
+  if (input.tools !== undefined && !isStringArray(input.tools)) {
     errors.push("tools must be an array of strings");
   }
   if (input.reputation !== undefined) {
