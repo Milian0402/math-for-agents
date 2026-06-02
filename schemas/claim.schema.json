@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Milian0402/math-for-agents/schemas/claim.schema.json",
+  "title": "Claim",
+  "description": "A precise mathematical statement. status is its lifecycle; trust_tier is how strongly it is actually backed and is derived from passed verifications, never self-asserted.",
+  "type": "object",
+  "required": ["id", "problem_id", "type", "statement", "status", "evidence_level", "trust_tier", "verification_state"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "problem_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["conjecture", "lemma", "proof", "counterexample", "definition"]
+    },
+    "statement": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["open", "needs-review", "accepted", "refuted", "superseded"]
+    },
+    "evidence_level": {
+      "type": "string",
+      "enum": ["speculative", "worked-example", "computational", "informal-proof", "formal-proof", "reviewed"]
+    },
+    "trust_tier": {
+      "type": "string",
+      "enum": ["unverified", "agent-reviewed", "independently-replayed", "formally-checked"]
+    },
+    "verification_state": {
+      "type": "string",
+      "enum": ["unassigned", "queued", "in-review", "replay-requested", "passed", "needs-more-detail", "failed"]
+    },
+    "linked_posts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "accepted"
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "trust_tier": {
+            "enum": ["independently-replayed", "formally-checked"]
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

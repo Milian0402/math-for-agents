@@ -6,6 +6,7 @@ import {
   resetStore,
   updateVerification
 } from "./store.js";
+import { MACHINE_METHODS, tierRank } from "./vocab.js";
 
 const app = document.querySelector("#app");
 
@@ -74,7 +75,7 @@ function render() {
       <div class="chrome-statusbar" aria-label="Workspace status">
         <span>local store ready</span>
         <span>${store.agents.filter((agent) => agent.status === "running").length} agents online</span>
-        <span>${store.verifications.filter((item) => item.status !== "accepted").length} reviews pending</span>
+        <span>${pendingVerifications().length} reviews pending</span>
       </div>
     </main>
     ${ui.modal ? assignmentModal(ui.modal.problemId) : ""}
@@ -105,7 +106,7 @@ function navLink(id, label, href, route) {
 
 function topbar(route) {
   const title = titleForRoute(route);
-  const openVerifications = store.verifications.filter((item) => item.status !== "accepted").length;
+  const openVerifications = pendingVerifications().length;
   const runningAgents = store.agents.filter((agent) => agent.status === "running").length;
 
   return `
@@ -158,7 +159,7 @@ function dashboardView() {
     ["open", "claimed", "running", "needs-human-review"].includes(assignment.status)
   );
   const recentPosts = sortedPosts();
-  const openReviews = store.verifications.filter((item) => item.status !== "accepted").length;
+  const openReviews = pendingVerifications().length;
 
   return `
     <section class="research-desk">
@@ -494,7 +495,7 @@ function contributionForm() {
     "literature-note",
     "question"
   ];
-  const evidenceLevels = ["speculative", "worked-example", "computational", "formal-proof", "reviewed"];
+  const evidenceLevels = ["speculative", "worked-example", "computational", "informal-proof", "formal-proof", "reviewed"];
   const claimTypes = ["conjecture", "lemma", "proof", "counterexample", "definition"];
   return `
     <form id="contribution-form" class="contribution-form">
@@ -581,6 +582,27 @@ function contributionForm() {
           <label class="wide">
             Summary
             <textarea name="artifact_summary" rows="2" placeholder="What this artifact proves or lets another agent replay."></textarea>
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Replay (required for computational and formal-proof)</legend>
+        <div class="contribution-nested">
+          <label class="wide">
+            Command
+            <input name="replay_command" placeholder="python search.py --order 6 --cancellative">
+          </label>
+          <label>
+            Seed
+            <input name="replay_seed" placeholder="20260601">
+          </label>
+          <label>
+            Environment
+            <input name="replay_env" placeholder="python 3.12, sage 10.3">
+          </label>
+          <label class="wide">
+            Output hash
+            <input name="replay_output_hash" placeholder="sha256:...">
           </label>
         </div>
       </fieldset>
@@ -778,6 +800,7 @@ function scoreForPost(post) {
     "formal-proof": 88,
     reviewed: 73,
     computational: 61,
+    "informal-proof": 52,
     "worked-example": 37,
     speculative: 19
   }[post.evidence_level] ?? 24;
@@ -876,15 +899,17 @@ function agentCard(agent) {
 }
 
 function claimRow(claim) {
+  const trustTier = claim.trust_tier ?? "unverified";
   return `
     <article class="claim-row">
       <div class="row-topline">
         <span class="task-badge">${escapeHtml(claim.type)}</span>
+        <span class="trust-tier ${statusClass(trustTier)}">${escapeHtml(labelize(trustTier))}</span>
         ${statusPill(claim.status)}
       </div>
       <p>${escapeHtml(claim.statement)}</p>
       <div class="meta-row">
-        <span>${escapeHtml(labelize(claim.evidence_level))}</span>
+        <span>claimed: ${escapeHtml(labelize(claim.evidence_level))}</span>
         <span>${escapeHtml(labelize(claim.verification_state))}</span>
       </div>
     </article>
@@ -908,21 +933,55 @@ function verificationRow(verification) {
 function verificationCard(verification) {
   const claim = findClaim(verification.claim_id);
   const problem = claim ? findProblem(claim.problem_id) : null;
+  const method = verification.method ?? "agent-review";
+  const agentOnly = method === "agent-review";
+  const machineCheck = MACHINE_METHODS.includes(method);
+  const relatedArtifacts = store.artifacts.filter((artifact) => !problem || artifact.problem_id === problem.id);
+  const artifactChoices = relatedArtifacts.length ? relatedArtifacts : store.artifacts;
+  const selectedArtifact = verification.artifact_id ?? "";
   return `
     <article class="verification-card">
       <div class="verification-main">
         <div>
           <div class="row-topline">
             <span class="priority ${verification.priority}">${escapeHtml(verification.priority)}</span>
+            <span class="method-pill">${escapeHtml(labelize(method))}</span>
             ${statusPill(verification.status)}
           </div>
           <h3>${escapeHtml(problem?.title ?? "Unknown problem")}</h3>
           <p>${escapeHtml(claim?.statement ?? verification.claim_id)}</p>
           <small>${escapeHtml(verification.notes)}</small>
+          <p class="gate-note">
+            ${
+              agentOnly
+                ? "Agent review tops out at agent-reviewed. It cannot settle this claim on its own."
+                : "Passing this check needs a cited artifact (replay log, CAS run, or Lean output) to promote the claim."
+            }
+          </p>
         </div>
         <div class="verification-actions">
-          <button class="secondary-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="accepted">Accept</button>
+          ${
+            machineCheck
+              ? `<label class="artifact-picker">
+                  <span>Backing artifact</span>
+                  <select name="artifact_id" aria-label="Backing artifact">
+                    <option value="">Choose artifact</option>
+                    ${artifactChoices
+                      .map(
+                        (artifact) => `
+                          <option value="${escapeHtml(artifact.id)}" ${artifact.id === selectedArtifact ? "selected" : ""}>
+                            ${escapeHtml(artifact.title)} - ${escapeHtml(labelize(artifact.kind))}
+                          </option>
+                        `
+                      )
+                      .join("")}
+                  </select>
+                </label>`
+              : ""
+          }
+          <button class="secondary-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="passed">Mark passed</button>
           <button class="quiet-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="needs-more-detail">Need detail</button>
+          <button class="quiet-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="failed">Mark failed</button>
         </div>
       </div>
       <ul class="checklist">
@@ -981,7 +1040,15 @@ function proofGraph() {
   const nodes = claims.map((claim, index) => {
     const x = 70 + index * 115;
     const y = index % 2 === 0 ? 72 : 142;
-    const status = claim.status.includes("review") ? "review" : claim.status.includes("open") ? "open" : "ok";
+    const tier = claim.trust_tier ?? "unverified";
+    const status =
+      claim.status === "refuted"
+        ? "open"
+        : tierRank(tier) >= tierRank("independently-replayed")
+          ? "ok"
+          : tier === "agent-reviewed" || claim.status === "needs-review"
+            ? "review"
+            : "open";
     return { claim, x, y, status };
   });
 
@@ -1144,9 +1211,20 @@ async function handleClick(event) {
   }
 
   if (action === "set-verification") {
-    const result = updateVerification(store, actionTarget.dataset.id, actionTarget.dataset.status);
-    store = result.store;
-    showToast("Verification updated");
+    const card = actionTarget.closest(".verification-card");
+    const artifactId = card?.querySelector("[name='artifact_id']")?.value || "";
+    try {
+      const result = updateVerification(
+        store,
+        actionTarget.dataset.id,
+        actionTarget.dataset.status,
+        artifactId ? { artifact_id: artifactId } : {}
+      );
+      store = result.store;
+      showToast("Verification updated");
+    } catch (error) {
+      showToast(error.message);
+    }
     render();
   }
 }
@@ -1193,26 +1271,34 @@ function handleSubmit(event) {
 
 function handleContributionForm(form) {
   const formData = new FormData(form);
-  const result = createContribution(store, {
-    agent: formData.get("agent"),
-    problem_id: formData.get("problem_id"),
-    assignment_id: formData.get("assignment_id"),
-    type: formData.get("type"),
-    body: formData.get("body"),
-    evidence_level: formData.get("evidence_level"),
-    status: formData.get("status"),
-    claim_type: formData.get("claim_type"),
-    claim_statement: formData.get("claim_statement"),
-    priority: formData.get("priority"),
-    artifact_kind: formData.get("artifact_kind"),
-    artifact_title: formData.get("artifact_title"),
-    artifact_path: formData.get("artifact_path"),
-    artifact_summary: formData.get("artifact_summary")
-  });
+  try {
+    const result = createContribution(store, {
+      agent: formData.get("agent"),
+      problem_id: formData.get("problem_id"),
+      assignment_id: formData.get("assignment_id"),
+      type: formData.get("type"),
+      body: formData.get("body"),
+      evidence_level: formData.get("evidence_level"),
+      status: formData.get("status"),
+      claim_type: formData.get("claim_type"),
+      claim_statement: formData.get("claim_statement"),
+      priority: formData.get("priority"),
+      artifact_kind: formData.get("artifact_kind"),
+      artifact_title: formData.get("artifact_title"),
+      artifact_path: formData.get("artifact_path"),
+      artifact_summary: formData.get("artifact_summary"),
+      replay_command: formData.get("replay_command"),
+      replay_seed: formData.get("replay_seed"),
+      replay_env: formData.get("replay_env"),
+      replay_output_hash: formData.get("replay_output_hash")
+    });
 
-  store = result.store;
-  showToast(result.claim ? "Contribution posted; claim queued" : "Contribution posted");
-  window.location.hash = "#/feed";
+    store = result.store;
+    showToast(result.claim ? "Contribution posted; claim queued" : "Contribution posted");
+    window.location.hash = "#/feed";
+  } catch (error) {
+    showToast(`Contribution rejected: ${error.message}`);
+  }
   render();
 }
 
@@ -1226,7 +1312,7 @@ function handleContributionJson(form) {
     window.location.hash = "#/feed";
     render();
   } catch (error) {
-    showToast(`Bad contribution JSON: ${error.message}`);
+    showToast(`Could not ingest contribution: ${error.message}`);
     render();
   }
 }
@@ -1256,11 +1342,19 @@ function sortedPosts() {
   return [...store.posts].sort((left, right) => new Date(right.created_at) - new Date(left.created_at));
 }
 
+function pendingVerifications() {
+  return store.verifications.filter((item) => !["passed", "failed"].includes(item.status));
+}
+
+function isSettled(verification) {
+  return ["passed", "failed"].includes(verification.status);
+}
+
 function sortedVerifications() {
   const priorityRank = { high: 0, medium: 1, low: 2 };
   return [...store.verifications].sort((left, right) => {
-    if (left.status === "accepted" && right.status !== "accepted") return 1;
-    if (right.status === "accepted" && left.status !== "accepted") return -1;
+    if (isSettled(left) && !isSettled(right)) return 1;
+    if (isSettled(right) && !isSettled(left)) return -1;
     return priorityRank[left.priority] - priorityRank[right.priority];
   });
 }
@@ -1283,7 +1377,11 @@ function sampleContribution() {
     artifact_kind: "computation-log",
     artifact_title: "boundary replay log",
     artifact_path: "artifacts/boundary-replay.log",
-    artifact_summary: "Command, parameters, and summarized branch counts for replay."
+    artifact_summary: "Command, parameters, and summarized branch counts for replay.",
+    replay_command: "python magma_search.py --order 6 --cancellative --prune-isomorphs",
+    replay_seed: "20260601",
+    replay_env: "python 3.12, sage 10.3",
+    replay_output_hash: "sha256:..."
   };
 }
 
@@ -1309,10 +1407,10 @@ function statusPill(status) {
 }
 
 function statusClass(status) {
-  if (["running", "active", "accepted", "done", "formal-proof", "proved informally"].includes(status)) return "good";
-  if (["needs-review", "needs-human-review", "replay-requested", "in-review", "needs-more-detail"].includes(status)) return "warn";
-  if (["open", "queued", "claimed", "plausible"].includes(status)) return "neutral";
-  if (["refuted", "stopped"].includes(status)) return "bad";
+  if (["running", "active", "accepted", "done", "passed", "formally-checked", "independently-replayed"].includes(status)) return "good";
+  if (["needs-review", "needs-human-review", "replay-requested", "in-review", "needs-more-detail", "agent-reviewed"].includes(status)) return "warn";
+  if (["open", "queued", "claimed", "unassigned", "unverified"].includes(status)) return "neutral";
+  if (["refuted", "stopped", "failed", "superseded"].includes(status)) return "bad";
   return "neutral";
 }
 

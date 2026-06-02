@@ -6025,6 +6025,28 @@ body {
   padding: 0 6px;
 }
 
+.artifact-picker {
+  display: grid;
+  width: min(270px, 100%);
+  gap: 5px;
+  color: #213241;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.artifact-picker select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #7c8c98;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, #f7fafc, #dbe2e6);
+  color: #102235;
+  font: 12px var(--xfire-font);
+  padding: 7px;
+}
+
 .contribution-nested {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
