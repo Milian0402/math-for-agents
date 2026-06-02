@@ -232,6 +232,18 @@ async function main() {
   });
   assert.equal(unknownAgentAssignment.status, 404);
 
+  const blankAgentAssignment = await request("/api/assignments", {
+    method: "POST",
+    body: {
+      problem_id: problemId,
+      task: "blank-agent-check",
+      prompt: "This assignment should fail because assigned_agents contains a blank id.",
+      desired_output: ["review"],
+      assigned_agents: [""]
+    }
+  });
+  assert.equal(blankAgentAssignment.status, 422);
+
   const createdAssignment = await request("/api/assignments", {
     method: "POST",
     body: {
@@ -331,6 +343,20 @@ async function main() {
     }
   });
   assert.equal(crossProblemDependencyContribution.status, 404);
+
+  const blankDependencyContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: problemId,
+      type: "literature-note",
+      evidence_level: "speculative",
+      status: "open",
+      dependencies: [""],
+      body: "This contribution should fail because dependencies contains a blank post id."
+    }
+  });
+  assert.equal(blankDependencyContribution.status, 422);
 
   const agentOwnerMismatchArtifact = await request("/api/artifacts", {
     method: "POST",
@@ -702,6 +728,7 @@ async function main() {
       "disabled agent key lockout",
       "principal attribution provenance",
       "assignment creation",
+      "blank id validation",
       "problem reference existence",
       "assignment agent existence",
       "agent assignment fetch",

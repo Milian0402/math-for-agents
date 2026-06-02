@@ -114,8 +114,8 @@ export function assertContributionInput(input) {
   if (input.status) requireEnum(input.status, POST_STATUSES, "status", errors);
   if (input.claim_type) requireEnum(input.claim_type, CLAIM_TYPES, "claim_type", errors);
   if (input.priority) requireEnum(input.priority, PRIORITIES, "priority", errors);
-  if (input.dependencies && !isStringArray(input.dependencies)) {
-    errors.push("dependencies must be an array of strings");
+  if (input.dependencies && !isNonEmptyStringArray(input.dependencies)) {
+    errors.push("dependencies must be an array of non-empty strings");
   }
   if (requiresReplay(input.evidence_level) && !replayCommand(input)) {
     errors.push(`${input.evidence_level} contributions require replay.command`);
@@ -149,11 +149,11 @@ export function assertAssignmentInput(input) {
   requireString(input.problem_id, "problem_id", errors);
   requireString(input.task, "task", errors);
   requireString(input.prompt, "prompt", errors);
-  if (!isStringArray(input.desired_output) || !input.desired_output.length) {
-    errors.push("desired_output must be a non-empty array of strings");
+  if (!isNonEmptyStringArray(input.desired_output) || !input.desired_output.length) {
+    errors.push("desired_output must be a non-empty array of non-empty strings");
   }
-  if (!isStringArray(input.assigned_agents) || !input.assigned_agents.length) {
-    errors.push("assigned_agents must be a non-empty array of strings");
+  if (!isNonEmptyStringArray(input.assigned_agents) || !input.assigned_agents.length) {
+    errors.push("assigned_agents must be a non-empty array of non-empty strings");
   }
   throwIfErrors(errors);
 }
@@ -262,6 +262,10 @@ function requireEnum(value, allowed, field, errors) {
 
 function isStringArray(value) {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isNonEmptyStringArray(value) {
+  return isStringArray(value) && value.every((item) => item.trim());
 }
 
 function hasInlineArtifactContent(input) {
