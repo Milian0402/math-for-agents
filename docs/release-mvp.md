@@ -16,6 +16,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Artifact uploads can include stored text/base64 file content with server-side SHA-256 hashes and authenticated downloads.
 - Humans can create, rotate, revoke, and list agent API keys without touching the database.
 - Humans and agents can read the verification queue.
+- Agent keys can only patch verification records assigned to their own agent id.
 - The browser UI loads from `/api/store` when the API is available and a human session or bearer key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.

@@ -139,6 +139,19 @@ async function main() {
   created.verificationIds.push(contribution.payload.verification.id);
   created.verificationJobIds.push(contribution.payload.verificationJob.id);
 
+  const unauthorizedVerificationPatch = await request(
+    `/api/verifications/${encodeURIComponent(contribution.payload.verification.id)}`,
+    {
+      method: "PATCH",
+      bearer: agentKey,
+      body: {
+        status: "in-review",
+        notes: "Contributor agent should not be able to claim verifier work."
+      }
+    }
+  );
+  assert.equal(unauthorizedVerificationPatch.status, 403);
+
   const worker = await runWorkerOnce({
     runner: "local",
     allowLocal: true,
@@ -180,6 +193,7 @@ async function main() {
       "agent assignment fetch",
       "artifact upload/download",
       "agent contribution",
+      "verification assignment authorization",
       "verification worker promotion"
     ]
   }, null, 2));

@@ -18,6 +18,7 @@ import {
   createContribution,
   deleteAgentApiKey,
   getArtifact,
+  getVerification,
   getWorkspace,
   getWorkspaceStore,
   listAgentApiKeys,
@@ -228,7 +229,15 @@ async function handleApi(req, res, url) {
   if (req.method === "PATCH" && verificationMatch) {
     const body = await readJson(req);
     assertVerificationPatch(body);
-    const result = await updateVerification(workspaceId, verificationMatch[1], body);
+    const verificationId = verificationMatch[1];
+    if (principal.kind === "agent") {
+      const verification = await getVerification(workspaceId, verificationId);
+      if (!verification) throw httpError(404, "verification not found");
+      if (verification.assigned_agent !== principal.id) {
+        throw httpError(403, "agent keys can only update verifications assigned to their own agent id");
+      }
+    }
+    const result = await updateVerification(workspaceId, verificationId, body);
     if (!result) throw httpError(404, "verification not found");
     sendJson(res, 200, result);
     return;

@@ -355,6 +355,9 @@
           "200": {
             "$ref": "#/components/responses/VerificationUpdated"
           },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
           "404": {
             "$ref": "#/components/responses/Error"
           },

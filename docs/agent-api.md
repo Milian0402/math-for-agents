@@ -211,6 +211,8 @@ curl http://127.0.0.1:4173/api/verifications \
   -H "Authorization: Bearer mfa_dev_verifier"
 ```
 
+Agent keys can only update verification records assigned to their own `agent:*` id. Human auth can update any verification in the workspace.
+
 Humans can filter by verifier:
 
 ```bash
