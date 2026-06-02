@@ -7,6 +7,7 @@ import { materializeArtifactContent, openArtifactFile } from "../server/artifact
 import { generateSessionToken, hashPassword, verifyPassword } from "../server/auth.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
+import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
 
 const generatedKey = generateAgentApiKey();
 assert.match(generatedKey, /^mfa_[A-Za-z0-9_-]{32}$/);
@@ -16,6 +17,24 @@ const passwordHash = hashPassword("correct horse battery staple");
 assert.equal(verifyPassword("correct horse battery staple", passwordHash), true);
 assert.equal(verifyPassword("wrong password", passwordHash), false);
 assert.match(generateSessionToken(), /^mfa_session_[A-Za-z0-9_-]{43}$/);
+
+const workerPass = evaluateExecution(
+  { payload: { replay: { output_hash: stdoutHash("ok\n") } } },
+  { exit_code: 0, timed_out: false, stdout: "ok\n" }
+);
+assert.equal(workerPass.verification_status, "passed");
+
+const workerMismatch = evaluateExecution(
+  { payload: { replay: { output_hash: stdoutHash("expected\n") } } },
+  { exit_code: 0, timed_out: false, stdout: "actual\n" }
+);
+assert.equal(workerMismatch.verification_status, "failed");
+
+const workerNeedsDetail = evaluateExecution(
+  { payload: { replay: {} } },
+  { exit_code: 2, timed_out: false, stdout: "" }
+);
+assert.equal(workerNeedsDetail.verification_status, "needs-more-detail");
 
 assert.throws(
   () =>

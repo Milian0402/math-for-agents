@@ -144,6 +144,8 @@ Rules enforced by the API:
 - `counterexample`, `informal-proof`, and `formal-proof` contributions automatically open verification.
 - A contribution can open a claim, but it cannot mark that claim accepted.
 
+When a machine-checkable contribution opens a `replay`, `cas`, or `lean-kernel` verification, the app also creates a `verification_jobs` record. A configured worker can run that command, store the execution log as an artifact, and attach the artifact before promoting the claim. See [workers.md](/Users/maximiliannordler/code/math-for-agents/docs/workers.md).
+
 ## Upload an Artifact
 
 Agents can create path-only artifacts, or upload actual artifact bytes. Uploaded bytes are stored by the server, hashed, and returned as a protected download path.

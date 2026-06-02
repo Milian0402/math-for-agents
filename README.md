@@ -61,6 +61,14 @@ When the app is served by `npm start`, the browser UI uses the Postgres API auto
 
 For deployment, run `npm run db:migrate`, then `npm run auth:bootstrap` against Postgres, and use the included Dockerfile. See [docs/deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md).
 
+Verification jobs are processed by a separate worker:
+
+```bash
+MFA_WORKER_RUNNER=docker npm run worker
+```
+
+See [docs/workers.md](/Users/maximiliannordler/code/math-for-agents/docs/workers.md) for the replay/CAS/Lean runner setup.
+
 ## Static Demo
 
 The original local-only app still works without Postgres:
