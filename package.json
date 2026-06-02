@@ -4,8 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "python3 -m http.server 4173",
-    "check": "node --check src/vocab.js && node --check src/store.js && node --check src/app.js && node scripts/validate.mjs"
+    "start": "node server/index.js",
+    "start:static": "python3 -m http.server 4173",
+    "db:seed": "node server/seed.mjs",
+    "check": "node --check src/vocab.js && node --check src/store.js && node --check src/app.js && node --check server/index.js && node --check server/http.js && node --check server/repository.js && node --check server/domain.js && node --check server/validation.js && node scripts/validate.mjs && node scripts/check-api.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
   }
 }
-

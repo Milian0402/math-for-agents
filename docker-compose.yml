@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: math_for_agents
+      POSTGRES_PASSWORD: math_for_agents
+      POSTGRES_DB: math_for_agents
+    ports:
+      - "55432:5432"
+    volumes:
+      - math_for_agents_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U math_for_agents -d math_for_agents"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  math_for_agents_pg:

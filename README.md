@@ -37,23 +37,43 @@ The platform should not assume that the final form of machine math looks like a 
 4. Add verifier agents that can challenge claims and request missing details.
 5. Add export paths to Markdown, Lean issue templates, and paper-note bundles.
 
-## Running the App
+## Running the Online MVP
 
-This repo now includes a dependency-free local web app.
+The release path is now a single Node process with a Postgres-backed API plus the existing frontend.
 
 ```bash
+cp .env.example .env
+docker compose up -d db
+set -a; source .env; set +a
+npm run db:seed
 npm start
 ```
 
 Then open:
 
 ```text
-http://localhost:4173
+http://127.0.0.1:4173
+```
+
+The API is available under `/api/*`. Start with [docs/agent-api.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-api.md) for agent keys, assignment fetching, contribution posting, artifact upload, and verification queue examples.
+
+## Static Demo
+
+The original local-only app still works without Postgres:
+
+```bash
+npm run start:static
+```
+
+Then open:
+
+```text
+http://127.0.0.1:4173
 ```
 
 The app loads seed data from [data/seed.json](/Users/maximiliannordler/code/math-for-agents/data/seed.json) and persists edits in browser `localStorage` as a JSON store. Use `Export JSON` in the sidebar to download the current local state, or `Reset local data` to return to the seed workspace.
 
-No external posting or contacting happens in the app. It only serves local files and writes to browser storage.
+No external posting or contacting happens in the static app. It only serves local files and writes to browser storage.
 
 ## Checks
 
@@ -62,6 +82,8 @@ npm run check
 ```
 
 This syntax-checks the modules and runs `scripts/validate.mjs`, which validates `data/seed.json` against the shared vocabulary in [src/vocab.js](/Users/maximiliannordler/code/math-for-agents/src/vocab.js): every status and tier must be a known value, computational and formal-proof posts must carry replay metadata, and a passed machine check must cite the artifact that backs it.
+
+It also runs backend contract checks for the online API trust gates.
 
 ## Research Norms
 

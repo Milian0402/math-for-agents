@@ -1,0 +1,207 @@
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { createServer as createNodeServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { makeId } from "./ids.js";
+import {
+  authenticateAgent,
+  createArtifact,
+  createContribution,
+  getWorkspace,
+  listAssignmentsForAgent,
+  listProblems,
+  listVerificationQueue,
+  updateVerification
+} from "./repository.js";
+import { assertArtifactInput, assertVerificationPatch, RequestValidationError } from "./validation.js";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const contentTypes = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8"
+};
+
+export function createServer() {
+  return createNodeServer(async (req, res) => {
+    try {
+      const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      if (url.pathname.startsWith("/api/")) {
+        await handleApi(req, res, url);
+        return;
+      }
+      await serveStatic(req, res, url);
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+}
+
+async function handleApi(req, res, url) {
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    sendJson(res, 200, { ok: true, service: "math-for-agents", mode: "online-mvp" });
+    return;
+  }
+
+  const principal = await requirePrincipal(req);
+  const workspaceId = principal.workspace_id;
+
+  if (req.method === "GET" && url.pathname === "/api/me") {
+    sendJson(res, 200, { principal });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/workspace") {
+    sendJson(res, 200, { workspace: await getWorkspace(workspaceId) });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/problems") {
+    sendJson(res, 200, { problems: await listProblems(workspaceId) });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/assignments") {
+    const agentId = principal.kind === "agent" ? principal.id : url.searchParams.get("agent_id") || "";
+    if (!agentId) throw httpError(400, "agent_id is required for human assignment lookup");
+    sendJson(res, 200, { assignments: await listAssignmentsForAgent(workspaceId, agentId) });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/verifications") {
+    const assignedAgent = principal.kind === "agent" ? principal.id : url.searchParams.get("assigned_agent") || "";
+    sendJson(res, 200, { verifications: await listVerificationQueue(workspaceId, assignedAgent) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/artifacts") {
+    const body = await readJson(req);
+    if (principal.kind === "agent" && body.owner && body.owner !== principal.id) {
+      throw httpError(403, "agent keys can only create artifacts for their own agent id");
+    }
+    const artifactInput = {
+      ...body,
+      owner: principal.kind === "agent" ? principal.id : body.owner
+    };
+    assertArtifactInput(artifactInput);
+    const artifact = {
+      id: makeId("artifact"),
+      created_at: new Date().toISOString(),
+      ...artifactInput
+    };
+    sendJson(res, 201, { artifact: await createArtifact(workspaceId, artifact) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/contributions") {
+    const body = await readJson(req);
+    if (principal.kind === "agent" && body.agent && body.agent !== principal.id) {
+      throw httpError(403, "agent keys can only submit contributions as their own agent id");
+    }
+    const contribution = await createContribution(workspaceId, {
+      ...body,
+      agent: principal.kind === "agent" ? principal.id : body.agent
+    });
+    sendJson(res, 201, contribution);
+    return;
+  }
+
+  const verificationMatch = url.pathname.match(/^\/api\/verifications\/([^/]+)$/);
+  if (req.method === "PATCH" && verificationMatch) {
+    const body = await readJson(req);
+    assertVerificationPatch(body);
+    const result = await updateVerification(workspaceId, verificationMatch[1], body);
+    if (!result) throw httpError(404, "verification not found");
+    sendJson(res, 200, result);
+    return;
+  }
+
+  throw httpError(404, "API route not found");
+}
+
+async function requirePrincipal(req) {
+  const authorization = req.headers.authorization || "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice("Bearer ".length).trim() : "";
+  if (!token) throw httpError(401, "missing bearer token");
+
+  if (process.env.MFA_HUMAN_KEY && token === process.env.MFA_HUMAN_KEY) {
+    return {
+      kind: "human",
+      id: process.env.MFA_HUMAN_ID || "human:max",
+      workspace_id: process.env.MFA_WORKSPACE_ID || "workspace:default"
+    };
+  }
+
+  const agent = await authenticateAgent(token);
+  if (!agent) throw httpError(401, "invalid bearer token");
+
+  return {
+    kind: "agent",
+    id: agent.id,
+    workspace_id: agent.workspace_id,
+    name: agent.name,
+    role: agent.role
+  };
+}
+
+async function readJson(req) {
+  let raw = "";
+  for await (const chunk of req) {
+    raw += chunk;
+    if (raw.length > 1_000_000) throw httpError(413, "request body too large");
+  }
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    throw httpError(400, "request body must be valid JSON");
+  }
+}
+
+async function serveStatic(req, res, url) {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    throw httpError(405, "method not allowed");
+  }
+
+  const cleanPath = decodeURIComponent(url.pathname).replace(/^\/+/, "") || "index.html";
+  const filePath = path.resolve(root, cleanPath);
+  if (!filePath.startsWith(root)) throw httpError(403, "forbidden");
+
+  const fileStat = await stat(filePath).catch(() => null);
+  if (!fileStat || !fileStat.isFile()) throw httpError(404, "not found");
+
+  res.writeHead(200, {
+    "content-type": contentTypes[path.extname(filePath)] || "application/octet-stream",
+    "cache-control": "no-store"
+  });
+
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
+  createReadStream(filePath).pipe(res);
+}
+
+function sendJson(res, statusCode, payload) {
+  res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" });
+  res.end(JSON.stringify(payload, null, 2));
+}
+
+function sendError(res, error) {
+  const statusCode = error.statusCode || (error instanceof RequestValidationError ? 422 : 500);
+  const payload = {
+    error: statusCode >= 500 ? "internal server error" : error.message
+  };
+  if (error.errors) payload.details = error.errors;
+  sendJson(res, statusCode, payload);
+}
+
+function httpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
