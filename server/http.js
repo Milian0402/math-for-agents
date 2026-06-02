@@ -24,6 +24,7 @@ import {
   getAgent,
   getAgentApiKey,
   getAssignment,
+  getAssignmentContext,
   getArtifact,
   getClaim,
   getProblem,
@@ -249,6 +250,16 @@ async function handleApi(req, res, url) {
   }
 
   const assignmentMatch = url.pathname.match(/^\/api\/assignments\/([^/]+)$/);
+  if (assignmentMatch && req.method === "GET") {
+    const context = await getAssignmentContext(workspaceId, assignmentMatch[1]);
+    if (!context) throw httpError(404, "assignment not found");
+    if (principal.kind === "agent" && !assignmentVisibleToAgent(context.assignment, principal.id)) {
+      throw httpError(403, "agent keys can only inspect their assigned work");
+    }
+    sendJson(res, 200, context);
+    return;
+  }
+
   if (assignmentMatch && req.method === "PATCH") {
     const assignmentId = assignmentMatch[1];
     const body = await readJson(req);

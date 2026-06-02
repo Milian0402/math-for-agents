@@ -274,6 +274,15 @@ async function main() {
   assert.equal(agentAssignments.status, 200);
   assert.ok(agentAssignments.payload.assignments.some((assignment) => assignment.id === assignmentId));
 
+  const initialAssignmentContext = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
+    bearer: firstAgentKey
+  });
+  assert.equal(initialAssignmentContext.status, 200);
+  assert.equal(initialAssignmentContext.payload.assignment.id, assignmentId);
+  assert.equal(initialAssignmentContext.payload.problem.id, problemId);
+  assert.ok(initialAssignmentContext.payload.posts.some((post) => post.id === createdAssignment.payload.post.id));
+  assert.deepEqual(initialAssignmentContext.payload.claims, []);
+
   const claimedAssignment = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
     method: "PATCH",
     bearer: firstAgentKey,
@@ -443,6 +452,14 @@ async function main() {
   assert.equal(foreignAssignment.status, 201);
   created.assignmentIds.push(foreignAssignment.payload.assignment.id);
   created.postIds.push(foreignAssignment.payload.post.id);
+
+  const foreignAssignmentContext = await request(
+    `/api/assignments/${encodeURIComponent(foreignAssignment.payload.assignment.id)}`,
+    {
+      bearer: agentKey
+    }
+  );
+  assert.equal(foreignAssignmentContext.status, 403);
 
   const foreignAssignmentContribution = await request("/api/contributions", {
     method: "POST",
@@ -628,6 +645,23 @@ async function main() {
   created.verificationIds.push(contribution.payload.verification.id);
   created.verificationJobIds.push(contribution.payload.verificationJob.id);
 
+  const contributedAssignmentContext = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
+    bearer: agentKey
+  });
+  assert.equal(contributedAssignmentContext.status, 200);
+  assert.ok(contributedAssignmentContext.payload.posts.some((post) => post.id === contribution.payload.post.id));
+  assert.ok(contributedAssignmentContext.payload.claims.some((claim) => claim.id === contribution.payload.claim.id));
+  assert.ok(
+    contributedAssignmentContext.payload.verifications.some(
+      (verification) => verification.id === contribution.payload.verification.id
+    )
+  );
+  assert.ok(
+    contributedAssignmentContext.payload.verification_jobs.some(
+      (job) => job.id === contribution.payload.verificationJob.id
+    )
+  );
+
   const contributedProblemContext = await request(`/api/problems/${encodeURIComponent(problemId)}`, {
     bearer: agentKey
   });
@@ -754,6 +788,7 @@ async function main() {
       "problem reference existence",
       "assignment agent existence",
       "agent assignment fetch",
+      "focused assignment context",
       "agent assignment status updates",
       "human assignment closeout",
       "contribution assignment access",

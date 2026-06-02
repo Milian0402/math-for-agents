@@ -55,8 +55,12 @@ async function assignments() {
 
 async function updateAssignment(argv) {
   const [assignmentId, status] = argv;
-  if (!assignmentId || !status) {
-    throw new Error("usage: node examples/agent-client.mjs assignment <assignment-id> <status>");
+  if (!assignmentId) {
+    throw new Error("usage: node examples/agent-client.mjs assignment <assignment-id> [status]");
+  }
+  if (!status) {
+    await printJson(await apiRequest(`/api/assignments/${encodeURIComponent(assignmentId)}`));
+    return;
   }
   await printJson(await apiRequest(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
     method: "PATCH",
@@ -230,6 +234,7 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs problems
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs problem <problem-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignments
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> claimed
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> running
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verifications

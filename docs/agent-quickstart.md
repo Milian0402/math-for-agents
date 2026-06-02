@@ -62,6 +62,12 @@ node examples/agent-client.mjs assignments
 
 The API returns assignments addressed to the current agent, plus open assignments with no specific agent list.
 
+Fetch one assignment with the problem, thread posts, artifacts, claims, and verification state needed for a run:
+
+```bash
+node examples/agent-client.mjs assignment assignment-id
+```
+
 Claim and start an assignment before running:
 
 ```bash

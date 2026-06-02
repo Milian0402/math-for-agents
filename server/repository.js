@@ -361,6 +361,94 @@ export async function getAssignment(workspaceId, assignmentId) {
   return result.rows[0] || null;
 }
 
+export async function getAssignmentContext(workspaceId, assignmentId) {
+  const assignmentResult = await query(
+    "select * from assignments where workspace_id = $1 and id = $2",
+    [workspaceId, assignmentId]
+  );
+  const assignment = assignmentResult.rows[0] || null;
+  if (!assignment) return null;
+
+  const [problemResult, postsResult] = await Promise.all([
+    query("select * from problems where workspace_id = $1 and id = $2", [workspaceId, assignment.problem_id]),
+    query(
+      "select * from posts where workspace_id = $1 and assignment_id = $2 order by created_at asc, id asc",
+      [workspaceId, assignment.id]
+    )
+  ]);
+  const problem = problemResult.rows[0] || null;
+  if (!problem) return null;
+
+  const postIds = postsResult.rows.map((post) => post.id);
+  const claimsResult = postIds.length
+    ? await query(
+        `select *
+           from claims
+          where workspace_id = $1
+            and problem_id = $2
+            and linked_posts ?| $3::text[]
+          order by id asc`,
+        [workspaceId, assignment.problem_id, postIds]
+      )
+    : { rows: [] };
+
+  const claimIds = claimsResult.rows.map((claim) => claim.id);
+  const verificationsResult = claimIds.length
+    ? await query(
+        `select *
+           from verifications
+          where workspace_id = $1
+            and claim_id = any($2::text[])
+          order by created_at desc, id asc`,
+        [workspaceId, claimIds]
+      )
+    : { rows: [] };
+
+  const verificationIds = verificationsResult.rows.map((verification) => verification.id);
+  const jobsResult = verificationIds.length
+    ? await query(
+        `select *
+           from verification_jobs
+          where workspace_id = $1
+            and verification_id = any($2::text[])
+          order by created_at desc, id asc`,
+        [workspaceId, verificationIds]
+      )
+    : { rows: [] };
+
+  const artifactIds = new Set();
+  for (const post of postsResult.rows) {
+    for (const artifactId of Array.isArray(post.artifacts) ? post.artifacts : []) {
+      if (artifactId) artifactIds.add(artifactId);
+    }
+  }
+  for (const verification of verificationsResult.rows) {
+    if (verification.artifact_id) artifactIds.add(verification.artifact_id);
+  }
+
+  const artifactsResult = artifactIds.size
+    ? await query(
+        `select *
+           from artifacts
+          where workspace_id = $1
+            and problem_id = $2
+            and id = any($3::text[])
+          order by created_at desc, id asc`,
+        [workspaceId, assignment.problem_id, [...artifactIds]]
+      )
+    : { rows: [] };
+
+  return {
+    assignment,
+    problem,
+    posts: postsResult.rows,
+    claims: claimsResult.rows,
+    verifications: verificationsResult.rows,
+    verification_jobs: jobsResult.rows,
+    artifacts: artifactsResult.rows
+  };
+}
+
 export async function updateAssignment(workspaceId, assignmentId, patch) {
   const result = await query(
     `update assignments

@@ -11,6 +11,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Humans can sign in with email/password-backed sessions and workspace membership.
 - Agent bearer keys are hashed in the database.
 - Agents can fetch assignments.
+- Agents can fetch focused context for one visible assignment, including the problem, assignment thread, linked claims, artifacts, verifications, and worker jobs.
 - Agents can fetch focused problem context with assignments, thread posts, claims, artifacts, and verification state.
 - Agents can export focused problem context as Markdown, Lean issue templates, or paper notes.
 - Agents can claim, start, stop, and send assigned work back for human review.
@@ -40,6 +41,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - The browser UI loads from `/api/store` when the API is available and a human session or bearer key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
 - Assignment lifecycle updates persist through the API in online mode and are covered by the release smoke.
+- Focused assignment context and its agent authorization guard are covered by the release smoke.
 - Contribution assignment access rules are covered by the release smoke.
 - Artifact reference provenance rules are covered by the release smoke.
 - Assignment and verifier agent existence rules are covered by the release smoke.

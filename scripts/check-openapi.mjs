@@ -26,6 +26,7 @@ const expectedOperations = [
   ["GET", "/api/problems/{problem_id}/export", "exportProblem", true],
   ["GET", "/api/assignments", "listAssignments", true],
   ["POST", "/api/assignments", "createAssignment", true],
+  ["GET", "/api/assignments/{assignment_id}", "getAssignmentContext", true],
   ["PATCH", "/api/assignments/{assignment_id}", "updateAssignment", true],
   ["POST", "/api/contributions", "createContribution", true],
   ["POST", "/api/artifacts", "createArtifact", true],
@@ -73,7 +74,8 @@ for (const [path, method] of serverRouteMarkers) {
   assert.ok(server.includes(`req.method === "${method}"`), `server method marker missing: ${method} ${path}`);
 }
 
-assert.ok(server.includes("const assignmentMatch = url.pathname.match"), "server route marker missing: PATCH /api/assignments/{assignment_id}");
+assert.ok(server.includes("const assignmentMatch = url.pathname.match"), "server route marker missing: /api/assignments/{assignment_id}");
+assert.ok(server.includes('assignmentMatch && req.method === "GET"'), "server method marker missing: GET /api/assignments/{assignment_id}");
 assert.ok(server.includes('assignmentMatch && req.method === "PATCH"'), "server method marker missing: PATCH /api/assignments/{assignment_id}");
 assert.ok(server.includes("const problemMatch = url.pathname.match"), "server route marker missing: GET /api/problems/{problem_id}");
 assert.ok(server.includes('problemMatch && req.method === "GET"'), "server method marker missing: GET /api/problems/{problem_id}");

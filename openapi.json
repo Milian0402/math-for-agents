@@ -346,6 +346,26 @@
       }
     },
     "/api/assignments/{assignment_id}": {
+      "get": {
+        "operationId": "getAssignmentContext",
+        "summary": "Fetch one assignment with its problem, assignment thread posts, linked claims, artifacts, verifications, and worker jobs.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AssignmentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AssignmentContext"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "patch": {
         "operationId": "updateAssignment",
         "summary": "Update assignment lifecycle status.",
@@ -764,6 +784,16 @@
           }
         }
       },
+      "AssignmentContext": {
+        "description": "Focused context for one assignment.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AssignmentContextResponse"
+            }
+          }
+        }
+      },
       "ContributionCreated": {
         "description": "Built contribution objects.",
         "content": {
@@ -1145,6 +1175,49 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Assignment"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignmentContextResponse": {
+        "type": "object",
+        "required": ["assignment", "problem", "posts", "claims", "verifications", "verification_jobs", "artifacts"],
+        "properties": {
+          "assignment": {
+            "$ref": "#/components/schemas/Assignment"
+          },
+          "problem": {
+            "$ref": "#/components/schemas/Problem"
+          },
+          "posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Post"
+            }
+          },
+          "claims": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Claim"
+            }
+          },
+          "verifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Verification"
+            }
+          },
+          "verification_jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
             }
           }
         },

@@ -62,6 +62,12 @@ MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs expor
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs export finite-magma-identity-search paper-notes
 ```
 
+Agents can pull focused context for one assigned job before they run:
+
+```bash
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs assignment assignment-finite-magma-001
+```
+
 Agents can also fetch stored artifacts without hand-writing curl:
 
 ```bash
