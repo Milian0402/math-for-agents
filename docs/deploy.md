@@ -113,7 +113,7 @@ The health endpoint queries Postgres and returns `database: "ok"` only when the 
 For a small private beta, use the production compose target:
 
 ```bash
-cp .env.example .env.production
+npm run env:production -- --origin https://math-for-agents.example.com --email you@example.com
 npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate
@@ -125,6 +125,8 @@ docker compose --env-file .env.production -f deploy/compose.production.yml up -d
 The compose target runs Postgres, the web/API container, and a worker sharing the same artifact volume.
 
 `npm run preflight:deploy -- .env.production` checks the effective production Compose runtime before launch. It fails on missing release files, missing release scripts, weak/default Postgres or human secrets, missing default verifier config, non-HTTPS or mismatched public origins, unsafe production cookie config, disabled workers, broken artifact limits, and Compose wiring drift. Warnings call out things that are still operator-owned, like off-host backups and the Docker-socket worker runner.
+
+`npm run env:production` refuses to overwrite an existing `.env.production` unless you pass `--force`. It generates random values for `POSTGRES_PASSWORD`, `MFA_HUMAN_PASSWORD`, and `MFA_HUMAN_KEY`, sets `MFA_PUBLIC_ORIGIN` and `MFA_BASE_URL` to the same HTTPS origin, and leaves off-host backup storage blank unless you pass `--backup-remote-host /mnt/math-for-agents-backups`.
 
 The compose file also includes an `ops` profile so healthchecks and backups run in the same release image:
 

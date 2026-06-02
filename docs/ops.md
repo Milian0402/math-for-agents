@@ -182,7 +182,7 @@ The backup script will copy the completed backup directory there after writing t
 The concrete hosted target is Docker Compose on a small VM:
 
 ```bash
-cp .env.example .env.production
+npm run env:production -- --origin https://math-for-agents.example.com --email you@example.com
 npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate

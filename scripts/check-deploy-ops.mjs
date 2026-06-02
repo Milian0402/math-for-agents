@@ -64,6 +64,7 @@ includesAll(
   [
     "Caddy",
     "systemd",
+    "npm run env:production",
     "--profile ops run --rm healthcheck",
     "--profile ops run --rm backup",
     "private-beta-launch.md",
@@ -84,6 +85,7 @@ includesAll(
   launchDocs,
   [
     "Go/No-Go Evidence",
+    "npm run env:production",
     "npm run preflight:deploy -- .env.production",
     "MFA_HEALTHCHECK_BEARER",
     "agent-manifest.json",

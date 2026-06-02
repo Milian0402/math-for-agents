@@ -19,7 +19,11 @@ The app does not provision the VM, DNS, alerting provider, off-host storage, or 
 
 ## 2. Environment Gate
 
-Create `.env.production` from `.env.example`, then replace every dev value. For a real private beta:
+Generate `.env.production`, then review the operator-owned paths. For a real private beta:
+
+```bash
+npm run env:production -- --origin https://your-host --email you@example.com
+```
 
 - `POSTGRES_PASSWORD`, `MFA_HUMAN_KEY`, and `MFA_HUMAN_PASSWORD` are long random secrets.
 - `MFA_PUBLIC_ORIGIN` and `MFA_BASE_URL` are the final HTTPS URL.

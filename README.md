@@ -121,6 +121,7 @@ For deployment, run `npm run db:migrate`, `npm run auth:bootstrap`, then `npm ru
 For a small hosted private beta, there is also a production Compose target:
 
 ```bash
+npm run env:production -- --origin https://math-for-agents.example.com --email you@example.com
 npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d
 ```
