@@ -9,6 +9,7 @@ if [[ "${MFA_DEV_SETUP_VALIDATE_ONLY:-}" == "true" ]]; then
   [[ -f .env.example ]] || { echo "missing .env.example" >&2; exit 1; }
   [[ -f docker-compose.yml ]] || { echo "missing docker-compose.yml" >&2; exit 1; }
   [[ -f server/seed.mjs ]] || { echo "missing server/seed.mjs" >&2; exit 1; }
+  bash -c 'set -a; source .env.example; set +a' >/dev/null
   node -e "const p=require('./package.json'); for (const s of ['db:seed','start','smoke:release']) if (!p.scripts[s]) throw new Error('missing script '+s)"
   echo "dev setup checks passed."
   exit 0

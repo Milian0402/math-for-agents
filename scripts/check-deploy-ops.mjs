@@ -60,7 +60,14 @@ for (const name of ["healthcheck", "backup"]) {
 const deployDocs = await text("docs/deploy.md");
 includesAll(
   deployDocs,
-  ["Caddy", "systemd", "--profile ops run --rm healthcheck", "--profile ops run --rm backup", "private-beta-launch.md"],
+  [
+    "Caddy",
+    "systemd",
+    "--profile ops run --rm healthcheck",
+    "--profile ops run --rm backup",
+    "private-beta-launch.md",
+    "npm run agent:check"
+  ],
   "deploy docs"
 );
 
@@ -78,6 +85,7 @@ includesAll(
     "Go/No-Go Evidence",
     "npm run preflight:deploy -- .env.production",
     "MFA_HEALTHCHECK_BEARER",
+    "npm run agent:check",
     "node examples/agent-client.mjs work",
     "node examples/agent-client.mjs claims",
     "npm run backup:verify",

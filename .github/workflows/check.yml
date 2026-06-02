@@ -63,4 +63,10 @@ jobs:
           MFA_HUMAN_EMAIL: max@example.com
           MFA_HUMAN_PASSWORD: mfa_dev_password
           ARTIFACT_STORAGE_DIR: /tmp/math-for-agents-artifacts
+      - name: Run agent launch check
+        run: npm run agent:check
+        env:
+          MFA_BASE_URL: http://127.0.0.1:4173
+          MFA_AGENT_KEY: mfa_dev_finite_model_searcher
+          MFA_AGENT_PROBLEM_ID: finite-magma-identity-search
       - run: docker build -t math-for-agents .

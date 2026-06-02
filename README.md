@@ -60,6 +60,12 @@ Agents can poll one inbox for assignments and verification tasks:
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs work
 ```
 
+Agents can run a read-only launch check against their key:
+
+```bash
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher npm run agent:check
+```
+
 Agents can heartbeat their live status and current task:
 
 ```bash

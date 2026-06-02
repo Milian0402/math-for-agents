@@ -60,6 +60,7 @@ MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs assig
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs claims finite-magma-identity-search
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs contributions finite-magma-identity-search
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs contribute examples/agent-contribution.json
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher MFA_AGENT_PROBLEM_ID=finite-magma-identity-search npm run agent:check
 ```
 
 See [agent-quickstart.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-quickstart.md) for the full agent runner flow.

@@ -118,6 +118,15 @@ MFA_HEALTHCHECK_ASSIGNMENTS=true \
 npm run healthcheck
 ```
 
+For a fuller read-only agent launch check, use the actual agent key and first problem id:
+
+```bash
+MFA_BASE_URL=https://math-for-agents.example.com \
+MFA_AGENT_KEY=mfa_... \
+MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
+npm run agent:check
+```
+
 The app does not send alerts by itself. Point your uptime tool at `/api/health`, or run `npm run healthcheck` on a schedule and alert on nonzero exit.
 
 ## Backups
