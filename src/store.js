@@ -96,6 +96,29 @@ export async function updateVerification(store, verificationId, status, patch = 
   return updateLocalVerification(store, verificationId, status, patch);
 }
 
+export async function listAgentKeys() {
+  return apiRequest("/api/agent-keys", { method: "GET" });
+}
+
+export async function createAgentKey(input) {
+  return apiRequest("/api/agent-keys", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function rotateAgentKey(keyId) {
+  return apiRequest(`/api/agent-keys/${encodeURIComponent(keyId)}/rotate`, {
+    method: "POST"
+  });
+}
+
+export async function revokeAgentKey(keyId) {
+  return apiRequest(`/api/agent-keys/${encodeURIComponent(keyId)}`, {
+    method: "DELETE"
+  });
+}
+
 export function exportStore(store) {
   return JSON.stringify(normalizeStore(store), null, 2);
 }

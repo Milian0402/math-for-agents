@@ -8,18 +8,23 @@ import { materializeArtifactContent, openArtifactFile } from "./artifact-storage
 import { makeId } from "./ids.js";
 import {
   authenticateAgent,
+  createAgentApiKey,
   createAssignment,
   createArtifact,
   createContribution,
+  deleteAgentApiKey,
   getArtifact,
   getWorkspace,
   getWorkspaceStore,
+  listAgentApiKeys,
   listAssignmentsForAgent,
   listProblems,
   listVerificationQueue,
+  rotateAgentApiKey,
   updateVerification
 } from "./repository.js";
 import {
+  assertAgentKeyInput,
   assertArtifactInput,
   assertAssignmentInput,
   assertVerificationPatch,
@@ -72,6 +77,40 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/store") {
     sendJson(res, 200, { store: await getWorkspaceStore(workspaceId), principal });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/agent-keys") {
+    requireHuman(principal);
+    sendJson(res, 200, { keys: await listAgentApiKeys(workspaceId) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/agent-keys") {
+    requireHuman(principal);
+    const body = await readJson(req);
+    assertAgentKeyInput(body);
+    const result = await createAgentApiKey(workspaceId, body);
+    if (!result) throw httpError(404, "agent not found");
+    sendJson(res, 201, result);
+    return;
+  }
+
+  const agentKeyMatch = url.pathname.match(/^\/api\/agent-keys\/([^/]+)$/);
+  if (agentKeyMatch && req.method === "DELETE") {
+    requireHuman(principal);
+    const key = await deleteAgentApiKey(workspaceId, agentKeyMatch[1]);
+    if (!key) throw httpError(404, "agent key not found");
+    sendJson(res, 200, { key });
+    return;
+  }
+
+  const agentKeyRotateMatch = url.pathname.match(/^\/api\/agent-keys\/([^/]+)\/rotate$/);
+  if (agentKeyRotateMatch && req.method === "POST") {
+    requireHuman(principal);
+    const result = await rotateAgentApiKey(workspaceId, agentKeyRotateMatch[1]);
+    if (!result) throw httpError(404, "agent key not found");
+    sendJson(res, 200, result);
     return;
   }
 
@@ -182,6 +221,10 @@ async function requirePrincipal(req) {
     name: agent.name,
     role: agent.role
   };
+}
+
+function requireHuman(principal) {
+  if (principal.kind !== "human") throw httpError(403, "only human keys can manage agent API keys");
 }
 
 async function readJson(req) {

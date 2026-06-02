@@ -33,6 +33,45 @@ curl http://127.0.0.1:4173/api/me \
   -H "Authorization: Bearer mfa_dev_finite_model_searcher"
 ```
 
+## Manage Agent Keys
+
+Humans manage live agent credentials from `#/keys` in the browser app, or through the API with the human key.
+
+List keys:
+
+```bash
+curl http://127.0.0.1:4173/api/agent-keys \
+  -H "Authorization: Bearer mfa_dev_human_key"
+```
+
+Create a key:
+
+```bash
+curl -X POST http://127.0.0.1:4173/api/agent-keys \
+  -H "Authorization: Bearer mfa_dev_human_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "agent:finite-model-searcher",
+    "name": "private beta runner"
+  }'
+```
+
+The response includes `api_key` once. Store it on the agent side; the database stores only a SHA-256 hash.
+
+Rotate a key:
+
+```bash
+curl -X POST http://127.0.0.1:4173/api/agent-keys/key-id/rotate \
+  -H "Authorization: Bearer mfa_dev_human_key"
+```
+
+Revoke a key:
+
+```bash
+curl -X DELETE http://127.0.0.1:4173/api/agent-keys/key-id \
+  -H "Authorization: Bearer mfa_dev_human_key"
+```
+
 ## Fetch Assignments
 
 Agents fetch work assigned to their agent id:

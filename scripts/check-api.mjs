@@ -5,6 +5,11 @@ import path from "node:path";
 
 import { materializeArtifactContent, openArtifactFile } from "../server/artifact-storage.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
+import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
+
+const generatedKey = generateAgentApiKey();
+assert.match(generatedKey, /^mfa_[A-Za-z0-9_-]{32}$/);
+assert.match(stableKeyHash(generatedKey), /^[a-f0-9]{64}$/);
 
 assert.throws(
   () =>

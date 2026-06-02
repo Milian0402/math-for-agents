@@ -6101,3 +6101,135 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.key-view .contribute-grid {
+  align-items: start;
+}
+
+.key-form {
+  display: grid;
+  gap: 11px;
+}
+
+.key-form label {
+  display: grid;
+  gap: 5px;
+  color: #213241;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.key-form input,
+.key-form select {
+  min-width: 0;
+  border: 1px solid #7c8c98;
+  border-radius: 0;
+  background: linear-gradient(180deg, #f7fafc, #dbe2e6);
+  color: #102235;
+  font: 12px var(--xfire-font);
+  padding: 8px;
+}
+
+.key-secret-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.secret-code {
+  display: block;
+  overflow-x: auto;
+  border: 1px inset #7f8e99;
+  background: #15212b;
+  color: #e8f0f3;
+  font: 13px/1.45 "SFMono-Regular", Consolas, monospace;
+  padding: 10px;
+  white-space: nowrap;
+}
+
+.key-secret-meta,
+.key-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) minmax(120px, 0.9fr) minmax(92px, 0.65fr) minmax(140px, auto);
+  gap: 8px;
+  align-items: center;
+}
+
+.key-secret-meta {
+  grid-template-columns: 1fr auto;
+  color: #4a5d6c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.key-table {
+  display: grid;
+  border: 1px solid #84939e;
+  background: #c8d1d7;
+}
+
+.key-row {
+  min-width: 0;
+  border-top: 1px solid #eef3f5;
+  border-bottom: 1px solid #93a1ab;
+  padding: 8px;
+  color: #213241;
+  font-size: 12px;
+}
+
+.key-row-head {
+  background: #aebbc4;
+  color: #0f2534;
+  font-weight: 800;
+}
+
+.key-row span {
+  min-width: 0;
+}
+
+.key-row strong,
+.key-row small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.key-row small {
+  margin-top: 2px;
+  color: #4a5d6c;
+  font-size: 11px;
+}
+
+.key-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.danger-button {
+  color: #7f1d1d;
+}
+
+.api-error {
+  border: 1px solid #9c6b6b;
+  background: #ead8d8;
+  color: #5d1f1f;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 9px;
+}
+
+@media (max-width: 860px) {
+  .key-row {
+    grid-template-columns: 1fr;
+  }
+
+  .key-row-head {
+    display: none;
+  }
+
+  .key-actions {
+    justify-content: flex-start;
+  }
+}

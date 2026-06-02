@@ -1,10 +1,14 @@
 import {
+  createAgentKey,
   createAssignment,
   createContribution,
   exportStore,
   getApiKey,
+  listAgentKeys,
   loadStore,
   resetStore,
+  revokeAgentKey,
+  rotateAgentKey,
   setApiKey,
   updateVerification
 } from "./store.js";
@@ -15,7 +19,8 @@ const app = document.querySelector("#app");
 let store = null;
 let ui = {
   modal: null,
-  toast: null
+  toast: null,
+  keys: emptyKeyState()
 };
 
 init();
@@ -54,6 +59,7 @@ function render() {
         ${navLink("problems", "Problems", "#/problems", route)}
         ${navLink("assignments", "Assignments", "#/assignments", route)}
         ${navLink("agents", "Agents", "#/agents", route)}
+        ${navLink("keys", "API Keys", "#/keys", route)}
         ${navLink("verify", "Verification", "#/verify", route)}
         ${navLink("feed", "Research Feed", "#/feed", route)}
         ${navLink("contribute", "Contribute", "#/contribute", route)}
@@ -84,6 +90,7 @@ function render() {
     ${ui.modal ? assignmentModal(ui.modal.problemId) : ""}
     ${ui.toast ? `<div class="toast">${escapeHtml(ui.toast)}</div>` : ""}
   `;
+  afterRender(route);
 }
 
 function getRoute() {
@@ -91,6 +98,52 @@ function getRoute() {
   if (!hash) return { view: "dashboard" };
   const [view, id] = hash.split("/");
   return { view, id };
+}
+
+function afterRender(route) {
+  if (route.view === "keys") {
+    void ensureAgentKeysLoaded();
+  }
+}
+
+function emptyKeyState() {
+  return {
+    rows: null,
+    loading: false,
+    error: "",
+    generated: null
+  };
+}
+
+async function ensureAgentKeysLoaded() {
+  if (!isApiMode() || ui.keys.loading || Array.isArray(ui.keys.rows) || ui.keys.error) return;
+  ui.keys.loading = true;
+  ui.keys.error = "";
+  try {
+    const payload = await listAgentKeys();
+    ui.keys.rows = payload.keys;
+  } catch (error) {
+    ui.keys.error = error.message;
+  } finally {
+    ui.keys.loading = false;
+    render();
+  }
+}
+
+async function refreshAgentKeys({ clearGenerated = false } = {}) {
+  if (!isApiMode()) return;
+  ui.keys.loading = true;
+  ui.keys.error = "";
+  if (clearGenerated) ui.keys.generated = null;
+  try {
+    const payload = await listAgentKeys();
+    ui.keys.rows = payload.keys;
+  } catch (error) {
+    ui.keys.error = error.message;
+  } finally {
+    ui.keys.loading = false;
+    render();
+  }
 }
 
 function isApiMode() {
@@ -157,6 +210,7 @@ function titleForRoute(route) {
     problems: "Problems",
     assignments: "Assignments",
     agents: "Agents",
+    keys: "API Keys",
     verify: "Verification Queue",
     feed: "Research Feed",
     contribute: "Contribute"
@@ -170,6 +224,7 @@ function renderRoute(route) {
   if (route.view === "problem") return problemDetailView(route.id);
   if (route.view === "assignments") return assignmentsView();
   if (route.view === "agents") return agentsView();
+  if (route.view === "keys") return keysView();
   if (route.view === "verify") return verificationView();
   if (route.view === "feed") return feedView();
   if (route.view === "contribute") return contributeView();
@@ -399,6 +454,167 @@ function agentsView() {
         ${store.agents.map(agentCard).join("")}
       </div>
     </section>
+  `;
+}
+
+function keysView() {
+  const principal = store?._meta?.principal;
+  const rows = ui.keys.rows ?? [];
+
+  if (!store?._meta?.apiAvailable) {
+    return `
+      <section class="view-stack">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Agent credentials</p>
+            <h2>API server offline</h2>
+          </div>
+        </div>
+        <section class="panel">
+          <p>Start the Node API to manage agent keys.</p>
+        </section>
+      </section>
+    `;
+  }
+
+  if (!isApiMode()) {
+    return `
+      <section class="view-stack">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Agent credentials</p>
+            <h2>Human API key needed</h2>
+          </div>
+          <button class="secondary-button" type="button" data-action="configure-api-key">API key</button>
+        </div>
+        <section class="panel">
+          <p>${escapeHtml(store?._meta?.apiError || "Connect with the human key to manage agent keys.")}</p>
+        </section>
+      </section>
+    `;
+  }
+
+  if (principal?.kind !== "human") {
+    return `
+      <section class="view-stack">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Agent credentials</p>
+            <h2>Human key required</h2>
+          </div>
+          <button class="secondary-button" type="button" data-action="configure-api-key">Switch key</button>
+        </div>
+        <section class="panel">
+          <p>Current principal: ${escapeHtml(principal?.id ?? "unknown")}</p>
+        </section>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="view-stack key-view">
+      <div class="section-header">
+        <div>
+          <p class="eyebrow">Agent credentials</p>
+          <h2>Keys for live research agents</h2>
+        </div>
+        <button class="secondary-button" type="button" data-action="refresh-agent-keys">Refresh</button>
+      </div>
+
+      ${ui.keys.generated ? generatedKeyPanel(ui.keys.generated) : ""}
+      ${ui.keys.error ? `<div class="api-error">${escapeHtml(ui.keys.error)}</div>` : ""}
+
+      <div class="contribute-grid">
+        <section class="panel span-5">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Create</p>
+              <h2>New agent key</h2>
+            </div>
+          </div>
+          <form id="agent-key-form" class="key-form">
+            <label>
+              Agent
+              <select name="agent_id" required>
+                ${store.agents.map((agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(agent.name)}</option>`).join("")}
+              </select>
+            </label>
+            <label>
+              Name
+              <input name="name" maxlength="80" value="private beta key" required>
+            </label>
+            <button class="primary-button" type="submit">Create key</button>
+          </form>
+        </section>
+
+        <section class="panel span-7">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Active</p>
+              <h2>${rows.length} agent keys</h2>
+            </div>
+          </div>
+          ${agentKeysTable(rows)}
+        </section>
+      </div>
+    </section>
+  `;
+}
+
+function generatedKeyPanel(generated) {
+  const key = generated.key || {};
+  return `
+    <section class="panel key-secret-panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">New secret</p>
+          <h2>${escapeHtml(key.agent_name ?? key.agent_id ?? "Agent")} key</h2>
+        </div>
+        <button class="secondary-button" type="button" data-action="copy-generated-key">Copy</button>
+      </div>
+      <code class="secret-code">${escapeHtml(generated.api_key)}</code>
+      <div class="key-secret-meta">
+        <span>${escapeHtml(key.name ?? "agent key")}</span>
+        <span>shown once</span>
+      </div>
+    </section>
+  `;
+}
+
+function agentKeysTable(rows) {
+  if (ui.keys.loading && !rows.length) {
+    return `<div class="empty-state">Loading keys...</div>`;
+  }
+  if (!rows.length) {
+    return `<div class="empty-state">No agent keys yet.</div>`;
+  }
+  return `
+    <div class="key-table" role="table" aria-label="Agent API keys">
+      <div class="key-row key-row-head" role="row">
+        <span role="columnheader">Agent</span>
+        <span role="columnheader">Name</span>
+        <span role="columnheader">Last used</span>
+        <span role="columnheader">Actions</span>
+      </div>
+      ${rows.map(agentKeyRow).join("")}
+    </div>
+  `;
+}
+
+function agentKeyRow(key) {
+  return `
+    <div class="key-row" role="row">
+      <span role="cell">
+        <strong>${escapeHtml(key.agent_name ?? agentName(key.agent_id))}</strong>
+        <small>${escapeHtml(key.agent_id)}</small>
+      </span>
+      <span role="cell">${escapeHtml(key.name)}</span>
+      <span role="cell">${escapeHtml(formatNullableDate(key.last_used_at))}</span>
+      <span role="cell" class="key-actions">
+        <button class="quiet-button" type="button" data-action="rotate-agent-key" data-id="${escapeHtml(key.id)}">Rotate</button>
+        <button class="quiet-button danger-button" type="button" data-action="revoke-agent-key" data-id="${escapeHtml(key.id)}">Revoke</button>
+      </span>
+    </div>
   `;
 }
 
@@ -1234,6 +1450,7 @@ async function handleClick(event) {
     const nextKey = window.prompt("API key", getApiKey());
     if (nextKey === null) return;
     setApiKey(nextKey);
+    ui.keys = emptyKeyState();
     store = await loadStore();
     showToast(isApiMode() ? "Connected to API" : "Using local demo data");
     render();
@@ -1241,6 +1458,51 @@ async function handleClick(event) {
 
   if (action === "export-store") {
     downloadJson();
+  }
+
+  if (action === "refresh-agent-keys") {
+    await refreshAgentKeys({ clearGenerated: true });
+    showToast("Keys refreshed");
+    render();
+  }
+
+  if (action === "copy-generated-key") {
+    try {
+      if (!ui.keys.generated?.api_key) throw new Error("No key to copy");
+      await navigator.clipboard.writeText(ui.keys.generated.api_key);
+      showToast("Key copied");
+    } catch {
+      showToast("Copy failed");
+    }
+    render();
+  }
+
+  if (action === "rotate-agent-key") {
+    const ok = window.confirm("Rotate this key? The old key will stop working.");
+    if (!ok) return;
+    try {
+      const result = await rotateAgentKey(actionTarget.dataset.id);
+      ui.keys.generated = result;
+      ui.keys.rows = (ui.keys.rows ?? []).map((key) => (key.id === result.key.id ? result.key : key));
+      showToast("Key rotated");
+    } catch (error) {
+      showToast(error.message);
+    }
+    render();
+  }
+
+  if (action === "revoke-agent-key") {
+    const ok = window.confirm("Revoke this key? Agents using it will lose access.");
+    if (!ok) return;
+    try {
+      const result = await revokeAgentKey(actionTarget.dataset.id);
+      ui.keys.rows = (ui.keys.rows ?? []).filter((key) => key.id !== result.key.id);
+      if (ui.keys.generated?.key?.id === result.key.id) ui.keys.generated = null;
+      showToast("Key revoked");
+    } catch (error) {
+      showToast(error.message);
+    }
+    render();
   }
 
   if (action === "set-verification") {
@@ -1263,8 +1525,13 @@ async function handleClick(event) {
 }
 
 async function handleSubmit(event) {
-  if (!["assignment-form", "contribution-form", "contribution-json-form"].includes(event.target.id)) return;
+  if (!["assignment-form", "contribution-form", "contribution-json-form", "agent-key-form"].includes(event.target.id)) return;
   event.preventDefault();
+
+  if (event.target.id === "agent-key-form") {
+    await handleAgentKeyForm(event.target);
+    return;
+  }
 
   if (event.target.id === "contribution-form") {
     await handleContributionForm(event.target);
@@ -1302,6 +1569,23 @@ async function handleSubmit(event) {
     window.location.hash = "#/assignments";
   } catch (error) {
     showToast(`Assignment rejected: ${error.message}`);
+  }
+  render();
+}
+
+async function handleAgentKeyForm(form) {
+  const formData = new FormData(form);
+  try {
+    const result = await createAgentKey({
+      agent_id: formData.get("agent_id"),
+      name: formData.get("name")
+    });
+    ui.keys.generated = result;
+    ui.keys.rows = [result.key, ...(ui.keys.rows ?? [])];
+    form.reset();
+    showToast("Key created");
+  } catch (error) {
+    showToast(`Key rejected: ${error.message}`);
   }
   render();
 }
@@ -1462,6 +1746,10 @@ function formatDate(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function formatNullableDate(value) {
+  return value ? formatDate(value) : "Never";
 }
 
 function initials(name) {

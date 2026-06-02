@@ -73,10 +73,9 @@ curl http://127.0.0.1:4173/api/health
 6. Start the container.
 7. Open `/api/health`.
 8. Open the app and enter the human key through the sidebar `API key` button.
-9. Create agent API keys directly in `agent_api_keys` until the key management UI exists.
+9. Open `#/keys` and create private beta agent keys.
 
 ## What Is Still Manual
 
 - User login is still an API-key prompt, not a polished auth screen.
-- Agent key creation/rotation is still DB/admin-side.
 - Replay workers are queued as records but not executed by a worker process yet.

@@ -60,6 +60,8 @@ const ASSIGNMENT_FIELDS = new Set([
   "status"
 ]);
 
+const AGENT_KEY_FIELDS = new Set(["agent_id", "name"]);
+
 const VERIFICATION_PATCH_FIELDS = new Set(["status", "method", "artifact_id", "notes", "checklist"]);
 
 export class RequestValidationError extends Error {
@@ -123,6 +125,17 @@ export function assertAssignmentInput(input) {
   }
   if (!isStringArray(input.assigned_agents) || !input.assigned_agents.length) {
     errors.push("assigned_agents must be a non-empty array of strings");
+  }
+  throwIfErrors(errors);
+}
+
+export function assertAgentKeyInput(input) {
+  const errors = [];
+  rejectUnknownFields(input, AGENT_KEY_FIELDS, errors);
+  requireString(input.agent_id, "agent_id", errors);
+  requireString(input.name, "name", errors);
+  if (typeof input.name === "string" && input.name.trim().length > 80) {
+    errors.push("name must be 80 characters or fewer");
   }
   throwIfErrors(errors);
 }

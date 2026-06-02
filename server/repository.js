@@ -1,5 +1,5 @@
 import { query, transaction } from "./db.js";
-import { makeId, stableKeyHash } from "./ids.js";
+import { generateAgentApiKey, makeId, stableKeyHash } from "./ids.js";
 import { applyVerificationPatch, buildContribution } from "./domain.js";
 
 export async function authenticateAgent(apiKey) {
@@ -49,6 +49,100 @@ export async function getWorkspaceStore(workspaceId) {
     posts: posts.rows,
     artifacts: artifacts.rows
   };
+}
+
+export async function listAgentApiKeys(workspaceId) {
+  const result = await query(
+    `select agent_api_keys.id,
+            agent_api_keys.workspace_id,
+            agent_api_keys.agent_id,
+            agents.name as agent_name,
+            agent_api_keys.name,
+            agent_api_keys.created_at,
+            agent_api_keys.last_used_at
+       from agent_api_keys
+       join agents on agents.id = agent_api_keys.agent_id
+      where agent_api_keys.workspace_id = $1
+      order by agent_api_keys.created_at desc, agents.name asc`,
+    [workspaceId]
+  );
+  return result.rows;
+}
+
+export async function createAgentApiKey(workspaceId, input) {
+  const apiKey = generateAgentApiKey();
+  const result = await query(
+    `with inserted as (
+       insert into agent_api_keys (id, workspace_id, agent_id, name, key_hash)
+       select $1, $2, agents.id, $4, $5
+         from agents
+        where agents.workspace_id = $2
+          and agents.id = $3
+       returning *
+     )
+     select inserted.id,
+            inserted.workspace_id,
+            inserted.agent_id,
+            agents.name as agent_name,
+            inserted.name,
+            inserted.created_at,
+            inserted.last_used_at
+       from inserted
+       join agents on agents.id = inserted.agent_id`,
+    [makeId("key"), workspaceId, input.agent_id, input.name.trim(), stableKeyHash(apiKey)]
+  );
+  const key = result.rows[0] || null;
+  if (!key) return null;
+  return { key, api_key: apiKey };
+}
+
+export async function rotateAgentApiKey(workspaceId, keyId) {
+  const apiKey = generateAgentApiKey();
+  const result = await query(
+    `with updated as (
+       update agent_api_keys
+          set key_hash = $3,
+              last_used_at = null
+        where workspace_id = $1
+          and id = $2
+       returning *
+     )
+     select updated.id,
+            updated.workspace_id,
+            updated.agent_id,
+            agents.name as agent_name,
+            updated.name,
+            updated.created_at,
+            updated.last_used_at
+       from updated
+       join agents on agents.id = updated.agent_id`,
+    [workspaceId, keyId, stableKeyHash(apiKey)]
+  );
+  const key = result.rows[0] || null;
+  if (!key) return null;
+  return { key, api_key: apiKey };
+}
+
+export async function deleteAgentApiKey(workspaceId, keyId) {
+  const result = await query(
+    `with deleted as (
+       delete from agent_api_keys
+        where workspace_id = $1
+          and id = $2
+       returning *
+     )
+     select deleted.id,
+            deleted.workspace_id,
+            deleted.agent_id,
+            agents.name as agent_name,
+            deleted.name,
+            deleted.created_at,
+            deleted.last_used_at
+       from deleted
+       join agents on agents.id = deleted.agent_id`,
+    [workspaceId, keyId]
+  );
+  return result.rows[0] || null;
 }
 
 export async function listAssignmentsForAgent(workspaceId, agentId) {
