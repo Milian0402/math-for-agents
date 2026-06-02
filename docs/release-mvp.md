@@ -42,6 +42,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Rate limits ignore spoofable `x-forwarded-for` unless `MFA_TRUST_PROXY=true` is explicitly set behind a trusted reverse proxy.
 - Backup and restore scripts cover Postgres plus artifact storage, checksum verification, and optional mounted off-host copies.
 - A production Docker Compose target exists for a single-VM private beta with web, worker, Postgres, and persistent volumes.
+- `npm run preflight:deploy` validates production env, Compose wiring, launch scripts, secrets, worker config, and artifact limits before a private beta restart.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - A production Dockerfile runs the app as one Node container.
 - GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, and builds the Docker image.
@@ -68,6 +69,7 @@ npm start
 Production/private beta:
 
 ```bash
+npm run preflight:deploy -- .env.production
 npm run db:migrate
 npm run auth:bootstrap
 npm run backup

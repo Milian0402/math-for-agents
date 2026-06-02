@@ -64,6 +64,7 @@ For deployment, run `npm run db:migrate`, then `npm run auth:bootstrap` against 
 For a small hosted private beta, there is also a production Compose target:
 
 ```bash
+npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d
 ```
 

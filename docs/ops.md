@@ -119,6 +119,7 @@ The concrete hosted target is Docker Compose on a small VM:
 
 ```bash
 cp .env.example .env.production
+npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run auth:bootstrap
@@ -132,3 +133,5 @@ This runs:
 - A worker container sharing artifact storage.
 
 The worker uses the Docker runner by default in this compose file and mounts `/var/run/docker.sock`. That is powerful host access. Use it only on a dedicated VM, or run the worker manually with a stricter sandbox if the threat model needs it.
+
+Run `npm run preflight:deploy -- .env.production` after editing the production env and before restarting the stack. It prints JSON, fails on launch-blocking config problems, and leaves operator-owned items as warnings.

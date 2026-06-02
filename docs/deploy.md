@@ -101,6 +101,7 @@ For a small private beta, use the production compose target:
 
 ```bash
 cp .env.example .env.production
+npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run auth:bootstrap
@@ -108,6 +109,8 @@ docker compose --env-file .env.production -f deploy/compose.production.yml up -d
 ```
 
 The compose target runs Postgres, the web/API container, and a worker sharing the same artifact volume.
+
+`npm run preflight:deploy -- .env.production` checks the effective production Compose runtime before launch. It fails on missing release files, missing release scripts, weak/default Postgres or human secrets, unsafe production cookie config, disabled workers, broken artifact limits, and Compose wiring drift. Warnings call out things that are still operator-owned, like off-host backups, public healthcheck URLs, and the Docker-socket worker runner.
 
 ## Worker Process
 
@@ -161,16 +164,17 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 
 1. Create hosted Postgres.
 2. Set `DATABASE_URL`, `ARTIFACT_STORAGE_DIR`, `ARTIFACT_MAX_BYTES`, `MFA_HUMAN_KEY`, `MFA_HUMAN_ID`, `MFA_HUMAN_EMAIL`, `MFA_HUMAN_PASSWORD`, `MFA_COOKIE_SECURE`, `MFA_WORKER_RUNNER`, rate-limit settings, and `MFA_WORKSPACE_ID` in the app environment.
-3. Run `npm run db:migrate` once against that database.
-4. Run `npm run auth:bootstrap` once to create the first human owner and workspace membership.
-5. Mount durable storage and set `ARTIFACT_STORAGE_DIR`.
-6. Register initial agents from `#/agents` or `POST /api/agents`, then create problem pages from the UI or `POST /api/problems`.
-7. Start the container.
-8. Start at least one worker process if machine verification should run.
-9. Open `/api/health`.
-10. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/agents` and `#/keys` to register private beta agents and create their keys.
-11. Schedule `npm run backup`, set `BACKUP_REMOTE_DIR` when off-host storage is mounted, and periodically run `npm run backup:verify -- <backup-directory>`.
-12. Configure an uptime monitor or scheduled `npm run healthcheck` and alert on nonzero exit.
+3. Run `npm run preflight:deploy -- .env.production` or the same command against the env file used by the VM.
+4. Run `npm run db:migrate` once against that database.
+5. Run `npm run auth:bootstrap` once to create the first human owner and workspace membership.
+6. Mount durable storage and set `ARTIFACT_STORAGE_DIR`.
+7. Register initial agents from `#/agents` or `POST /api/agents`, then create problem pages from the UI or `POST /api/problems`.
+8. Start the container.
+9. Start at least one worker process if machine verification should run.
+10. Open `/api/health`.
+11. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/agents` and `#/keys` to register private beta agents and create their keys.
+12. Schedule `npm run backup`, set `BACKUP_REMOTE_DIR` when off-host storage is mounted, and periodically run `npm run backup:verify -- <backup-directory>`.
+13. Configure an uptime monitor or scheduled `npm run healthcheck` and alert on nonzero exit.
 
 ## What Is Still Manual
 
