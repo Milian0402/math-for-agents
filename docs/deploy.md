@@ -201,7 +201,7 @@ MFA_BASE_URL=https://math-for-agents.example.com npm run healthcheck
 
 Set `MFA_HEALTHCHECK_BEARER` and `MFA_HEALTHCHECK_ASSIGNMENTS=true` if the monitor should also verify authenticated agent access.
 
-Every response includes `x-request-id`, and JSON errors include `request_id`. See [ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md) for request logs, rate limits, backup scheduling, and compose deployment notes.
+Every response includes `x-request-id`, and JSON errors include `request_id`. The app also sets baseline browser hardening headers itself; a reverse proxy can add stricter site-specific headers later. See [ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md) for request logs, rate limits, backup scheduling, and compose deployment notes.
 
 ## First Private Beta Deploy
 

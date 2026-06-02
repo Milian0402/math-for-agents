@@ -9,6 +9,7 @@ import { assertWebRuntimeConfig, assertWorkerRuntimeConfig, secureCookiesEnabled
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import {
   allowedSessionOrigins,
+  responseHeaders,
   requestBodyLimitBytes,
   resolveStaticFilePath,
   sessionWriteOriginCheck
@@ -150,6 +151,18 @@ assert.throws(() => resolveStaticFilePath("/.env", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/server/db.js", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/docs/.env", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/%2e%2e/math-for-agents-evil/.env", staticRoot), /forbidden/);
+
+const headers = responseHeaders({ "content-type": "application/json; charset=utf-8" });
+assert.equal(headers["content-type"], "application/json; charset=utf-8");
+assert.equal(headers["x-content-type-options"], "nosniff");
+assert.equal(headers["x-frame-options"], "DENY");
+assert.equal(headers["referrer-policy"], "no-referrer");
+assert.equal(headers["cross-origin-opener-policy"], "same-origin");
+assert.equal(headers["cross-origin-resource-policy"], "same-origin");
+assert.match(headers["content-security-policy"], /default-src 'self'/);
+assert.match(headers["content-security-policy"], /script-src 'self'/);
+assert.match(headers["content-security-policy"], /object-src 'none'/);
+assert.match(headers["content-security-policy"], /frame-ancestors 'none'/);
 
 assert.equal(requestBodyLimitBytes({ MAX_JSON_BYTES: "12345", ARTIFACT_MAX_BYTES: "1000" }), 12_345);
 assert.equal(requestBodyLimitBytes({ ARTIFACT_MAX_BYTES: "1000" }), 67_036);

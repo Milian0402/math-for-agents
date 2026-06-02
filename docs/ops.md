@@ -10,6 +10,8 @@ Every HTTP response includes `x-request-id`. Error responses also include `reque
 
 The web process serves only the frontend, public docs/spec files, schemas, examples, and bundled sample logs. Dotfiles, runtime env files, server code, scripts, packages, and dependency directories are not served as static files.
 
+Every JSON, static, export, and artifact-download response also carries baseline browser hardening headers: no MIME sniffing, no framing, no referrer leakage, same-origin opener/resource policy, and a CSP that keeps scripts and API connections same-origin while allowing the current local stylesheet/UI behavior.
+
 JSON request bodies are capped by bytes, not JavaScript string length. Leave `MAX_JSON_BYTES` unset for the default, which covers base64 overhead for artifact uploads up to `ARTIFACT_MAX_BYTES`.
 
 The server writes one JSON log line per request unless disabled:

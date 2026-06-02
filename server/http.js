@@ -73,6 +73,25 @@ const contentTypes = {
 };
 const publicStaticExactPaths = new Set(["index.html", "openapi.json", "README.md", "data/seed.json"]);
 const publicStaticPrefixes = ["src/", "docs/", "schemas/", "examples/", "logs/"];
+const SECURITY_HEADERS = Object.freeze({
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  "cross-origin-opener-policy": "same-origin",
+  "cross-origin-resource-policy": "same-origin",
+  "content-security-policy": [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'"
+  ].join("; ")
+});
 
 export function createServer() {
   return createNodeServer(async (req, res) => {
@@ -702,10 +721,10 @@ async function serveStatic(req, res, url) {
   const fileStat = await stat(filePath).catch(() => null);
   if (!fileStat || !fileStat.isFile()) throw httpError(404, "not found");
 
-  res.writeHead(200, {
+  res.writeHead(200, responseHeaders({
     "content-type": contentTypes[path.extname(filePath)] || "application/octet-stream",
     "cache-control": "no-store"
-  });
+  }));
 
   if (req.method === "HEAD") {
     res.end();
@@ -741,17 +760,21 @@ function isPublicStaticPath(publicPath) {
   return publicStaticPrefixes.some((prefix) => publicPath.startsWith(prefix));
 }
 
+export function responseHeaders(headers = {}) {
+  return { ...SECURITY_HEADERS, ...headers };
+}
+
 function sendJson(res, statusCode, payload, headers = {}) {
-  res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8", ...headers });
+  res.writeHead(statusCode, responseHeaders({ "content-type": "application/json; charset=utf-8", ...headers }));
   res.end(JSON.stringify(payload, null, 2));
 }
 
 function sendText(res, statusCode, body, fileName) {
-  res.writeHead(statusCode, {
+  res.writeHead(statusCode, responseHeaders({
     "content-type": "text/markdown; charset=utf-8",
     "content-disposition": `attachment; filename="${fileName.replace(/"/g, "")}"`,
     "cache-control": "no-store"
-  });
+  }));
   res.end(body);
 }
 
@@ -789,12 +812,12 @@ function cookieHeader(name, value, lifetime) {
 }
 
 function sendFile(res, file) {
-  res.writeHead(200, {
+  res.writeHead(200, responseHeaders({
     "content-type": file.contentType,
     "content-length": String(file.size),
     "content-disposition": `attachment; filename="${file.fileName.replace(/"/g, "")}"`,
     "cache-control": "no-store"
-  });
+  }));
   file.stream.pipe(res);
 }
 
