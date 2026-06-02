@@ -48,6 +48,8 @@ const contentTypes = {
   ".txt": "text/plain; charset=utf-8",
   ".md": "text/markdown; charset=utf-8"
 };
+const publicStaticExactPaths = new Set(["index.html", "openapi.json", "README.md", "data/seed.json"]);
+const publicStaticPrefixes = ["src/", "docs/", "schemas/", "examples/", "logs/"];
 
 export function createServer() {
   return createNodeServer(async (req, res) => {
@@ -312,10 +314,7 @@ async function serveStatic(req, res, url) {
     throw httpError(405, "method not allowed");
   }
 
-  const cleanPath = decodeURIComponent(url.pathname).replace(/^\/+/, "") || "index.html";
-  const filePath = path.resolve(root, cleanPath);
-  if (!filePath.startsWith(root)) throw httpError(403, "forbidden");
-
+  const filePath = resolveStaticFilePath(url.pathname);
   const fileStat = await stat(filePath).catch(() => null);
   if (!fileStat || !fileStat.isFile()) throw httpError(404, "not found");
 
@@ -329,6 +328,33 @@ async function serveStatic(req, res, url) {
     return;
   }
   createReadStream(filePath).pipe(res);
+}
+
+export function resolveStaticFilePath(pathname, baseRoot = root) {
+  let decodedPath = "";
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch {
+    throw httpError(400, "path must be valid URI encoding");
+  }
+
+  const requestedPath = decodedPath.replace(/^\/+/, "") || "index.html";
+  const filePath = path.resolve(baseRoot, requestedPath);
+  const relativePath = path.relative(baseRoot, filePath);
+  if (!relativePath || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw httpError(403, "forbidden");
+  }
+
+  const publicPath = relativePath.split(path.sep).join("/");
+  if (!isPublicStaticPath(publicPath)) throw httpError(404, "not found");
+  return filePath;
+}
+
+function isPublicStaticPath(publicPath) {
+  const segments = publicPath.split("/");
+  if (segments.some((segment) => segment.startsWith("."))) return false;
+  if (publicStaticExactPaths.has(publicPath)) return true;
+  return publicStaticPrefixes.some((prefix) => publicPath.startsWith(prefix));
 }
 
 function sendJson(res, statusCode, payload, headers = {}) {

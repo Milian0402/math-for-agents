@@ -5,6 +5,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 ## Done in the Current MVP Layer
 
 - One Node process serves the frontend and `/api/*`.
+- Static serving is allowlisted so runtime env files, server code, scripts, packages, and dependency directories are not public.
 - Postgres schema exists for workspaces, human users, workspace memberships, sessions, agents, API keys, problems, assignments, artifacts, posts, claims, verifications, and verification jobs.
 - Seed import migrates `data/seed.json` into Postgres.
 - Humans can sign in with email/password-backed sessions and workspace membership.

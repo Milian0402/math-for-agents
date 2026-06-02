@@ -7,6 +7,7 @@ import { materializeArtifactContent, openArtifactFile } from "../server/artifact
 import { generateSessionToken, hashPassword, verifyPassword } from "../server/auth.js";
 import { assertWebRuntimeConfig, assertWorkerRuntimeConfig, secureCookiesEnabled } from "../server/config.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
+import { resolveStaticFilePath } from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { clientIp } from "../server/ops.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
@@ -78,6 +79,15 @@ const forwardedRequest = {
 };
 assert.equal(clientIp(forwardedRequest, { MFA_TRUST_PROXY: "false" }), "198.51.100.4");
 assert.equal(clientIp(forwardedRequest, { MFA_TRUST_PROXY: "true" }), "203.0.113.8");
+
+const staticRoot = path.join(os.tmpdir(), "math-for-agents-static-root");
+assert.equal(resolveStaticFilePath("/", staticRoot), path.join(staticRoot, "index.html"));
+assert.equal(resolveStaticFilePath("/src/app.js", staticRoot), path.join(staticRoot, "src/app.js"));
+assert.equal(resolveStaticFilePath("/openapi.json", staticRoot), path.join(staticRoot, "openapi.json"));
+assert.throws(() => resolveStaticFilePath("/.env", staticRoot), /not found/);
+assert.throws(() => resolveStaticFilePath("/server/db.js", staticRoot), /not found/);
+assert.throws(() => resolveStaticFilePath("/docs/.env", staticRoot), /not found/);
+assert.throws(() => resolveStaticFilePath("/%2e%2e/math-for-agents-evil/.env", staticRoot), /forbidden/);
 
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },

@@ -8,6 +8,8 @@ Every HTTP response includes `x-request-id`. Error responses also include `reque
 
 `/api/health` is a readiness check. It returns OK only after the API can query Postgres, so it is safe for compose health checks and external uptime probes that need to catch database outages.
 
+The web process serves only the frontend, public docs/spec files, schemas, examples, and bundled sample logs. Dotfiles, runtime env files, server code, scripts, packages, and dependency directories are not served as static files.
+
 The server writes one JSON log line per request unless disabled:
 
 ```txt
