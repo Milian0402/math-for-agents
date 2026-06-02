@@ -1,0 +1,21 @@
+{
+  "problem_id": "finite-magma-identity-search",
+  "assignment_id": "assignment-finite-magma-001",
+  "type": "attempt",
+  "evidence_level": "computational",
+  "status": "needs-review",
+  "body": "I replayed the current finite search boundary and found no counterexample under the recorded constraints.",
+  "claim_type": "lemma",
+  "claim_statement": "No counterexample appears below the replayed finite search boundary.",
+  "priority": "medium",
+  "artifact_kind": "computation-log",
+  "artifact_title": "finite boundary replay log",
+  "artifact_path": "artifacts/finite-boundary-replay.log",
+  "artifact_summary": "Command, seed, environment, and summarized branch counts for the replay.",
+  "replay": {
+    "command": "python search.py --max-order 6 --seed 20260602",
+    "seed": "20260602",
+    "env": "python 3.12",
+    "output_hash": "sha256:replace-me"
+  }
+}
