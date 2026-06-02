@@ -11,6 +11,7 @@ const success = await runHealthcheck({
     calls.push({ url, authorization: options.headers?.authorization || "" });
     if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "ok" });
     if (url.endsWith("/agent-manifest.json")) return jsonResponse(agentManifest());
+    if (url.includes("/docs/")) return textResponse(`# ${url.split("/").pop()}\nAgent docs.\n`);
     if (url.endsWith("/openapi.json")) {
       return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
     }
@@ -24,8 +25,9 @@ const success = await runHealthcheck({
 
 assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
-assert.equal(success.checks.length, 5);
+assert.equal(success.checks.length, 6);
 assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 7);
+assert.ok(success.checks.find((check) => check.name === "docs").docs.agent_quickstart > 0);
 assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/assignments")).authorization, "Bearer mfa_test_agent_key");
 
@@ -34,6 +36,7 @@ const failed = await runHealthcheck({
   fetchImpl: async (url) => {
     if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "down" });
     if (url.endsWith("/agent-manifest.json")) return jsonResponse(agentManifest());
+    if (url.includes("/docs/")) return textResponse("# Agent docs\n");
     return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
   }
 });
@@ -60,6 +63,14 @@ function jsonResponse(payload, status = 200) {
     ok: status >= 200 && status < 300,
     status,
     text: async () => JSON.stringify(payload)
+  };
+}
+
+function textResponse(text, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => text
   };
 }
 

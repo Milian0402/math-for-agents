@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:4173";
 const DEFAULT_TIMEOUT_MS = 5_000;
+const REQUIRED_DOCS = ["agent_quickstart", "agent_api", "agent_protocol"];
 
 export async function runHealthcheck(options = {}) {
   const baseUrl = normalizeBaseUrl(options.baseUrl || process.env.MFA_BASE_URL || DEFAULT_BASE_URL);
@@ -12,6 +13,7 @@ export async function runHealthcheck(options = {}) {
   const fetchImpl = options.fetchImpl || fetch;
   const startedAt = Date.now();
   const checks = [];
+  let manifestDocs = {};
 
   await runCheck(checks, "health", async () => {
     const payload = await requestJson(fetchImpl, `${baseUrl}/api/health`, { timeoutMs });
@@ -28,10 +30,22 @@ export async function runHealthcheck(options = {}) {
     assertEqual(payload.openapi, "/openapi.json", "manifest.openapi must point to /openapi.json");
     assertManifestDocs(payload.docs);
     assertManifestEndpoints(payload.core_endpoints);
+    manifestDocs = payload.docs;
     return {
       openapi: payload.openapi,
       endpoints: payload.core_endpoints.length
     };
+  });
+
+  await runCheck(checks, "docs", async () => {
+    const docs = {};
+    for (const key of REQUIRED_DOCS) {
+      const docPath = manifestDocs[key];
+      const text = await requestText(fetchImpl, `${baseUrl}${docPath}`, { timeoutMs });
+      if (!text.includes("# ")) throw new Error(`${docPath} must contain a markdown heading`);
+      docs[key] = text.length;
+    }
+    return { docs };
   });
 
   await runCheck(checks, "openapi", async () => {
@@ -84,6 +98,27 @@ async function runCheck(checks, name, fn) {
   }
 }
 
+async function requestText(fetchImpl, url, { timeoutMs, bearer = "" }) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url, {
+      headers: bearer ? { authorization: `Bearer ${bearer}` } : {},
+      signal: controller.signal
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(errorFromText(text) || `HTTP ${response.status}`);
+    }
+    return text;
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error(`timed out after ${timeoutMs}ms`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function requestJson(fetchImpl, url, { timeoutMs, bearer = "" }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -107,6 +142,14 @@ async function requestJson(fetchImpl, url, { timeoutMs, bearer = "" }) {
   }
 }
 
+function errorFromText(text) {
+  try {
+    return text ? JSON.parse(text).error : "";
+  } catch {
+    return "";
+  }
+}
+
 function normalizeBaseUrl(value) {
   return String(value || DEFAULT_BASE_URL).replace(/\/+$/, "");
 }
@@ -116,7 +159,7 @@ function assertEqual(actual, expected, message) {
 }
 
 function assertManifestDocs(docs) {
-  for (const key of ["agent_quickstart", "agent_api", "agent_protocol"]) {
+  for (const key of REQUIRED_DOCS) {
     if (typeof docs?.[key] !== "string" || !docs[key].startsWith("/docs/")) {
       throw new Error(`manifest docs must include ${key}`);
     }

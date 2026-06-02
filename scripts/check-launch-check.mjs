@@ -97,6 +97,9 @@ async function fetchImpl(url, options = {}) {
   if (parsed.pathname === "/agent-manifest.json") {
     return jsonResponse(agentManifest());
   }
+  if (parsed.pathname.startsWith("/docs/")) {
+    return textResponse(`# ${parsed.pathname.split("/").pop()}\nAgent docs.\n`);
+  }
   if (parsed.pathname === "/openapi.json") {
     return jsonResponse({
       openapi: "3.1.0",
@@ -183,6 +186,17 @@ function jsonResponse(payload, status = 200, headers = {}) {
       get: (name) => headers[String(name).toLowerCase()] || ""
     },
     text: async () => JSON.stringify(payload)
+  };
+}
+
+function textResponse(text, status = 200, headers = {}) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get: (name) => headers[String(name).toLowerCase()] || ""
+    },
+    text: async () => text
   };
 }
 

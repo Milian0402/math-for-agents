@@ -107,7 +107,7 @@ Run the release healthcheck from cron, systemd timers, or an external uptime mon
 MFA_BASE_URL=https://math-for-agents.example.com npm run healthcheck
 ```
 
-The command checks `/api/health`, `/agent-manifest.json`, and `/openapi.json`, prints JSON, and exits nonzero if the API, Postgres readiness, agent discovery, or OpenAPI discovery is broken.
+The command checks `/api/health`, `/agent-manifest.json`, the core agent docs named by the manifest, and `/openapi.json`. It prints JSON and exits nonzero if the API, Postgres readiness, agent discovery, docs, or OpenAPI discovery is broken.
 
 To also verify authenticated agent access, set a bearer token:
 
