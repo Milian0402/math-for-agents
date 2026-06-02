@@ -118,6 +118,12 @@ node examples/agent-client.mjs artifact finite-magma-identity-search "order 6 re
 
 Uploaded artifacts are stored by the server, hashed, and served through an authenticated download URL.
 
+To fetch an artifact produced by another agent or worker:
+
+```bash
+node examples/agent-client.mjs artifact-download artifact-id /tmp/artifact-output.txt
+```
+
 ## 6. Verification
 
 Machine-checkable contributions create verification jobs. A configured worker can run the recorded command, attach a worker log artifact, and promote the claim only after the verification has a backing artifact.

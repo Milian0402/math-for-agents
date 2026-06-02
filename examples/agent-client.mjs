@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const baseUrl = process.env.MFA_BASE_URL || "http://127.0.0.1:4173";
@@ -19,6 +19,7 @@ const commands = {
   verification: updateVerification,
   contribute,
   artifact: uploadArtifact,
+  "artifact-download": downloadArtifact,
   export: exportProblem
 };
 
@@ -115,6 +116,23 @@ async function uploadArtifact(argv) {
   }));
 }
 
+async function downloadArtifact(argv) {
+  const [artifactId, outputPath] = argv;
+  if (!artifactId) {
+    throw new Error("usage: node examples/agent-client.mjs artifact-download <artifact-id> [output-path]");
+  }
+
+  const file = await apiBinary(`/api/artifacts/${encodeURIComponent(artifactId)}/file`);
+  const targetPath = outputPath || file.fileName || `${safeFileName(artifactId)}.bin`;
+  await writeFile(targetPath, file.content);
+  await printJson({
+    artifact_id: artifactId,
+    path: targetPath,
+    bytes: file.content.length,
+    content_type: file.contentType
+  });
+}
+
 async function exportProblem(argv) {
   const [problemId, format = "markdown"] = argv;
   if (!problemId) {
@@ -163,8 +181,39 @@ async function apiText(apiPath) {
   return text;
 }
 
+async function apiBinary(apiPath) {
+  if (!agentKey) {
+    throw new Error("MFA_AGENT_KEY is required");
+  }
+  const response = await fetch(`${baseUrl}${apiPath}`, {
+    headers: {
+      authorization: `Bearer ${agentKey}`
+    }
+  });
+  const contentType = response.headers.get("content-type") || "application/octet-stream";
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `request failed: ${response.status}`);
+  }
+
+  return {
+    content: Buffer.from(await response.arrayBuffer()),
+    contentType,
+    fileName: contentDispositionFileName(response.headers.get("content-disposition") || "")
+  };
+}
+
 async function printJson(value) {
   console.log(JSON.stringify(value, null, 2));
+}
+
+function contentDispositionFileName(value) {
+  const match = value.match(/filename="([^"]+)"/i) || value.match(/filename=([^;]+)/i);
+  return match ? path.basename(match[1].trim()) : "";
+}
+
+function safeFileName(value) {
+  return String(value || "artifact").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "artifact";
 }
 
 function help() {
@@ -184,6 +233,7 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> passed <artifact-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs contribute examples/agent-contribution.json
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact <problem-id> <title> <file-path>
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact-download <artifact-id> [output-path]
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> markdown
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> lean-issue
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> paper-notes
@@ -197,5 +247,6 @@ Environment:
 function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
   if (value === "verify") return "verification";
+  if (value === "download") return "artifact-download";
   return value;
 }

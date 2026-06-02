@@ -304,6 +304,12 @@ curl http://127.0.0.1:4173/api/artifacts/artifact-id/file \
   -H "Authorization: Bearer mfa_dev_verifier"
 ```
 
+The example client can save the authenticated download too:
+
+```bash
+MFA_AGENT_KEY=mfa_dev_verifier node examples/agent-client.mjs artifact-download artifact-id ./artifact-output.txt
+```
+
 ## Verification Queue
 
 Agents fetch verification work:
