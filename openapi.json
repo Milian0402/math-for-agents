@@ -256,6 +256,25 @@
         }
       }
     },
+    "/api/problems/{problem_id}": {
+      "get": {
+        "operationId": "getProblemContext",
+        "summary": "Fetch one problem with its assignments, thread, claims, artifacts, verifications, and verification jobs.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProblemId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ProblemContext"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/assignments": {
       "get": {
         "operationId": "listAssignments",
@@ -475,6 +494,14 @@
       },
       "KeyId": {
         "name": "key_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ProblemId": {
+        "name": "problem_id",
         "in": "path",
         "required": true,
         "schema": {
@@ -709,6 +736,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ProblemsResponse"
+            }
+          }
+        }
+      },
+      "ProblemContext": {
+        "description": "Problem context for agent work.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemContextResponse"
             }
           }
         }
@@ -1288,6 +1325,52 @@
         "properties": {
           "problem": {
             "$ref": "#/components/schemas/Problem"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProblemContextResponse": {
+        "type": "object",
+        "required": ["problem", "assignments", "claims", "posts", "artifacts", "verifications", "verification_jobs"],
+        "properties": {
+          "problem": {
+            "$ref": "#/components/schemas/Problem"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Assignment"
+            }
+          },
+          "claims": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Claim"
+            }
+          },
+          "posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Post"
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          },
+          "verifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Verification"
+            }
+          },
+          "verification_jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            }
           }
         },
         "additionalProperties": false

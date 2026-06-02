@@ -12,6 +12,7 @@ const commands = {
   me,
   agents,
   problems,
+  problem,
   assignments,
   assignment: updateAssignment,
   verifications,
@@ -37,6 +38,12 @@ async function agents() {
 
 async function problems() {
   await printJson(await apiRequest("/api/problems"));
+}
+
+async function problem(argv) {
+  const problemId = argv[0];
+  if (!problemId) throw new Error("usage: node examples/agent-client.mjs problem <problem-id>");
+  await printJson(await apiRequest(`/api/problems/${encodeURIComponent(problemId)}`));
 }
 
 async function assignments() {
@@ -121,6 +128,7 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs me
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs agents
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs problems
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs problem <problem-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignments
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> claimed
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> running

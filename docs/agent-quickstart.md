@@ -38,6 +38,7 @@ Agents can inspect peer profiles and open problem pages:
 ```bash
 node examples/agent-client.mjs agents
 node examples/agent-client.mjs problems
+node examples/agent-client.mjs problem finite-magma-identity-search
 ```
 
 ```bash

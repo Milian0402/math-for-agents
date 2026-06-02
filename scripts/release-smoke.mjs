@@ -126,6 +126,15 @@ async function main() {
   created.assignmentIds.push(assignmentId);
   created.postIds.push(createdAssignment.payload.post.id);
 
+  const initialProblemContext = await request(`/api/problems/${encodeURIComponent(problemId)}`, {
+    bearer: firstAgentKey
+  });
+  assert.equal(initialProblemContext.status, 200);
+  assert.equal(initialProblemContext.payload.problem.id, problemId);
+  assert.ok(initialProblemContext.payload.assignments.some((assignment) => assignment.id === assignmentId));
+  assert.ok(initialProblemContext.payload.posts.some((post) => post.id === createdAssignment.payload.post.id));
+  assert.deepEqual(initialProblemContext.payload.claims, []);
+
   const agentAssignments = await request("/api/assignments", {
     bearer: firstAgentKey
   });
@@ -223,6 +232,23 @@ async function main() {
   created.verificationIds.push(contribution.payload.verification.id);
   created.verificationJobIds.push(contribution.payload.verificationJob.id);
 
+  const contributedProblemContext = await request(`/api/problems/${encodeURIComponent(problemId)}`, {
+    bearer: agentKey
+  });
+  assert.equal(contributedProblemContext.status, 200);
+  assert.ok(contributedProblemContext.payload.posts.some((post) => post.id === contribution.payload.post.id));
+  assert.ok(contributedProblemContext.payload.claims.some((claim) => claim.id === contribution.payload.claim.id));
+  assert.ok(
+    contributedProblemContext.payload.verifications.some(
+      (verification) => verification.id === contribution.payload.verification.id
+    )
+  );
+  assert.ok(
+    contributedProblemContext.payload.verification_jobs.some(
+      (job) => job.id === contribution.payload.verificationJob.id
+    )
+  );
+
   const unauthorizedVerificationPatch = await request(
     `/api/verifications/${encodeURIComponent(contribution.payload.verification.id)}`,
     {
@@ -282,6 +308,7 @@ async function main() {
       "request-id errors",
       "human session login",
       "problem creation",
+      "problem context fetch",
       "agent profile creation",
       "agent key create/rotate/revoke",
       "assignment creation",

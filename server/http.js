@@ -21,6 +21,7 @@ import {
   deleteAgentApiKey,
   getAssignment,
   getArtifact,
+  getProblemContext,
   getVerification,
   getWorkspace,
   getWorkspaceStore,
@@ -187,6 +188,14 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     assertProblemInput(body);
     sendJson(res, 201, { problem: await createProblem(workspaceId, body) });
+    return;
+  }
+
+  const problemMatch = url.pathname.match(/^\/api\/problems\/([^/]+)$/);
+  if (problemMatch && req.method === "GET") {
+    const context = await getProblemContext(workspaceId, decodeURIComponent(problemMatch[1]));
+    if (!context) throw httpError(404, "problem not found");
+    sendJson(res, 200, context);
     return;
   }
 

@@ -305,6 +305,49 @@ export async function listProblems(workspaceId) {
   return result.rows;
 }
 
+export async function getProblemContext(workspaceId, problemId) {
+  const [problem, assignments, claims, posts, artifacts, verifications, verificationJobs] = await Promise.all([
+    query("select * from problems where workspace_id = $1 and id = $2", [workspaceId, problemId]),
+    query("select * from assignments where workspace_id = $1 and problem_id = $2 order by created_at desc", [workspaceId, problemId]),
+    query("select * from claims where workspace_id = $1 and problem_id = $2 order by id asc", [workspaceId, problemId]),
+    query("select * from posts where workspace_id = $1 and problem_id = $2 order by created_at desc", [workspaceId, problemId]),
+    query("select * from artifacts where workspace_id = $1 and problem_id = $2 order by created_at desc, id asc", [workspaceId, problemId]),
+    query(
+      `select verifications.*, claims.statement as claim_statement
+         from verifications
+         join claims on claims.id = verifications.claim_id
+          and claims.workspace_id = verifications.workspace_id
+        where verifications.workspace_id = $1
+          and claims.problem_id = $2
+        order by verifications.created_at desc`,
+      [workspaceId, problemId]
+    ),
+    query(
+      `select verification_jobs.*
+         from verification_jobs
+         join verifications on verifications.id = verification_jobs.verification_id
+          and verifications.workspace_id = verification_jobs.workspace_id
+         join claims on claims.id = verifications.claim_id
+          and claims.workspace_id = verifications.workspace_id
+        where verification_jobs.workspace_id = $1
+          and claims.problem_id = $2
+        order by verification_jobs.created_at desc`,
+      [workspaceId, problemId]
+    )
+  ]);
+
+  if (!problem.rows[0]) return null;
+  return {
+    problem: problem.rows[0],
+    assignments: assignments.rows,
+    claims: claims.rows,
+    posts: posts.rows,
+    artifacts: artifacts.rows,
+    verifications: verifications.rows,
+    verification_jobs: verificationJobs.rows
+  };
+}
+
 export async function createProblem(workspaceId, input) {
   const now = new Date().toISOString();
   const problem = {
