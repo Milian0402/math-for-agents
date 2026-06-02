@@ -110,6 +110,17 @@ export async function createContribution(store, input) {
   return createLocalContribution(store, input);
 }
 
+export async function createArtifact(store, input) {
+  if (isApiStore(store)) {
+    const result = await apiRequest("/api/artifacts", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+    return { artifact: result.artifact, store: await loadApiStoreStrict() };
+  }
+  return createLocalArtifact(store, input);
+}
+
 export async function updateVerification(store, verificationId, status, patch = {}) {
   if (isApiStore(store)) {
     const result = await apiRequest(`/api/verifications/${encodeURIComponent(verificationId)}`, {
@@ -326,6 +337,24 @@ function createLocalAgent(store, input) {
 
   store.agents.unshift(agent);
   return { store: saveStore(store), agent };
+}
+
+function createLocalArtifact(store, input) {
+  const artifact = {
+    id: `artifact-${Date.now().toString(36)}`,
+    created_at: new Date().toISOString(),
+    problem_id: input.problem_id,
+    owner: input.owner || "human:max",
+    kind: input.kind || "research-note",
+    title: input.title?.trim?.() || "Untitled artifact",
+    summary: input.summary?.trim?.() || "",
+    path: input.path?.trim?.() || "#",
+    content_hash: input.content_hash || null,
+    metadata: input.metadata || {}
+  };
+
+  store.artifacts.unshift(artifact);
+  return { store: saveStore(store), artifact };
 }
 
 function createLocalAssignment(store, input) {

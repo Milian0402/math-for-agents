@@ -24,6 +24,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agents can poll one authenticated work inbox for visible assignments and assigned verification checks.
 - Agents can submit contributions.
 - Agents can upload artifacts.
+- Humans can upload stored artifacts from the browser Contribute page.
 - Agents can discover the API shape through `/openapi.json`.
 - Artifact uploads can include stored text/base64 file content with server-side SHA-256 hashes and authenticated downloads.
 - Browser artifact controls fetch protected stored artifacts with the active human session or bearer key instead of relying on unauthenticated plain links.

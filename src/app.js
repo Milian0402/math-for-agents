@@ -2,6 +2,7 @@ import {
   createAgent,
   createAgentKey,
   createAssignment,
+  createArtifact,
   createContribution,
   createProblem,
   exportStore,
@@ -726,6 +727,16 @@ function contributeView() {
           </form>
         </section>
 
+        <section class="panel contribution-panel span-12">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Evidence vault</p>
+              <h2>Upload artifact</h2>
+            </div>
+          </div>
+          ${artifactUploadForm()}
+        </section>
+
         <section class="panel span-12">
           <div class="panel-header">
             <div>
@@ -741,6 +752,64 @@ function contributeView() {
       </div>
     </section>
   `;
+}
+
+function artifactUploadForm() {
+  return `
+    <form id="artifact-upload-form" class="contribution-form artifact-upload-form">
+      <label>
+        Problem
+        <select name="problem_id" required>
+          ${store.problems.map((problem) => `<option value="${escapeHtml(problem.id)}">${escapeHtml(problem.title)}</option>`).join("")}
+        </select>
+      </label>
+      <label>
+        Owner
+        <select name="owner">
+          ${artifactOwnerOptions()}
+        </select>
+      </label>
+      <label>
+        Kind
+        <input name="kind" value="research-note" required>
+      </label>
+      <label>
+        Title
+        <input name="title" placeholder="Replay log, Lean file, notebook" required>
+      </label>
+      <label class="wide">
+        Summary
+        <textarea name="summary" rows="2" required placeholder="What this artifact lets another agent verify or replay."></textarea>
+      </label>
+      <label class="wide">
+        Path or URL
+        <input name="path" placeholder="artifacts/run.log, https://..., or leave blank when uploading content">
+      </label>
+      <label class="wide">
+        File
+        <input name="file" type="file">
+      </label>
+      <label class="wide">
+        Pasted text
+        <textarea name="content_text" rows="6" placeholder="Paste stdout, Lean output, notes, or replay evidence."></textarea>
+      </label>
+      <div class="form-actions">
+        <button class="primary-button" type="submit">Upload artifact</button>
+      </div>
+    </form>
+  `;
+}
+
+function artifactOwnerOptions() {
+  const principal = store?._meta?.principal;
+  const currentLabel = principal?.id ? `Current principal - ${principal.id}` : "Current principal";
+  const options = [`<option value="">${escapeHtml(currentLabel)}</option>`];
+  if (principal?.kind === "human" || !isApiMode()) {
+    options.push(
+      ...store.agents.map((agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(agent.name)}</option>`)
+    );
+  }
+  return options.join("");
 }
 
 function contributionForm() {
@@ -1784,7 +1853,7 @@ async function handleClick(event) {
 }
 
 async function handleSubmit(event) {
-  if (!["assignment-form", "problem-form", "agent-form", "contribution-form", "contribution-json-form", "agent-key-form", "login-form"].includes(event.target.id)) return;
+  if (!["assignment-form", "problem-form", "agent-form", "contribution-form", "contribution-json-form", "artifact-upload-form", "agent-key-form", "login-form"].includes(event.target.id)) return;
   event.preventDefault();
 
   if (event.target.id === "login-form") {
@@ -1814,6 +1883,11 @@ async function handleSubmit(event) {
 
   if (event.target.id === "contribution-json-form") {
     await handleContributionJson(event.target);
+    return;
+  }
+
+  if (event.target.id === "artifact-upload-form") {
+    await handleArtifactUploadForm(event.target);
     return;
   }
 
@@ -1971,6 +2045,61 @@ async function handleContributionJson(form) {
     showToast(`Could not ingest contribution: ${error.message}`);
     render();
   }
+}
+
+async function handleArtifactUploadForm(form) {
+  const formData = new FormData(form);
+  try {
+    const payload = await artifactPayloadFromForm(formData);
+    const result = await createArtifact(store, payload);
+    store = result.store;
+    form.reset();
+    showToast("Artifact uploaded");
+  } catch (error) {
+    showToast(`Artifact rejected: ${error.message}`);
+  }
+  render();
+}
+
+async function artifactPayloadFromForm(formData) {
+  const file = formData.get("file");
+  const text = String(formData.get("content_text") || "").trim();
+  const path = String(formData.get("path") || "").trim();
+  const payload = {
+    problem_id: formData.get("problem_id"),
+    kind: formData.get("kind"),
+    title: formData.get("title"),
+    summary: formData.get("summary")
+  };
+  const owner = String(formData.get("owner") || "").trim();
+  if (owner) payload.owner = owner;
+  if (path) payload.path = path;
+
+  const hasFile = file instanceof File && file.size > 0;
+  if (hasFile && text) throw new Error("Use either file upload or pasted text, not both");
+  if (!hasFile && !text && !path) throw new Error("Add a file, pasted text, or path");
+
+  if (hasFile) {
+    payload.file_name = file.name || `${safeFileName(payload.title)}.bin`;
+    payload.content_type = file.type || "application/octet-stream";
+    payload.content_base64 = await fileToBase64(file);
+  } else if (text) {
+    payload.file_name = `${safeFileName(payload.title)}.txt`;
+    payload.content_type = "text/plain; charset=utf-8";
+    payload.content_text = text;
+  }
+
+  return payload;
+}
+
+async function fileToBase64(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
 }
 
 function parseTags(value) {

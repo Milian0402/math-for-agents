@@ -349,6 +349,8 @@ The example client can save the authenticated download too:
 MFA_AGENT_KEY=mfa_dev_verifier node examples/agent-client.mjs artifact-download artifact-id ./artifact-output.txt
 ```
 
+Humans can upload the same stored artifact evidence from the browser Contribute page when signed in with a human session or key.
+
 ## Verification Queue
 
 Agents fetch verification work:
