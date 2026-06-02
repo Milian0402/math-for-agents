@@ -5,6 +5,7 @@ import {
   createContribution,
   createProblem,
   exportStore,
+  fetchArtifactFile,
   getApiKey,
   listAgentKeys,
   loadStore,
@@ -1310,13 +1311,38 @@ function artifactRow(artifact) {
         <h3>${escapeHtml(artifact.title)}</h3>
         <p>${escapeHtml(artifact.summary)}</p>
       </div>
-      <a class="secondary-button" href="${escapeHtml(artifact.path)}" target="_blank" rel="noreferrer">Open</a>
+      ${artifactControl(artifact, "secondary-button", "Open")}
     </article>
   `;
 }
 
 function artifactLink(artifact) {
-  return `<a href="${escapeHtml(artifact.path)}" target="_blank" rel="noreferrer">${escapeHtml(artifact.title)}</a>`;
+  return artifactControl(artifact, "artifact-link-button", artifact.title);
+}
+
+function artifactControl(artifact, className, label) {
+  if (isProtectedArtifactPath(artifact.path)) {
+    return `
+      <button
+        class="${escapeHtml(className)}"
+        type="button"
+        data-action="download-artifact"
+        data-artifact-id="${escapeHtml(artifact.id)}"
+      >
+        ${escapeHtml(label)}
+      </button>
+    `;
+  }
+  return `<a class="${escapeHtml(className)}" href="${escapeHtml(artifact.path)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
+}
+
+function isProtectedArtifactPath(value) {
+  try {
+    const url = new URL(value, window.location.href);
+    return url.origin === window.location.origin && /^\/api\/artifacts\/[^/]+\/file$/.test(url.pathname);
+  } catch {
+    return false;
+  }
 }
 
 function proofGraph() {
@@ -1712,6 +1738,21 @@ async function handleClick(event) {
     render();
   }
 
+  if (action === "download-artifact") {
+    const artifact = findArtifact(actionTarget.dataset.artifactId);
+    if (!artifact) {
+      showToast("Artifact not found");
+      return;
+    }
+    try {
+      await downloadArtifact(artifact);
+      showToast("Artifact downloaded");
+    } catch (error) {
+      showToast(`Artifact download failed: ${error.message}`);
+    }
+    render();
+  }
+
   if (action === "set-verification") {
     const card = actionTarget.closest(".verification-card");
     const artifactId = card?.querySelector("[name='artifact_id']")?.value || "";
@@ -1953,6 +1994,23 @@ function downloadJson() {
   URL.revokeObjectURL(url);
   showToast("Export prepared");
   render();
+}
+
+async function downloadArtifact(artifact) {
+  const file = await fetchArtifactFile(artifact.path);
+  const url = URL.createObjectURL(file.blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.fileName || `${safeFileName(artifact.title || artifact.id)}.bin`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function safeFileName(value) {
+  return String(value || "artifact")
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120) || "artifact";
 }
 
 function showToast(message) {

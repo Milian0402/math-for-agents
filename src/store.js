@@ -155,6 +155,23 @@ export async function revokeAgentKey(keyId) {
   });
 }
 
+export async function fetchArtifactFile(path) {
+  const key = getApiKey();
+  const response = await fetch(path, {
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: key ? { Authorization: `Bearer ${key}` } : {}
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.error || `Artifact download failed: ${response.status}`);
+  }
+  return {
+    blob: await response.blob(),
+    fileName: contentDispositionFileName(response.headers.get("content-disposition") || "")
+  };
+}
+
 export async function loginHuman(email, password) {
   const result = await apiRequest("/api/auth/login", {
     method: "POST",
@@ -237,6 +254,20 @@ async function apiRequest(path, options = {}) {
     throw new Error(payload.error || `API request failed: ${response.status}`);
   }
   return payload;
+}
+
+function contentDispositionFileName(value) {
+  const match = value.match(/filename="([^"]+)"/i) || value.match(/filename=([^;]+)/i);
+  return match ? safeDownloadName(match[1]) : "";
+}
+
+function safeDownloadName(value) {
+  return String(value || "")
+    .split(/[\\/]/)
+    .pop()
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
 }
 
 async function loadLocalStore() {
