@@ -123,6 +123,18 @@ async function main() {
   const firstAgentKey = createdKey.payload.api_key;
   assert.match(firstAgentKey, /^mfa_/);
 
+  const unknownAgentAssignment = await request("/api/assignments", {
+    method: "POST",
+    body: {
+      problem_id: problemId,
+      task: "ghost-agent-check",
+      prompt: "This assignment should fail because the assigned agent does not exist.",
+      desired_output: ["review"],
+      assigned_agents: ["agent:does-not-exist"]
+    }
+  });
+  assert.equal(unknownAgentAssignment.status, 404);
+
   const createdAssignment = await request("/api/assignments", {
     method: "POST",
     body: {
@@ -272,6 +284,23 @@ async function main() {
     }
   });
   assert.equal(wrongProblemArtifactContribution.status, 422);
+
+  const unknownVerifierContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: problemId,
+      assignment_id: assignmentId,
+      type: "attempt",
+      evidence_level: "speculative",
+      status: "needs-review",
+      body: "This claim should not be queued to a missing verifier.",
+      claim_type: "lemma",
+      claim_statement: "A missing verifier should be rejected.",
+      verifier: "agent:missing-verifier"
+    }
+  });
+  assert.equal(unknownVerifierContribution.status, 404);
 
   const reviewContribution = await request("/api/contributions", {
     method: "POST",
@@ -472,11 +501,13 @@ async function main() {
       "agent profile creation",
       "agent key create/rotate/revoke",
       "assignment creation",
+      "assignment agent existence",
       "agent assignment fetch",
       "agent assignment status updates",
       "human assignment closeout",
       "contribution assignment access",
       "artifact reference provenance",
+      "verifier agent existence",
       "artifact upload/download",
       "agent contribution",
       "verification assignment authorization",

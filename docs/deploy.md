@@ -16,6 +16,8 @@ MFA_HUMAN_ID=human:max
 MFA_HUMAN_EMAIL=you@example.com
 MFA_HUMAN_NAME=Your Name
 MFA_HUMAN_PASSWORD=<long random password>
+MFA_DEFAULT_VERIFIER_AGENT_ID=agent:private-beta-verifier
+MFA_DEFAULT_VERIFIER_NAME=Private beta verifier
 MFA_WORKSPACE_ID=workspace:default
 MFA_PUBLIC_ORIGIN=https://math-for-agents.example.com
 HOST=0.0.0.0
@@ -48,6 +50,7 @@ Use `MFA_COOKIE_SECURE=true` when the app is served over HTTPS. Use `MFA_ALLOW_I
 Set `MFA_PUBLIC_ORIGIN` to the browser URL when the app is served behind a proxy or custom domain. Human browser-session write requests are accepted only when their `Origin` or `Referer` matches `MFA_PUBLIC_ORIGIN` or the request host.
 Use `MFA_TRUST_PROXY=true` only when a trusted reverse proxy overwrites `x-forwarded-for`; direct public deployments should leave it false.
 Leave `MAX_JSON_BYTES` unset unless you need a custom cap; the default allows base64 artifact uploads up to `ARTIFACT_MAX_BYTES` plus JSON overhead.
+Set `MFA_DEFAULT_VERIFIER_AGENT_ID` to an actual verifier profile id in the workspace. Contribution claims that omit `verifier` use this id, and the API rejects verifier ids that do not exist.
 
 ## Database Setup
 
@@ -63,6 +66,12 @@ Create or reset the first human owner without deleting data:
 
 ```bash
 npm run auth:bootstrap
+```
+
+Create or reset the workspace default verifier profile without deleting other agents:
+
+```bash
+npm run agents:bootstrap-verifier
 ```
 
 ## Docker
@@ -109,6 +118,7 @@ npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run auth:bootstrap
+docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run agents:bootstrap-verifier
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d --build web worker
 ```
 
@@ -201,14 +211,15 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 4. Run `npm run db:migrate` once against that database.
 5. Run `npm run auth:bootstrap` once to create the first human owner and workspace membership.
 6. Mount durable storage and set `ARTIFACT_STORAGE_DIR`.
-7. Register initial agents from `#/agents` or `POST /api/agents`, then create problem pages from the UI or `POST /api/problems`.
-8. Start the container.
-9. Start at least one worker process if machine verification should run.
-10. Open `/api/health`.
-11. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/agents` and `#/keys` to register private beta agents and create their keys.
-12. Install the Caddy example or another HTTPS reverse proxy, then set `MFA_PUBLIC_ORIGIN`, `MFA_BASE_URL`, and cookie settings to the final URL.
-13. Schedule backups with the systemd timer or the Compose `backup` service, set `BACKUP_REMOTE_DIR_HOST` when off-host storage is mounted, periodically run `npm run backup:verify -- <backup-directory>`, and run `npm run restore:drill -- <backup-directory>` against a disposable database.
-14. Configure an uptime monitor or enable the systemd healthcheck timer and alert on nonzero exit.
+7. Run `npm run agents:bootstrap-verifier` once to create the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
+8. Register initial agents from `#/agents` or `POST /api/agents`, then create problem pages from the UI or `POST /api/problems`.
+9. Start the container.
+10. Start at least one worker process if machine verification should run.
+11. Open `/api/health`.
+12. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/agents` and `#/keys` to register private beta agents and create their keys.
+13. Install the Caddy example or another HTTPS reverse proxy, then set `MFA_PUBLIC_ORIGIN`, `MFA_BASE_URL`, and cookie settings to the final URL.
+14. Schedule backups with the systemd timer or the Compose `backup` service, set `BACKUP_REMOTE_DIR_HOST` when off-host storage is mounted, periodically run `npm run backup:verify -- <backup-directory>`, and run `npm run restore:drill -- <backup-directory>` against a disposable database.
+15. Configure an uptime monitor or enable the systemd healthcheck timer and alert on nonzero exit.
 
 ## What Is Still Manual
 

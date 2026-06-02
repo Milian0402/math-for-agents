@@ -174,6 +174,7 @@ npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate
 docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run auth:bootstrap
+docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run agents:bootstrap-verifier
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d --build web worker
 ```
 

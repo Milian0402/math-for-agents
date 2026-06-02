@@ -7,6 +7,7 @@ const VALID_WORKER_RUNNERS = new Set(["disabled", "docker", "local"]);
 export function assertWebRuntimeConfig(env = process.env) {
   const errors = commonRuntimeErrors(env);
   if (isProduction(env)) {
+    requireEnv(env, "MFA_DEFAULT_VERIFIER_AGENT_ID", errors);
     requireSecureCookieConfig(env, errors);
     rejectWeakOptionalSecret(env, "MFA_HUMAN_KEY", DEV_HUMAN_KEYS, 24, errors);
     rejectWeakOptionalSecret(env, "MFA_HUMAN_PASSWORD", DEV_HUMAN_PASSWORDS, 12, errors);

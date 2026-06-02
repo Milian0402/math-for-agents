@@ -36,7 +36,8 @@ assert.doesNotThrow(() =>
     ARTIFACT_MAX_BYTES: "10000000",
     MFA_COOKIE_SECURE: "true",
     MFA_HUMAN_KEY: "mfa_private_beta_key_32_chars",
-    MFA_HUMAN_PASSWORD: "long-private-beta-password"
+    MFA_HUMAN_PASSWORD: "long-private-beta-password",
+    MFA_DEFAULT_VERIFIER_AGENT_ID: "agent:verifier"
   })
 );
 
@@ -60,6 +61,7 @@ assert.doesNotThrow(() =>
     DATABASE_URL: "postgres://math_for_agents:strong-password@db:5432/math_for_agents",
     ARTIFACT_STORAGE_DIR: "/data/artifacts",
     ARTIFACT_MAX_BYTES: "10000000",
+    MFA_DEFAULT_VERIFIER_AGENT_ID: "agent:verifier",
     MFA_WORKER_RUNNER: "docker"
   })
 );

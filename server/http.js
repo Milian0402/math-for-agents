@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { materializeArtifactContent, openArtifactFile } from "./artifact-storage.js";
 import { secureCookiesEnabled } from "./config.js";
 import { checkDatabaseHealth } from "./db.js";
+import { verificationAgentForContribution } from "./domain.js";
 import { makeId } from "./ids.js";
 import { applyRateLimit, createRequestContext, errorPayload, logErrorEvent, rateLimitHeaders } from "./ops.js";
 import { formatProblemExport } from "./problem-export.js";
@@ -27,6 +28,7 @@ import {
   getVerification,
   getWorkspace,
   getWorkspaceStore,
+  findMissingAgentIds,
   listAgentApiKeys,
   listAgents,
   listAssignmentsForAgent,
@@ -44,6 +46,7 @@ import {
   assertArtifactInput,
   assertAssignmentInput,
   assertAssignmentPatch,
+  assertContributionInput,
   assertLoginInput,
   assertProblemInput,
   assertVerificationPatch,
@@ -229,6 +232,7 @@ async function handleApi(req, res, url) {
     if (principal.kind !== "human") throw httpError(403, "only human keys can create assignments");
     const body = await readJson(req);
     assertAssignmentInput(body);
+    await enforceKnownAgentIds(workspaceId, body.assigned_agents, "assigned_agents");
     sendJson(res, 201, await createAssignment(workspaceId, principal.id, body));
     return;
   }
@@ -298,12 +302,16 @@ async function handleApi(req, res, url) {
     if (principal.kind === "agent" && body.agent && body.agent !== principal.id) {
       throw httpError(403, "agent keys can only submit contributions as their own agent id");
     }
-    await enforceContributionAssignmentAccess(workspaceId, principal, body);
-    await enforceContributionArtifactAccess(workspaceId, body);
-    const contribution = await createContribution(workspaceId, {
+    const contributionInput = {
       ...body,
-      agent: principal.kind === "agent" ? principal.id : body.agent
-    });
+      agent: principal.kind === "agent" ? principal.id : body.agent,
+      verifier: body.verifier || defaultVerifierAgentId()
+    };
+    assertContributionInput(contributionInput);
+    await enforceContributionAssignmentAccess(workspaceId, principal, contributionInput);
+    await enforceContributionArtifactAccess(workspaceId, contributionInput);
+    await enforceContributionVerifierAccess(workspaceId, contributionInput);
+    const contribution = await createContribution(workspaceId, contributionInput);
     sendJson(res, 201, contribution);
     return;
   }
@@ -488,6 +496,12 @@ async function enforceContributionArtifactAccess(workspaceId, body) {
   }
 }
 
+async function enforceContributionVerifierAccess(workspaceId, body) {
+  const verifier = verificationAgentForContribution(body, { defaultVerifier: defaultVerifierAgentId() });
+  if (!verifier) return;
+  await enforceKnownAgentIds(workspaceId, [verifier], "verifier");
+}
+
 async function enforceVerificationArtifactAccess(workspaceId, verification, artifactId) {
   const artifact = await getArtifact(workspaceId, artifactId);
   if (!artifact) throw httpError(404, "artifact not found");
@@ -497,6 +511,15 @@ async function enforceVerificationArtifactAccess(workspaceId, verification, arti
   if (artifact.problem_id !== claim.problem_id) {
     throw httpError(422, "artifact_id must belong to the verification claim problem");
   }
+}
+
+async function enforceKnownAgentIds(workspaceId, agentIds, fieldName) {
+  const missing = await findMissingAgentIds(workspaceId, agentIds);
+  if (missing.length) throw httpError(404, `${fieldName} contains unknown agent id: ${missing.join(", ")}`);
+}
+
+function defaultVerifierAgentId(env = process.env) {
+  return env.MFA_DEFAULT_VERIFIER_AGENT_ID || "agent:verifier";
 }
 
 async function readJson(req) {

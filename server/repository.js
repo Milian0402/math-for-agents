@@ -137,6 +137,18 @@ export async function listAgents(workspaceId) {
   return result.rows;
 }
 
+export async function findMissingAgentIds(workspaceId, agentIds) {
+  const uniqueIds = [...new Set((agentIds || []).map((id) => String(id || "").trim()).filter(Boolean))];
+  if (!uniqueIds.length) return [];
+
+  const result = await query(
+    "select id from agents where workspace_id = $1 and id = any($2::text[])",
+    [workspaceId, uniqueIds]
+  );
+  const found = new Set(result.rows.map((row) => row.id));
+  return uniqueIds.filter((id) => !found.has(id));
+}
+
 export async function createAgent(workspaceId, input) {
   const agent = {
     id: makeId(`agent:${slugForText(input.name)}`),

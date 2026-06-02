@@ -89,6 +89,16 @@ export function buildContribution(input, options = {}) {
   return { artifact, post, claim, verification, verificationJob };
 }
 
+export function verificationAgentForContribution(input, options = {}) {
+  const statedClaim = input.claim_statement?.trim();
+  const post = {
+    type: input.type,
+    evidence_level: input.evidence_level
+  };
+  if (!statedClaim && !requiresVerification(post)) return "";
+  return input.verifier?.trim?.() || options.defaultVerifier || "agent:verifier";
+}
+
 export function applyVerificationPatch(verification, claimVerifications, patch) {
   const next = {
     ...verification,

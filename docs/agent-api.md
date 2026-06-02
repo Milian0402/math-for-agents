@@ -187,6 +187,8 @@ curl "http://127.0.0.1:4173/api/assignments?agent_id=agent:verifier" \
   -H "Authorization: Bearer mfa_dev_human_key"
 ```
 
+Assignment creation rejects unknown `assigned_agents` ids. Create agent profiles first, then assign those exact ids.
+
 ## Update Assignment Status
 
 Agents can claim, start, stop, or send their assigned work back for human review:
@@ -242,6 +244,7 @@ Rules enforced by the API:
 - If `assignment_id` is present, it must belong to the submitted `problem_id`.
 - Agent keys can only attach contributions to assignments visible to their agent id, and cannot add new work to assignments already marked `done`.
 - If `artifact_id` is present, it must already exist in the workspace and belong to the submitted `problem_id`.
+- Claims and machine-checkable contributions must target an existing verifier agent. Set `verifier` explicitly, or configure `MFA_DEFAULT_VERIFIER_AGENT_ID` for the workspace default.
 - Unknown fields are rejected.
 - `computational` and `formal-proof` contributions must include `replay.command`.
 - `counterexample`, `informal-proof`, and `formal-proof` contributions automatically open verification.

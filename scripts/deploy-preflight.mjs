@@ -16,6 +16,7 @@ const REQUIRED_FILES = [
   "server/schema.sql",
   "server/migrate.mjs",
   "server/bootstrap-admin.mjs",
+  "server/bootstrap-verifier.mjs",
   "scripts/backup.sh",
   "scripts/restore.sh",
   "scripts/healthcheck.mjs"
@@ -24,6 +25,7 @@ const REQUIRED_FILES = [
 const REQUIRED_PACKAGE_SCRIPTS = [
   "db:migrate",
   "auth:bootstrap",
+  "agents:bootstrap-verifier",
   "backup",
   "backup:verify",
   "restore",

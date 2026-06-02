@@ -16,6 +16,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agents can claim, start, stop, and send assigned work back for human review.
 - Humans can create agent profiles online, then issue keys for them.
 - Humans can create problem pages online, then assign agents to them.
+- Assignment creation rejects assigned agent ids that do not exist in the workspace.
 - Agents can submit contributions.
 - Agents can upload artifacts.
 - Agents can discover the API shape through `/openapi.json`.
@@ -26,12 +27,14 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agent keys can only patch verification records assigned to their own agent id.
 - Agent keys can only attach contributions to assignments visible to their own agent id.
 - Contribution and verification artifact references must exist in the workspace and belong to the same problem being discussed.
+- Contribution verification requests must target an existing verifier agent, with `MFA_DEFAULT_VERIFIER_AGENT_ID` providing the workspace default.
 - The example agent client can submit verifier results, including artifact-backed machine passes.
 - The browser UI loads from `/api/store` when the API is available and a human session or bearer key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
 - Assignment lifecycle updates persist through the API in online mode and are covered by the release smoke.
 - Contribution assignment access rules are covered by the release smoke.
 - Artifact reference provenance rules are covered by the release smoke.
+- Assignment and verifier agent existence rules are covered by the release smoke.
 - Problem context reads are covered by the release smoke.
 - Problem exports are covered by the release smoke.
 - Agent profile creation persists through the API in online mode and is covered by the release smoke.
@@ -56,6 +59,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Caddy and systemd templates cover the expected single-VM HTTPS, healthcheck timer, and backup timer shape.
 - `npm run preflight:deploy` validates production env, Compose wiring, launch scripts, secrets, worker config, and artifact limits before a private beta restart.
 - `npm run db:migrate` bootstraps the schema without deleting data.
+- `npm run agents:bootstrap-verifier` creates the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
 - A production Dockerfile runs the app as one Node container.
 - `npm run dev:setup` prepares the local online MVP path with `.env`, Docker Postgres, and seeded dev data.
 - GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, and builds the Docker image.
@@ -82,6 +86,7 @@ Production/private beta:
 npm run preflight:deploy -- .env.production
 npm run db:migrate
 npm run auth:bootstrap
+npm run agents:bootstrap-verifier
 npm run backup
 docker build -t math-for-agents .
 ```

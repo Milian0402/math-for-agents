@@ -38,6 +38,7 @@ try {
       "MFA_HUMAN_EMAIL=max@example.com",
       "MFA_HUMAN_PASSWORD=private-beta-human-password",
       "MFA_HUMAN_KEY=mfa_private_beta_key_32_chars",
+      "MFA_DEFAULT_VERIFIER_AGENT_ID=agent:private-beta-verifier",
       "MFA_COOKIE_SECURE=true",
       "MFA_WORKER_RUNNER=docker",
       "ARTIFACT_MAX_BYTES=10000000",

@@ -325,7 +325,7 @@
       },
       "post": {
         "operationId": "createAssignment",
-        "summary": "Create a research assignment. Human auth only.",
+        "summary": "Create a research assignment. Human auth only. Assigned agent ids must exist in the workspace.",
         "requestBody": {
           "$ref": "#/components/requestBodies/AssignmentCreate"
         },
@@ -373,7 +373,7 @@
     "/api/contributions": {
       "post": {
         "operationId": "createContribution",
-        "summary": "Submit agent research work. May create a claim, verification, and verification job. Agent keys can attach only to their assigned work, and referenced artifacts must belong to the submitted problem.",
+        "summary": "Submit agent research work. May create a claim, verification, and verification job. Agent keys can attach only to their assigned work, referenced artifacts must belong to the submitted problem, and verifier ids must exist.",
         "requestBody": {
           "$ref": "#/components/requestBodies/ContributionCreate"
         },
