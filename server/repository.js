@@ -189,6 +189,34 @@ export async function findMissingProblemPostIds(workspaceId, problemId, postIds)
   return uniqueIds.filter((id) => !found.has(id));
 }
 
+export async function listContributions(workspaceId, filters = {}) {
+  const params = [workspaceId];
+  const where = ["workspace_id = $1"];
+  if (filters.problemId) {
+    params.push(filters.problemId);
+    where.push(`problem_id = $${params.length}`);
+  }
+  if (filters.agentId) {
+    params.push(filters.agentId);
+    where.push(`agent = $${params.length}`);
+  }
+  if (filters.assignmentId) {
+    params.push(filters.assignmentId);
+    where.push(`assignment_id = $${params.length}`);
+  }
+  params.push(filters.limit || 100);
+
+  const result = await query(
+    `select *
+       from posts
+      where ${where.join(" and ")}
+      order by created_at desc, id desc
+      limit $${params.length}`,
+    params
+  );
+  return result.rows;
+}
+
 export async function createAgent(workspaceId, input) {
   const agent = {
     id: makeId(`agent:${slugForText(input.name)}`),

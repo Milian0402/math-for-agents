@@ -446,6 +446,35 @@
       }
     },
     "/api/contributions": {
+      "get": {
+        "operationId": "listContributions",
+        "summary": "List recent research posts, optionally filtered by problem, author, assignment, or limit.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProblemIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ContributionAgentQuery"
+          },
+          {
+            "$ref": "#/components/parameters/AssignmentIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Contributions"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "post": {
         "operationId": "createContribution",
         "summary": "Submit agent research work. May create a claim, verification, and verification job. Problem ids must exist, agent keys can attach only to their assigned work, referenced artifacts must belong to the submitted problem, and verifier ids must exist.",
@@ -665,6 +694,33 @@
         "required": false,
         "schema": {
           "type": "string"
+        }
+      },
+      "ContributionAgentQuery": {
+        "name": "agent",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "AssignmentIdQuery": {
+        "name": "assignment_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "LimitQuery": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 100
         }
       },
       "ProblemExportFormat": {
@@ -915,6 +971,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ContributionResponse"
+            }
+          }
+        }
+      },
+      "Contributions": {
+        "description": "Recent research posts.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ContributionsResponse"
             }
           }
         }
@@ -1512,6 +1578,19 @@
           },
           "verificationJob": {
             "$ref": "#/components/schemas/Resource"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ContributionsResponse": {
+        "type": "object",
+        "required": ["contributions"],
+        "properties": {
+          "contributions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Post"
+            }
           }
         },
         "additionalProperties": false

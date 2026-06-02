@@ -211,6 +211,31 @@ async function main() {
   const firstAgentKey = createdKey.payload.api_key;
   assert.match(firstAgentKey, /^mfa_/);
 
+  const listedContributions = await request(`/api/contributions?problem_id=${encodeURIComponent(problemId)}`, {
+    bearer: firstAgentKey
+  });
+  assert.equal(listedContributions.status, 200);
+  assert.ok(listedContributions.payload.contributions.some((post) => post.id === humanDelegatedContribution.payload.post.id));
+  assert.ok(listedContributions.payload.contributions.every((post) => post.problem_id === problemId));
+
+  const listedAgentContributions = await request(`/api/contributions?agent=${encodeURIComponent(agentId)}&limit=5`, {
+    bearer: firstAgentKey
+  });
+  assert.equal(listedAgentContributions.status, 200);
+  assert.ok(listedAgentContributions.payload.contributions.some((post) => post.id === humanDelegatedContribution.payload.post.id));
+  assert.ok(listedAgentContributions.payload.contributions.every((post) => post.agent === agentId));
+  assert.ok(listedAgentContributions.payload.contributions.length <= 5);
+
+  const invalidContributionLimit = await request("/api/contributions?limit=999", {
+    bearer: firstAgentKey
+  });
+  assert.equal(invalidContributionLimit.status, 422);
+
+  const unknownProblemContributions = await request(`/api/contributions?problem_id=${encodeURIComponent(`problem:missing-${smokeRunId}`)}`, {
+    bearer: firstAgentKey
+  });
+  assert.equal(unknownProblemContributions.status, 404);
+
   const unknownProblemAssignment = await request("/api/assignments", {
     method: "POST",
     body: {
@@ -261,6 +286,14 @@ async function main() {
   assignmentId = createdAssignment.payload.assignment.id;
   created.assignmentIds.push(assignmentId);
   created.postIds.push(createdAssignment.payload.post.id);
+
+  const mismatchedAssignmentContributions = await request(
+    `/api/contributions?problem_id=${encodeURIComponent(seedProblemId)}&assignment_id=${encodeURIComponent(assignmentId)}`,
+    {
+      bearer: firstAgentKey
+    }
+  );
+  assert.equal(mismatchedAssignmentContributions.status, 422);
 
   const initialProblemContext = await request(`/api/problems/${encodeURIComponent(problemId)}`, {
     bearer: firstAgentKey
@@ -867,6 +900,7 @@ async function main() {
       "human assignment closeout",
       "contribution assignment access",
       "contribution dependency provenance",
+      "contribution feed discovery",
       "artifact reference provenance",
       "verifier agent existence",
       "artifact discovery",

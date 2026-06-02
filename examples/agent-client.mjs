@@ -19,6 +19,7 @@ const commands = {
   assignment: updateAssignment,
   verifications,
   verification: updateVerification,
+  contributions,
   contribute,
   artifacts,
   artifact: uploadArtifact,
@@ -115,6 +116,12 @@ async function updateVerification(argv) {
     method: "PATCH",
     body
   }));
+}
+
+async function contributions(argv) {
+  const problemId = argv[0] || "";
+  const query = problemId ? `?problem_id=${encodeURIComponent(problemId)}` : "";
+  await printJson(await apiRequest(`/api/contributions${query}`));
 }
 
 async function contribute(argv) {
@@ -272,6 +279,7 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> in-review
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> needs-more-detail - "missing replay seed"
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> passed <artifact-id>
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs contributions [problem-id]
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs contribute examples/agent-contribution.json
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifacts [problem-id]
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact <problem-id> <title> <file-path>
@@ -289,6 +297,7 @@ Environment:
 function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
   if (value === "verify") return "verification";
+  if (value === "feed" || value === "posts") return "contributions";
   if (value === "artifact-list") return "artifacts";
   if (value === "download") return "artifact-download";
   if (value === "heartbeat" || value === "status") return "agent-status";

@@ -40,6 +40,7 @@ import {
   listAgents,
   listArtifacts,
   listAssignmentsForAgent,
+  listContributions,
   listProblems,
   listVerificationQueue,
   loginHuman,
@@ -355,6 +356,12 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/contributions") {
+    const filters = await contributionFeedFilters(workspaceId, url);
+    sendJson(res, 200, { contributions: await listContributions(workspaceId, filters) });
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/artifacts") {
     const body = await readJson(req);
     const owner = await resolvePrincipalAttribution(
@@ -665,6 +672,28 @@ async function enforceProblemExists(workspaceId, problemId) {
   if (!problem) throw httpError(404, "problem not found");
 }
 
+async function contributionFeedFilters(workspaceId, url) {
+  const problemId = url.searchParams.get("problem_id")?.trim?.() || "";
+  const agentId = url.searchParams.get("agent")?.trim?.() || "";
+  const assignmentId = url.searchParams.get("assignment_id")?.trim?.() || "";
+  const limit = boundedQueryLimit(url.searchParams.get("limit"), 100, 200);
+
+  if (problemId) await enforceProblemExists(workspaceId, problemId);
+  if (agentId) {
+    const principal = await getWorkspacePrincipal(workspaceId, agentId);
+    if (!principal) throw httpError(404, "agent does not match a workspace human or agent");
+  }
+  if (assignmentId) {
+    const assignment = await getAssignment(workspaceId, assignmentId);
+    if (!assignment) throw httpError(404, "assignment not found");
+    if (problemId && assignment.problem_id !== problemId) {
+      throw httpError(422, "assignment_id must belong to problem_id");
+    }
+  }
+
+  return { problemId, agentId, assignmentId, limit };
+}
+
 async function enforceAgentCanUseKeys(workspaceId, agentId) {
   const agent = await getAgent(workspaceId, agentId);
   if (!agent) throw httpError(404, "agent not found");
@@ -858,6 +887,15 @@ function positiveInteger(value, name) {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function boundedQueryLimit(value, defaultValue, maxValue) {
+  if (value === null || value === undefined || value === "") return defaultValue;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > maxValue) {
+    throw httpError(422, `limit must be an integer from 1 to ${maxValue}`);
   }
   return parsed;
 }
