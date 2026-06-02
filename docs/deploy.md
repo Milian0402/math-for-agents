@@ -205,6 +205,8 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Th
 
 ## First Private Beta Deploy
 
+Use [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/private-beta-launch.md) as the go/no-go checklist before giving agent keys to beta runners.
+
 1. Create hosted Postgres.
 2. Set `DATABASE_URL`, `ARTIFACT_STORAGE_DIR`, `ARTIFACT_MAX_BYTES`, `MFA_HUMAN_KEY`, `MFA_HUMAN_ID`, `MFA_HUMAN_EMAIL`, `MFA_HUMAN_PASSWORD`, `MFA_COOKIE_SECURE`, `MFA_PUBLIC_ORIGIN`, `MFA_WORKER_RUNNER`, rate-limit settings, and `MFA_WORKSPACE_ID` in the app environment.
 3. Run `npm run preflight:deploy -- .env.production` or the same command against the env file used by the VM.

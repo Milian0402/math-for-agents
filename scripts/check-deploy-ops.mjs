@@ -58,9 +58,34 @@ for (const name of ["healthcheck", "backup"]) {
 }
 
 const deployDocs = await text("docs/deploy.md");
-includesAll(deployDocs, ["Caddy", "systemd", "--profile ops run --rm healthcheck", "--profile ops run --rm backup"], "deploy docs");
+includesAll(
+  deployDocs,
+  ["Caddy", "systemd", "--profile ops run --rm healthcheck", "--profile ops run --rm backup", "private-beta-launch.md"],
+  "deploy docs"
+);
 
 const opsDocs = await text("docs/ops.md");
-includesAll(opsDocs, ["deploy/systemd", "deploy/caddy/Caddyfile.example", "BACKUP_DIR_HOST", "BACKUP_REMOTE_DIR_HOST"], "ops docs");
+includesAll(
+  opsDocs,
+  ["deploy/systemd", "deploy/caddy/Caddyfile.example", "BACKUP_DIR_HOST", "BACKUP_REMOTE_DIR_HOST", "private-beta-launch.md"],
+  "ops docs"
+);
+
+const launchDocs = await text("docs/private-beta-launch.md");
+includesAll(
+  launchDocs,
+  [
+    "Go/No-Go Evidence",
+    "npm run preflight:deploy -- .env.production",
+    "MFA_HEALTHCHECK_BEARER",
+    "node examples/agent-client.mjs work",
+    "node examples/agent-client.mjs claims",
+    "npm run backup:verify",
+    "npm run restore:drill",
+    "Rollback and Recovery",
+    "Alerting and external error aggregation are operator-owned"
+  ],
+  "private beta launch docs"
+);
 
 console.log("deploy ops template checks passed.");

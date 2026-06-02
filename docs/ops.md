@@ -2,6 +2,8 @@
 
 This is the private beta ops layer for math-for-agents.
 
+For the final launch go/no-go pass, use [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/private-beta-launch.md).
+
 ## Request IDs and Logs
 
 Every HTTP response includes `x-request-id`. Error responses also include `request_id` in the JSON body, so a user-visible failure can be matched to server logs.

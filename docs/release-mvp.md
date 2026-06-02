@@ -85,6 +85,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - The production Compose target includes `ops` profile services for release healthchecks and verified backups.
 - Caddy and systemd templates cover the expected single-VM HTTPS, healthcheck timer, and backup timer shape.
 - `npm run preflight:deploy` validates production env, Compose wiring, launch scripts, secrets, worker config, and artifact limits before a private beta restart.
+- [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/private-beta-launch.md) defines the launch go/no-go evidence for hosted agent access, backups, monitoring, logs, and rollback.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - `npm run agents:bootstrap-verifier` creates the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
 - A production Dockerfile runs the app as one Node container.
