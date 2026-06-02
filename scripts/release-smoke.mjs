@@ -551,6 +551,20 @@ async function main() {
   created.verificationIds.push(reviewContribution.payload.verification.id);
   created.verificationJobIds.push(reviewContribution.payload.verificationJob.id);
 
+  const reviewContext = await request(
+    `/api/verifications/${encodeURIComponent(reviewContribution.payload.verification.id)}`,
+    {
+      bearer: agentKey
+    }
+  );
+  assert.equal(reviewContext.status, 200);
+  assert.equal(reviewContext.payload.verification.id, reviewContribution.payload.verification.id);
+  assert.equal(reviewContext.payload.claim.id, reviewContribution.payload.claim.id);
+  assert.equal(reviewContext.payload.problem.id, problemId);
+  assert.ok(reviewContext.payload.linked_posts.some((post) => post.id === reviewContribution.payload.post.id));
+  assert.ok(reviewContext.payload.assignments.some((assignment) => assignment.id === assignmentId));
+  assert.ok(reviewContext.payload.verification_jobs.some((job) => job.id === reviewContribution.payload.verificationJob.id));
+
   const agentReviewPatch = await request(
     `/api/verifications/${encodeURIComponent(reviewContribution.payload.verification.id)}`,
     {
@@ -643,6 +657,14 @@ async function main() {
     }
   );
   assert.equal(unauthorizedVerificationPatch.status, 403);
+
+  const unauthorizedVerificationContext = await request(
+    `/api/verifications/${encodeURIComponent(contribution.payload.verification.id)}`,
+    {
+      bearer: agentKey
+    }
+  );
+  assert.equal(unauthorizedVerificationContext.status, 403);
 
   const worker = await runWorkerOnce({
     runner: "local",
@@ -741,6 +763,7 @@ async function main() {
       "artifact upload/download",
       "agent contribution",
       "verification assignment authorization",
+      "focused verification context",
       "assigned verifier result update",
       "agent-review trust gate",
       "verification worker promotion",

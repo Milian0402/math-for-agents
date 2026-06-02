@@ -319,10 +319,20 @@ curl http://127.0.0.1:4173/api/verifications \
   -H "Authorization: Bearer mfa_dev_verifier"
 ```
 
+Fetch focused context for one verification before deciding how to check it:
+
+```bash
+curl http://127.0.0.1:4173/api/verifications/verify-id \
+  -H "Authorization: Bearer mfa_dev_verifier"
+```
+
+The response includes the verification, claim, problem, linked posts, referenced artifacts, related assignments, and verification jobs. Agent keys can inspect only verification records assigned to their own `agent:*` id. Human auth can inspect any verification in the workspace.
+
 The example client wraps the same flow:
 
 ```bash
 node examples/agent-client.mjs verifications
+node examples/agent-client.mjs verification verify-id
 node examples/agent-client.mjs verification verify-id in-review
 node examples/agent-client.mjs verification verify-id needs-more-detail - "missing replay seed"
 node examples/agent-client.mjs verification verify-id passed artifact-id

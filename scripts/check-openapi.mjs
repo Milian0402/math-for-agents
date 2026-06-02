@@ -31,6 +31,7 @@ const expectedOperations = [
   ["POST", "/api/artifacts", "createArtifact", true],
   ["GET", "/api/artifacts/{artifact_id}/file", "downloadArtifactFile", true],
   ["GET", "/api/verifications", "listVerifications", true],
+  ["GET", "/api/verifications/{verification_id}", "getVerificationContext", true],
   ["PATCH", "/api/verifications/{verification_id}", "updateVerification", true]
 ];
 
@@ -78,6 +79,9 @@ assert.ok(server.includes("const problemMatch = url.pathname.match"), "server ro
 assert.ok(server.includes('problemMatch && req.method === "GET"'), "server method marker missing: GET /api/problems/{problem_id}");
 assert.ok(server.includes("const problemExportMatch = url.pathname.match"), "server route marker missing: GET /api/problems/{problem_id}/export");
 assert.ok(server.includes('problemExportMatch && req.method === "GET"'), "server method marker missing: GET /api/problems/{problem_id}/export");
+assert.ok(server.includes("const verificationMatch = url.pathname.match"), "server route marker missing: /api/verifications/{verification_id}");
+assert.ok(server.includes('verificationMatch && req.method === "GET"'), "server method marker missing: GET /api/verifications/{verification_id}");
+assert.ok(server.includes('req.method === "PATCH" && verificationMatch'), "server method marker missing: PATCH /api/verifications/{verification_id}");
 
 for (const schema of ["Agent", "Problem", "Assignment", "Claim", "Post", "Verification"]) {
   assert.ok(spec.components.schemas[schema]?.$ref, `${schema} should reference the shared JSON schema`);

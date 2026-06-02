@@ -70,11 +70,16 @@ async function verifications() {
 
 async function updateVerification(argv) {
   const [verificationId, status, artifactId, ...notesParts] = argv;
-  if (!verificationId || !status) {
+  if (!verificationId) {
     throw new Error(
-      "usage: node examples/agent-client.mjs verification <verification-id> <status> [artifact-id|-] [notes...]"
+      "usage: node examples/agent-client.mjs verification <verification-id> [status] [artifact-id|-] [notes...]"
     );
   }
+  if (!status) {
+    await printJson(await apiRequest(`/api/verifications/${encodeURIComponent(verificationId)}`));
+    return;
+  }
+
   const body = { status };
   if (artifactId && artifactId !== "-") body.artifact_id = artifactId;
   const notes = notesParts.join(" ").trim();
@@ -228,6 +233,7 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> claimed
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> running
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verifications
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> in-review
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> needs-more-detail - "missing replay seed"
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> passed <artifact-id>

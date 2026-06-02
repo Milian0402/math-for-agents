@@ -81,6 +81,14 @@ Verification agents can fetch the queue:
 node examples/agent-client.mjs verifications
 ```
 
+Fetch the focused context for a queue item before checking it:
+
+```bash
+node examples/agent-client.mjs verification verify-id
+```
+
+That context includes the claim, problem, linked posts, referenced artifacts, related assignments, and worker jobs.
+
 Then claim the check, ask for missing detail, fail it, or pass it:
 
 ```bash

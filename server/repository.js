@@ -542,6 +542,97 @@ export async function getVerification(workspaceId, verificationId) {
   return result.rows[0] || null;
 }
 
+export async function getVerificationContext(workspaceId, verificationId) {
+  const verificationResult = await query(
+    "select * from verifications where workspace_id = $1 and id = $2",
+    [workspaceId, verificationId]
+  );
+  const verification = verificationResult.rows[0] || null;
+  if (!verification) return null;
+
+  const claimResult = await query(
+    "select * from claims where workspace_id = $1 and id = $2",
+    [workspaceId, verification.claim_id]
+  );
+  const claim = claimResult.rows[0] || null;
+  if (!claim) return null;
+
+  const [problemResult, jobsResult] = await Promise.all([
+    query("select * from problems where workspace_id = $1 and id = $2", [workspaceId, claim.problem_id]),
+    query(
+      "select * from verification_jobs where workspace_id = $1 and verification_id = $2 order by created_at desc, id asc",
+      [workspaceId, verification.id]
+    )
+  ]);
+  const problem = problemResult.rows[0] || null;
+  if (!problem) return null;
+
+  const postIds = new Set(Array.isArray(claim.linked_posts) ? claim.linked_posts : []);
+  for (const job of jobsResult.rows) {
+    const postId = job.payload?.post_id?.trim?.();
+    if (postId) postIds.add(postId);
+  }
+
+  const postsResult = await query(
+    `with focused_posts as (
+       select *
+         from posts
+        where workspace_id = $1
+          and problem_id = $2
+          and id = any($3::text[])
+     ),
+     dependency_ids as (
+       select distinct jsonb_array_elements_text(dependencies) as id
+         from focused_posts
+     )
+     select *
+       from posts
+      where workspace_id = $1
+        and problem_id = $2
+        and (
+          id = any($3::text[])
+          or id in (select id from dependency_ids)
+        )
+      order by created_at asc, id asc`,
+    [workspaceId, claim.problem_id, [...postIds]]
+  );
+
+  const assignmentIds = new Set();
+  const artifactIds = new Set();
+  if (verification.artifact_id) artifactIds.add(verification.artifact_id);
+  for (const post of postsResult.rows) {
+    if (post.assignment_id) assignmentIds.add(post.assignment_id);
+    for (const artifactId of Array.isArray(post.artifacts) ? post.artifacts : []) {
+      if (artifactId) artifactIds.add(artifactId);
+    }
+  }
+
+  const [assignmentsResult, artifactsResult] = await Promise.all([
+    assignmentIds.size
+      ? query(
+          "select * from assignments where workspace_id = $1 and problem_id = $2 and id = any($3::text[]) order by created_at desc, id asc",
+          [workspaceId, claim.problem_id, [...assignmentIds]]
+        )
+      : { rows: [] },
+    artifactIds.size
+      ? query(
+          "select * from artifacts where workspace_id = $1 and problem_id = $2 and id = any($3::text[]) order by created_at desc, id asc",
+          [workspaceId, claim.problem_id, [...artifactIds]]
+        )
+      : { rows: [] }
+  ]);
+
+  return {
+    verification,
+    claim,
+    problem,
+    linked_posts: postsResult.rows,
+    assignments: assignmentsResult.rows,
+    artifacts: artifactsResult.rows,
+    verification_jobs: jobsResult.rows
+  };
+}
+
 export async function createAssignment(workspaceId, owner, input) {
   const now = new Date().toISOString();
   const assignment = {

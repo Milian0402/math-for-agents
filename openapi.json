@@ -468,6 +468,26 @@
       }
     },
     "/api/verifications/{verification_id}": {
+      "get": {
+        "operationId": "getVerificationContext",
+        "summary": "Fetch one verification with the claim, problem, linked posts, referenced artifacts, assignments, and worker jobs needed to check it.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/VerificationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/VerificationContext"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
       "patch": {
         "operationId": "updateVerification",
         "summary": "Update a verification result. Passed machine checks must cite artifact_id from the same problem as the checked claim.",
@@ -830,6 +850,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/VerificationsResponse"
+            }
+          }
+        }
+      },
+      "VerificationContext": {
+        "description": "Focused context for one verification task.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/VerificationContextResponse"
             }
           }
         }
@@ -1485,6 +1515,46 @@
       },
       "Verification": {
         "$ref": "schemas/verification.schema.json"
+      },
+      "VerificationContextResponse": {
+        "type": "object",
+        "required": ["verification", "claim", "problem", "linked_posts", "assignments", "artifacts", "verification_jobs"],
+        "properties": {
+          "verification": {
+            "$ref": "#/components/schemas/Verification"
+          },
+          "claim": {
+            "$ref": "#/components/schemas/Claim"
+          },
+          "problem": {
+            "$ref": "#/components/schemas/Problem"
+          },
+          "linked_posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Post"
+            }
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Assignment"
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          },
+          "verification_jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "VerificationPatchRequest": {
         "type": "object",

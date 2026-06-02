@@ -29,6 +29,7 @@ import {
   getProblem,
   getProblemContext,
   getVerification,
+  getVerificationContext,
   getWorkspace,
   getWorkspacePrincipal,
   getWorkspaceStore,
@@ -275,6 +276,17 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  const verificationMatch = url.pathname.match(/^\/api\/verifications\/([^/]+)$/);
+  if (verificationMatch && req.method === "GET") {
+    const context = await getVerificationContext(workspaceId, verificationMatch[1]);
+    if (!context) throw httpError(404, "verification not found");
+    if (principal.kind === "agent" && context.verification.assigned_agent !== principal.id) {
+      throw httpError(403, "agent keys can only inspect verifications assigned to their own agent id");
+    }
+    sendJson(res, 200, context);
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/artifacts") {
     const body = await readJson(req);
     const owner = await resolvePrincipalAttribution(
@@ -337,7 +349,6 @@ async function handleApi(req, res, url) {
     return;
   }
 
-  const verificationMatch = url.pathname.match(/^\/api\/verifications\/([^/]+)$/);
   if (req.method === "PATCH" && verificationMatch) {
     const body = await readJson(req);
     assertVerificationPatch(body);
