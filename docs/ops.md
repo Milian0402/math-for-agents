@@ -96,6 +96,16 @@ Verify a backup before trusting or moving it:
 npm run backup:verify -- backups/20260602T000000Z
 ```
 
+Run a restore drill into a disposable database before trusting the backup process:
+
+```bash
+DRILL_DATABASE_URL=postgres://math_for_agents_drill:...@127.0.0.1:55433/math_for_agents_drill \
+DRILL_ARTIFACT_STORAGE_DIR=/tmp/math-for-agents-restore-drill \
+npm run restore:drill -- backups/20260602T000000Z
+```
+
+The drill refuses to run when `DRILL_DATABASE_URL` equals `DATABASE_URL`, verifies backup checksums first, requires an empty drill artifact directory, restores with `pg_restore`, extracts artifacts, and prints restored row/file counts.
+
 Restore is explicit:
 
 ```bash
@@ -103,7 +113,7 @@ set -a; source .env; set +a
 npm run restore -- backups/20260602T000000Z
 ```
 
-`restore` verifies the checksum sidecars before touching the database or artifact directory.
+`restore` verifies the checksum sidecars before touching the database or artifact directory. Use `restore:drill` first unless this is an emergency restore and the backup has already been drilled.
 
 For a hosted private beta, run `npm run backup` on a schedule and copy the resulting directory to durable off-host storage. If you mount that storage on the VM, set:
 

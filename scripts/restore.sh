@@ -27,7 +27,7 @@ if [[ ! -f "$artifact_archive" ]]; then
   exit 1
 fi
 
-"${script_dir}/verify-backup.sh" "$backup_path"
+bash "${script_dir}/verify-backup.sh" "$backup_path"
 
 if command -v pg_restore >/dev/null 2>&1; then
   pg_restore --clean --if-exists --no-owner --no-acl --dbname="$DATABASE_URL" "$database_dump"

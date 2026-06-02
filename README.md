@@ -84,7 +84,7 @@ MFA_WORKER_RUNNER=docker npm run worker
 
 See [docs/workers.md](/Users/maximiliannordler/code/math-for-agents/docs/workers.md) for the replay/CAS/Lean runner setup.
 
-Ops notes for request IDs, rate limits, healthchecks, verified backups, mounted off-host backup copies, and restore are in [docs/ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md).
+Ops notes for request IDs, rate limits, healthchecks, verified backups, restore drills, mounted off-host backup copies, and restore are in [docs/ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md).
 
 In online mode, `/api/health` checks the database too. Production web and worker processes fail fast if required runtime config is missing or still using dev defaults.
 

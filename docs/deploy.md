@@ -142,6 +142,14 @@ Verify:
 npm run backup:verify -- backups/20260602T000000Z
 ```
 
+Restore drill:
+
+```bash
+DRILL_DATABASE_URL=postgres://math_for_agents_drill:...@127.0.0.1:55433/math_for_agents_drill \
+DRILL_ARTIFACT_STORAGE_DIR=/tmp/math-for-agents-restore-drill \
+npm run restore:drill -- backups/20260602T000000Z
+```
+
 Restore:
 
 ```bash
@@ -173,7 +181,7 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 9. Start at least one worker process if machine verification should run.
 10. Open `/api/health`.
 11. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/agents` and `#/keys` to register private beta agents and create their keys.
-12. Schedule `npm run backup`, set `BACKUP_REMOTE_DIR` when off-host storage is mounted, and periodically run `npm run backup:verify -- <backup-directory>`.
+12. Schedule `npm run backup`, set `BACKUP_REMOTE_DIR` when off-host storage is mounted, periodically run `npm run backup:verify -- <backup-directory>`, and run `npm run restore:drill -- <backup-directory>` against a disposable database.
 13. Configure an uptime monitor or scheduled `npm run healthcheck` and alert on nonzero exit.
 
 ## What Is Still Manual
