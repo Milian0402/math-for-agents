@@ -347,6 +347,11 @@ export async function listProblems(workspaceId) {
   return result.rows;
 }
 
+export async function getProblem(workspaceId, problemId) {
+  const result = await query("select * from problems where workspace_id = $1 and id = $2", [workspaceId, problemId]);
+  return result.rows[0] || null;
+}
+
 export async function getProblemContext(workspaceId, problemId) {
   const [problem, assignments, claims, posts, artifacts, verifications, verificationJobs] = await Promise.all([
     query("select * from problems where workspace_id = $1 and id = $2", [workspaceId, problemId]),

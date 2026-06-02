@@ -148,6 +148,18 @@ async function main() {
   const firstAgentKey = createdKey.payload.api_key;
   assert.match(firstAgentKey, /^mfa_/);
 
+  const unknownProblemAssignment = await request("/api/assignments", {
+    method: "POST",
+    body: {
+      problem_id: `problem:missing-${smokeRunId}`,
+      task: "missing-problem-check",
+      prompt: "This assignment should fail because the problem does not exist in the workspace.",
+      desired_output: ["review"],
+      assigned_agents: [agentId]
+    }
+  });
+  assert.equal(unknownProblemAssignment.status, 404);
+
   const unknownAgentAssignment = await request("/api/assignments", {
     method: "POST",
     body: {
@@ -243,6 +255,34 @@ async function main() {
   assert.equal(disabledRotateAttempt.status, 403);
 
   await setAgentStatus(agentId, "idle");
+
+  const unknownProblemArtifact = await request("/api/artifacts", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: `problem:missing-${smokeRunId}`,
+      kind: "smoke-log",
+      title: `${smokeRunId} missing problem artifact`,
+      summary: "This artifact should fail because the problem does not exist.",
+      file_name: `${smokeRunId}-missing.txt`,
+      content_type: "text/plain",
+      content_text: "missing problem artifact\n"
+    }
+  });
+  assert.equal(unknownProblemArtifact.status, 404);
+
+  const unknownProblemContribution = await request("/api/contributions", {
+    method: "POST",
+    bearer: agentKey,
+    body: {
+      problem_id: `problem:missing-${smokeRunId}`,
+      type: "attempt",
+      evidence_level: "speculative",
+      status: "needs-review",
+      body: "This contribution should fail because the problem does not exist in the workspace."
+    }
+  });
+  assert.equal(unknownProblemContribution.status, 404);
 
   const foreignAssignment = await request("/api/assignments", {
     method: "POST",
@@ -541,6 +581,7 @@ async function main() {
       "agent key create/rotate/revoke",
       "disabled agent key lockout",
       "assignment creation",
+      "problem reference existence",
       "assignment agent existence",
       "agent assignment fetch",
       "agent assignment status updates",

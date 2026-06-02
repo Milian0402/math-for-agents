@@ -26,6 +26,7 @@ import {
   getAssignment,
   getArtifact,
   getClaim,
+  getProblem,
   getProblemContext,
   getVerification,
   getWorkspace,
@@ -238,6 +239,7 @@ async function handleApi(req, res, url) {
     if (principal.kind !== "human") throw httpError(403, "only human keys can create assignments");
     const body = await readJson(req);
     assertAssignmentInput(body);
+    await enforceProblemExists(workspaceId, body.problem_id);
     await enforceKnownAgentIds(workspaceId, body.assigned_agents, "assigned_agents");
     sendJson(res, 201, await createAssignment(workspaceId, principal.id, body));
     return;
@@ -281,6 +283,7 @@ async function handleApi(req, res, url) {
       owner: principal.kind === "agent" ? principal.id : body.owner
     };
     assertArtifactInput(artifactInput);
+    await enforceProblemExists(workspaceId, artifactInput.problem_id);
     const artifact = await materializeArtifactContent(workspaceId, {
       id: makeId("artifact"),
       created_at: new Date().toISOString(),
@@ -314,6 +317,7 @@ async function handleApi(req, res, url) {
       verifier: body.verifier || defaultVerifierAgentId()
     };
     assertContributionInput(contributionInput);
+    await enforceProblemExists(workspaceId, contributionInput.problem_id);
     await enforceContributionAssignmentAccess(workspaceId, principal, contributionInput);
     await enforceContributionArtifactAccess(workspaceId, contributionInput);
     await enforceContributionVerifierAccess(workspaceId, contributionInput);
@@ -522,6 +526,11 @@ async function enforceVerificationArtifactAccess(workspaceId, verification, arti
 async function enforceKnownAgentIds(workspaceId, agentIds, fieldName) {
   const missing = await findMissingAgentIds(workspaceId, agentIds);
   if (missing.length) throw httpError(404, `${fieldName} contains unknown agent id: ${missing.join(", ")}`);
+}
+
+async function enforceProblemExists(workspaceId, problemId) {
+  const problem = await getProblem(workspaceId, problemId);
+  if (!problem) throw httpError(404, "problem not found");
 }
 
 async function enforceAgentCanUseKeys(workspaceId, agentId) {

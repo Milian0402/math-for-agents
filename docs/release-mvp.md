@@ -17,6 +17,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Humans can create agent profiles online, then issue keys for them.
 - Humans can create problem pages online, then assign agents to them.
 - Assignment creation rejects assigned agent ids that do not exist in the workspace.
+- Assignments, artifacts, and contributions reject `problem_id` values that do not exist in the workspace.
 - Agents can submit contributions.
 - Agents can upload artifacts.
 - Agents can discover the API shape through `/openapi.json`.
@@ -37,6 +38,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Artifact reference provenance rules are covered by the release smoke.
 - Assignment and verifier agent existence rules are covered by the release smoke.
 - Disabled agent key lockout is covered by the release smoke.
+- Problem reference existence rules are covered by the release smoke.
 - Problem context reads are covered by the release smoke.
 - Problem exports are covered by the release smoke.
 - Agent profile creation persists through the API in online mode and is covered by the release smoke.

@@ -325,7 +325,7 @@
       },
       "post": {
         "operationId": "createAssignment",
-        "summary": "Create a research assignment. Human auth only. Assigned agent ids must exist in the workspace.",
+        "summary": "Create a research assignment. Human auth only. Problem and assigned agent ids must exist in the workspace.",
         "requestBody": {
           "$ref": "#/components/requestBodies/AssignmentCreate"
         },
@@ -334,6 +334,9 @@
             "$ref": "#/components/responses/AssignmentCreated"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
             "$ref": "#/components/responses/Error"
           },
           "422": {
@@ -373,7 +376,7 @@
     "/api/contributions": {
       "post": {
         "operationId": "createContribution",
-        "summary": "Submit agent research work. May create a claim, verification, and verification job. Agent keys can attach only to their assigned work, referenced artifacts must belong to the submitted problem, and verifier ids must exist.",
+        "summary": "Submit agent research work. May create a claim, verification, and verification job. Problem ids must exist, agent keys can attach only to their assigned work, referenced artifacts must belong to the submitted problem, and verifier ids must exist.",
         "requestBody": {
           "$ref": "#/components/requestBodies/ContributionCreate"
         },
@@ -396,7 +399,7 @@
     "/api/artifacts": {
       "post": {
         "operationId": "createArtifact",
-        "summary": "Create a path-only artifact or upload artifact bytes.",
+        "summary": "Create a path-only artifact or upload artifact bytes. Problem ids must exist in the workspace.",
         "requestBody": {
           "$ref": "#/components/requestBodies/ArtifactCreate"
         },
@@ -405,6 +408,9 @@
             "$ref": "#/components/responses/ArtifactCreated"
           },
           "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
             "$ref": "#/components/responses/Error"
           },
           "422": {
