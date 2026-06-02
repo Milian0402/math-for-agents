@@ -47,6 +47,8 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Backup and restore scripts cover Postgres plus artifact storage, checksum verification, and optional mounted off-host copies.
 - `npm run restore:drill` verifies a backup can restore into a separate disposable database and artifact directory before trusting it.
 - A production Docker Compose target exists for a single-VM private beta with web, worker, Postgres, and persistent volumes.
+- The production Compose target includes `ops` profile services for release healthchecks and verified backups.
+- Caddy and systemd templates cover the expected single-VM HTTPS, healthcheck timer, and backup timer shape.
 - `npm run preflight:deploy` validates production env, Compose wiring, launch scripts, secrets, worker config, and artifact limits before a private beta restart.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - A production Dockerfile runs the app as one Node container.
@@ -58,7 +60,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 ## Still Needed Before a Real Private Beta
 
 - Provision the actual hosted VM/domain/Postgres instance.
-- Configure off-host backup storage, alerting, and external error aggregation.
+- Configure the actual mounted off-host backup storage, alert destination, and external error aggregation provider.
 
 ## Release Command Path
 

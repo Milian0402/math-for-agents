@@ -155,3 +155,28 @@ This runs:
 The worker uses the Docker runner by default in this compose file and mounts `/var/run/docker.sock`. That is powerful host access. Use it only on a dedicated VM, or run the worker manually with a stricter sandbox if the threat model needs it.
 
 Run `npm run preflight:deploy -- .env.production` after editing the production env and before restarting the stack. It prints JSON, fails on launch-blocking config problems, and leaves operator-owned items as warnings.
+
+## VM Ops Templates
+
+The repo includes single-VM templates for the boring release plumbing:
+
+- `deploy/caddy/Caddyfile.example` terminates HTTPS and proxies to `127.0.0.1:4173`.
+- `deploy/systemd/math-for-agents-healthcheck.*.example` runs the Compose `healthcheck` service every five minutes.
+- `deploy/systemd/math-for-agents-backup.*.example` runs the Compose `backup` service daily.
+
+The Compose ops commands are:
+
+```bash
+docker compose --env-file .env.production -f deploy/compose.production.yml --profile ops run --rm healthcheck
+docker compose --env-file .env.production -f deploy/compose.production.yml --profile ops run --rm backup
+```
+
+For Compose backups, keep local backup output and mounted off-host storage separate:
+
+```txt
+BACKUP_DIR_HOST=/opt/math-for-agents/backups
+BACKUP_REMOTE_DIR_HOST=/mnt/math-for-agents-backups
+BACKUP_REMOTE_DIR=/data/backup-remote
+```
+
+The service writes backups to `/data/backups` inside the container, mounted from `BACKUP_DIR_HOST`. If `BACKUP_REMOTE_DIR` is set, the backup script copies the verified result to that container path, which should be mounted from `BACKUP_REMOTE_DIR_HOST`.

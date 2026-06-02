@@ -8,6 +8,11 @@ import { assertWebRuntimeConfig, assertWorkerRuntimeConfig } from "../server/con
 const REQUIRED_FILES = [
   "Dockerfile",
   "deploy/compose.production.yml",
+  "deploy/caddy/Caddyfile.example",
+  "deploy/systemd/math-for-agents-healthcheck.service.example",
+  "deploy/systemd/math-for-agents-healthcheck.timer.example",
+  "deploy/systemd/math-for-agents-backup.service.example",
+  "deploy/systemd/math-for-agents-backup.timer.example",
   "server/schema.sql",
   "server/migrate.mjs",
   "server/bootstrap-admin.mjs",
@@ -31,9 +36,13 @@ const COMPOSE_MARKERS = [
   "db:",
   "web:",
   "worker:",
+  "healthcheck:",
+  "backup:",
+  'profiles: ["ops"]',
   "NODE_ENV: production",
   "condition: service_healthy",
   "artifact_data:",
+  "BACKUP_DIR: /data/backups",
   "/var/run/docker.sock:/var/run/docker.sock"
 ];
 

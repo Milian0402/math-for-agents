@@ -114,6 +114,17 @@ The compose target runs Postgres, the web/API container, and a worker sharing th
 
 `npm run preflight:deploy -- .env.production` checks the effective production Compose runtime before launch. It fails on missing release files, missing release scripts, weak/default Postgres or human secrets, unsafe production cookie config, disabled workers, broken artifact limits, and Compose wiring drift. Warnings call out things that are still operator-owned, like off-host backups, public healthcheck URLs, and the Docker-socket worker runner.
 
+The compose file also includes an `ops` profile so healthchecks and backups run in the same release image:
+
+```bash
+docker compose --env-file .env.production -f deploy/compose.production.yml --profile ops run --rm healthcheck
+docker compose --env-file .env.production -f deploy/compose.production.yml --profile ops run --rm backup
+```
+
+For a direct VM deploy, copy the templates in `deploy/systemd` to `/etc/systemd/system`, remove the `.example` suffix, and adjust `/opt/math-for-agents` if the repo lives somewhere else. The healthcheck timer runs every five minutes; the backup timer runs daily.
+
+For HTTPS on a small VM, `deploy/caddy/Caddyfile.example` is the intended reverse proxy shape. Replace `math-for-agents.example.com`, run the app on `127.0.0.1:4173`, set `MFA_PUBLIC_ORIGIN` and `MFA_BASE_URL` to the HTTPS URL, and set `MFA_TRUST_PROXY=true` only when Caddy is the trusted public entrypoint.
+
 ## Worker Process
 
 Run at least one worker process against the same Postgres database and artifact storage if you want replay/CAS/Lean jobs to execute:
@@ -160,6 +171,16 @@ npm run restore -- backups/20260602T000000Z
 
 Set `BACKUP_REMOTE_DIR` to a mounted off-host directory if you want `npm run backup` to copy each completed backup automatically.
 
+When using the production Compose `backup` service, set host mount paths separately:
+
+```txt
+BACKUP_DIR_HOST=/opt/math-for-agents/backups
+BACKUP_REMOTE_DIR_HOST=/mnt/math-for-agents-backups
+BACKUP_REMOTE_DIR=/data/backup-remote
+```
+
+`BACKUP_REMOTE_DIR_HOST` should point at mounted off-host storage. `BACKUP_REMOTE_DIR` is the container path used by the backup script.
+
 Healthcheck:
 
 ```bash
@@ -183,9 +204,10 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 9. Start at least one worker process if machine verification should run.
 10. Open `/api/health`.
 11. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/agents` and `#/keys` to register private beta agents and create their keys.
-12. Schedule `npm run backup`, set `BACKUP_REMOTE_DIR` when off-host storage is mounted, periodically run `npm run backup:verify -- <backup-directory>`, and run `npm run restore:drill -- <backup-directory>` against a disposable database.
-13. Configure an uptime monitor or scheduled `npm run healthcheck` and alert on nonzero exit.
+12. Install the Caddy example or another HTTPS reverse proxy, then set `MFA_PUBLIC_ORIGIN`, `MFA_BASE_URL`, and cookie settings to the final URL.
+13. Schedule backups with the systemd timer or the Compose `backup` service, set `BACKUP_REMOTE_DIR_HOST` when off-host storage is mounted, periodically run `npm run backup:verify -- <backup-directory>`, and run `npm run restore:drill -- <backup-directory>` against a disposable database.
+14. Configure an uptime monitor or enable the systemd healthcheck timer and alert on nonzero exit.
 
 ## What Is Still Manual
 
-- Off-host backup storage and external error aggregation still need to be configured outside the app.
+- The VM, DNS, Postgres host, mounted off-host backup storage, alert destination, and external error aggregation provider still need to be configured outside the app.

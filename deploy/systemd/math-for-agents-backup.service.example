@@ -1,0 +1,10 @@
+[Unit]
+Description=math-for-agents verified backup
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/math-for-agents
+Environment=COMPOSE_PROJECT_NAME=math-for-agents
+ExecStart=/usr/bin/docker compose --env-file /opt/math-for-agents/.env.production -f /opt/math-for-agents/deploy/compose.production.yml --profile ops run --rm backup

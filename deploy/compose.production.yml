@@ -73,6 +73,41 @@ services:
       - artifact_data:/data/artifacts
       - /var/run/docker.sock:/var/run/docker.sock
 
+  healthcheck:
+    build:
+      context: ..
+    profiles: ["ops"]
+    depends_on:
+      web:
+        condition: service_healthy
+    command: ["npm", "run", "healthcheck"]
+    environment:
+      NODE_ENV: production
+      MFA_BASE_URL: ${MFA_BASE_URL:?MFA_BASE_URL is required}
+      MFA_HEALTHCHECK_TIMEOUT_MS: ${MFA_HEALTHCHECK_TIMEOUT_MS:-5000}
+      MFA_HEALTHCHECK_BEARER: ${MFA_HEALTHCHECK_BEARER:-}
+      MFA_HEALTHCHECK_ASSIGNMENTS: ${MFA_HEALTHCHECK_ASSIGNMENTS:-false}
+
+  backup:
+    build:
+      context: ..
+    profiles: ["ops"]
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["npm", "run", "backup"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-math_for_agents}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-math_for_agents}
+      DATABASE_SSL: "false"
+      ARTIFACT_STORAGE_DIR: /data/artifacts
+      BACKUP_DIR: /data/backups
+      BACKUP_REMOTE_DIR: ${BACKUP_REMOTE_DIR:-}
+    volumes:
+      - artifact_data:/data/artifacts:ro
+      - ${BACKUP_DIR_HOST:-../backups}:/data/backups
+      - ${BACKUP_REMOTE_DIR_HOST:-../backup-remote}:/data/backup-remote
+
 volumes:
   postgres_data:
   artifact_data:

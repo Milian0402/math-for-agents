@@ -1,0 +1,11 @@
+[Unit]
+Description=Run math-for-agents verified backup daily
+
+[Timer]
+OnCalendar=*-*-* 03:17:00
+RandomizedDelaySec=15m
+Persistent=true
+Unit=math-for-agents-backup.service
+
+[Install]
+WantedBy=timers.target
