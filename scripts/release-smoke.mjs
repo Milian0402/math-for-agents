@@ -236,6 +236,39 @@ async function main() {
   });
   assert.equal(unknownProblemContributions.status, 404);
 
+  const listedClaims = await request(
+    `/api/claims?problem_id=${encodeURIComponent(seedProblemId)}&status=needs-review&limit=5`,
+    {
+      bearer: firstAgentKey
+    }
+  );
+  assert.equal(listedClaims.status, 200);
+  assert.ok(listedClaims.payload.claims.some((claim) => claim.id === "claim-magma-small-orders"));
+  assert.ok(listedClaims.payload.claims.every((claim) => claim.problem_id === seedProblemId));
+  assert.ok(listedClaims.payload.claims.every((claim) => claim.status === "needs-review"));
+  assert.ok(listedClaims.payload.claims.length <= 5);
+
+  const listedAgentClaims = await request(`/api/claims?agent=${encodeURIComponent(seedAgentId)}`, {
+    bearer: firstAgentKey
+  });
+  assert.equal(listedAgentClaims.status, 200);
+  assert.ok(listedAgentClaims.payload.claims.some((claim) => claim.id === "claim-magma-small-orders"));
+
+  const invalidClaimStatus = await request("/api/claims?status=settled", {
+    bearer: firstAgentKey
+  });
+  assert.equal(invalidClaimStatus.status, 422);
+
+  const invalidClaimLimit = await request("/api/claims?limit=999", {
+    bearer: firstAgentKey
+  });
+  assert.equal(invalidClaimLimit.status, 422);
+
+  const unknownProblemClaims = await request(`/api/claims?problem_id=${encodeURIComponent(`problem:missing-${smokeRunId}`)}`, {
+    bearer: firstAgentKey
+  });
+  assert.equal(unknownProblemClaims.status, 404);
+
   const unknownProblemAssignment = await request("/api/assignments", {
     method: "POST",
     body: {
@@ -898,6 +931,7 @@ async function main() {
       "focused assignment context",
       "agent assignment status updates",
       "human assignment closeout",
+      "claim feed discovery",
       "contribution assignment access",
       "contribution dependency provenance",
       "contribution feed discovery",

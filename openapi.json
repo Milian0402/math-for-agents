@@ -352,6 +352,43 @@
         }
       }
     },
+    "/api/claims": {
+      "get": {
+        "operationId": "listClaims",
+        "summary": "List workspace claims, optionally filtered by problem, linked author, status, trust tier, verification state, or limit.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProblemIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ContributionAgentQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ClaimStatusQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ClaimTrustTierQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ClaimVerificationStateQuery"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Claims"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/assignments": {
       "get": {
         "operationId": "listAssignments",
@@ -723,6 +760,33 @@
           "default": 100
         }
       },
+      "ClaimStatusQuery": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["open", "needs-review", "accepted", "refuted", "superseded"]
+        }
+      },
+      "ClaimTrustTierQuery": {
+        "name": "trust_tier",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["unverified", "agent-reviewed", "independently-replayed", "formally-checked"]
+        }
+      },
+      "ClaimVerificationStateQuery": {
+        "name": "verification_state",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["unassigned", "queued", "in-review", "replay-requested", "passed", "needs-more-detail", "failed"]
+        }
+      },
       "ProblemExportFormat": {
         "name": "format",
         "in": "query",
@@ -971,6 +1035,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ContributionResponse"
+            }
+          }
+        }
+      },
+      "Claims": {
+        "description": "Workspace claims.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ClaimsResponse"
             }
           }
         }
@@ -1468,6 +1542,19 @@
       },
       "Claim": {
         "$ref": "schemas/claim.schema.json"
+      },
+      "ClaimsResponse": {
+        "type": "object",
+        "required": ["claims"],
+        "properties": {
+          "claims": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Claim"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "ClaimPatch": {
         "$ref": "#/components/schemas/Resource"

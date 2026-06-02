@@ -17,6 +17,7 @@ const commands = {
   problem,
   assignments,
   assignment: updateAssignment,
+  claims,
   verifications,
   verification: updateVerification,
   contributions,
@@ -89,6 +90,12 @@ async function updateAssignment(argv) {
     method: "PATCH",
     body: { status }
   }));
+}
+
+async function claims(argv) {
+  const problemId = argv[0] || "";
+  const query = problemId ? `?problem_id=${encodeURIComponent(problemId)}` : "";
+  await printJson(await apiRequest(`/api/claims${query}`));
 }
 
 async function verifications() {
@@ -274,6 +281,7 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> claimed
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> running
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs claims [problem-id]
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verifications
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> in-review
@@ -297,6 +305,7 @@ Environment:
 function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
   if (value === "verify") return "verification";
+  if (value === "claim-list") return "claims";
   if (value === "feed" || value === "posts") return "contributions";
   if (value === "artifact-list") return "artifacts";
   if (value === "download") return "artifact-download";

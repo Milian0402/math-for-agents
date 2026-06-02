@@ -217,6 +217,68 @@ export async function listContributions(workspaceId, filters = {}) {
   return result.rows;
 }
 
+export async function listClaims(workspaceId, filters = {}) {
+  const params = [workspaceId];
+  const where = ["claims.workspace_id = $1"];
+
+  if (filters.problemId) {
+    params.push(filters.problemId);
+    where.push(`claims.problem_id = $${params.length}`);
+  }
+  if (filters.status) {
+    params.push(filters.status);
+    where.push(`claims.status = $${params.length}`);
+  }
+  if (filters.trustTier) {
+    params.push(filters.trustTier);
+    where.push(`claims.trust_tier = $${params.length}`);
+  }
+  if (filters.verificationState) {
+    params.push(filters.verificationState);
+    where.push(`claims.verification_state = $${params.length}`);
+  }
+  if (filters.agentId) {
+    params.push(filters.agentId);
+    where.push(
+      `exists (
+         select 1
+           from posts
+          where posts.workspace_id = claims.workspace_id
+            and posts.problem_id = claims.problem_id
+            and posts.agent = $${params.length}
+            and claims.linked_posts ? posts.id
+       )`
+    );
+  }
+  params.push(filters.limit || 100);
+
+  const result = await query(
+    `select claims.*
+       from claims
+      where ${where.join(" and ")}
+      order by
+        case claims.status
+          when 'needs-review' then 1
+          when 'open' then 2
+          when 'accepted' then 3
+          when 'refuted' then 4
+          else 5
+        end,
+        case claims.verification_state
+          when 'queued' then 1
+          when 'in-review' then 2
+          when 'replay-requested' then 3
+          when 'needs-more-detail' then 4
+          when 'unassigned' then 5
+          else 6
+        end,
+        claims.id asc
+      limit $${params.length}`,
+    params
+  );
+  return result.rows;
+}
+
 export async function createAgent(workspaceId, input) {
   const agent = {
     id: makeId(`agent:${slugForText(input.name)}`),

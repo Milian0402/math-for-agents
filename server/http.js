@@ -11,6 +11,7 @@ import { verificationAgentForContribution } from "./domain.js";
 import { makeId } from "./ids.js";
 import { applyRateLimit, createRequestContext, errorPayload, logErrorEvent, rateLimitHeaders } from "./ops.js";
 import { formatProblemExport } from "./problem-export.js";
+import { CLAIM_STATUSES, TRUST_TIERS, VERIFICATION_STATUSES } from "../src/vocab.js";
 import {
   authenticateAgent,
   authenticateHumanSession,
@@ -40,6 +41,7 @@ import {
   listAgents,
   listArtifacts,
   listAssignmentsForAgent,
+  listClaims,
   listContributions,
   listProblems,
   listVerificationQueue,
@@ -359,6 +361,12 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/contributions") {
     const filters = await contributionFeedFilters(workspaceId, url);
     sendJson(res, 200, { contributions: await listContributions(workspaceId, filters) });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/claims") {
+    const filters = await claimFeedFilters(workspaceId, url);
+    sendJson(res, 200, { claims: await listClaims(workspaceId, filters) });
     return;
   }
 
@@ -694,6 +702,23 @@ async function contributionFeedFilters(workspaceId, url) {
   return { problemId, agentId, assignmentId, limit };
 }
 
+async function claimFeedFilters(workspaceId, url) {
+  const problemId = url.searchParams.get("problem_id")?.trim?.() || "";
+  const agentId = url.searchParams.get("agent")?.trim?.() || "";
+  const status = enumQueryParam(url, "status", CLAIM_STATUSES);
+  const trustTier = enumQueryParam(url, "trust_tier", TRUST_TIERS);
+  const verificationState = enumQueryParam(url, "verification_state", VERIFICATION_STATUSES);
+  const limit = boundedQueryLimit(url.searchParams.get("limit"), 100, 200);
+
+  if (problemId) await enforceProblemExists(workspaceId, problemId);
+  if (agentId) {
+    const principal = await getWorkspacePrincipal(workspaceId, agentId);
+    if (!principal) throw httpError(404, "agent does not match a workspace human or agent");
+  }
+
+  return { problemId, agentId, status, trustTier, verificationState, limit };
+}
+
 async function enforceAgentCanUseKeys(workspaceId, agentId) {
   const agent = await getAgent(workspaceId, agentId);
   if (!agent) throw httpError(404, "agent not found");
@@ -898,4 +923,13 @@ function boundedQueryLimit(value, defaultValue, maxValue) {
     throw httpError(422, `limit must be an integer from 1 to ${maxValue}`);
   }
   return parsed;
+}
+
+function enumQueryParam(url, name, allowedValues) {
+  const value = url.searchParams.get(name)?.trim?.() || "";
+  if (!value) return "";
+  if (!allowedValues.includes(value)) {
+    throw httpError(422, `${name} must be one of: ${allowedValues.join(", ")}`);
+  }
+  return value;
 }
