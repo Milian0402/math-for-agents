@@ -13,6 +13,8 @@ export async function runAgentCheck(options = {}) {
   const startedAt = Date.now();
   const checks = [];
   let principal = null;
+  let problemContext = null;
+  let artifactFeed = [];
 
   if (!agentKey) {
     checks.push({ name: "configuration", ok: false, duration_ms: 0, error: "MFA_AGENT_KEY is required" });
@@ -99,6 +101,7 @@ export async function runAgentCheck(options = {}) {
     for (const field of ["assignments", "claims", "posts", "artifacts", "verifications", "verification_jobs"]) {
       if (!Array.isArray(payload[field])) throw new Error(`problem check must return ${field}`);
     }
+    problemContext = payload;
     return {
       claims: payload.claims.length,
       posts: payload.posts.length,
@@ -144,7 +147,25 @@ export async function runAgentCheck(options = {}) {
     if (!payload.artifacts.every((artifact) => artifact.problem_id === problemId)) {
       throw new Error("artifacts check returned an artifact from another problem");
     }
+    artifactFeed = payload.artifacts;
     return { count: payload.artifacts.length };
+  });
+
+  await runCheck(checks, "artifact_download", async () => {
+    const artifact = findProtectedArtifact([...(problemContext?.artifacts || []), ...artifactFeed]);
+    if (!artifact) {
+      return { skipped: true, reason: "no protected stored artifact available" };
+    }
+    const file = await requestBytes(fetchImpl, `${baseUrl}${artifact.path}`, {
+      timeoutMs,
+      bearer: agentKey
+    });
+    if (file.bytes < 1) throw new Error("artifact download returned an empty file");
+    return {
+      artifact_id: artifact.id,
+      bytes: file.bytes,
+      content_type: file.content_type
+    };
   });
 
   await runCheck(checks, "verifications", async () => {
@@ -188,6 +209,40 @@ async function requestJson(fetchImpl, url, { timeoutMs, bearer = "" }) {
   }
 }
 
+async function requestBytes(fetchImpl, url, { timeoutMs, bearer = "" }) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url, {
+      headers: bearer ? { authorization: `Bearer ${bearer}` } : {},
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      let message = `HTTP ${response.status}`;
+      try {
+        const text = await response.text();
+        if (text) {
+          const payload = JSON.parse(text);
+          message = payload.error || message;
+        }
+      } catch {
+        // Keep the HTTP status when the error body is not JSON.
+      }
+      throw new Error(message);
+    }
+    const data = await response.arrayBuffer();
+    return {
+      bytes: data.byteLength,
+      content_type: response.headers?.get?.("content-type") || ""
+    };
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error(`timed out after ${timeoutMs}ms`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function result({ baseUrl, problemId, principal, checks, startedAt }) {
   return {
     ok: checks.every((check) => check.ok),
@@ -216,6 +271,12 @@ function countOperations(paths) {
     }
   }
   return count;
+}
+
+function findProtectedArtifact(artifacts = []) {
+  return artifacts.find(
+    (artifact) => typeof artifact.path === "string" && /^\/api\/artifacts\/[^/]+\/file$/.test(artifact.path)
+  );
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

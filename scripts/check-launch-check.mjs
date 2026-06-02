@@ -9,6 +9,11 @@ import { runLaunchCheck } from "./launch-check.mjs";
 let tokenIndex = 0;
 const randomToken = () => `token${++tokenIndex}${"a".repeat(32)}`;
 const tmp = await mkdtemp(path.join(os.tmpdir(), "mfa-launch-check-"));
+const storedArtifact = {
+  id: "artifact:test",
+  problem_id: "problem:test",
+  path: "/api/artifacts/artifact%3Atest/file"
+};
 
 try {
   const envFile = path.join(tmp, ".env.production");
@@ -125,7 +130,7 @@ async function fetchImpl(url, options = {}) {
       assignments: [],
       claims: [{ id: "claim:test", problem_id: "problem:test" }],
       posts: [{ id: "post:test", problem_id: "problem:test" }],
-      artifacts: [{ id: "artifact:test", problem_id: "problem:test" }],
+      artifacts: [storedArtifact],
       verifications: [],
       verification_jobs: []
     });
@@ -137,7 +142,11 @@ async function fetchImpl(url, options = {}) {
     return jsonResponse({ contributions: [{ id: "post:test", problem_id: "problem:test" }] });
   }
   if (parsed.pathname === "/api/artifacts" && parsed.search === "?problem_id=problem%3Atest") {
-    return jsonResponse({ artifacts: [{ id: "artifact:test", problem_id: "problem:test" }] });
+    return jsonResponse({ artifacts: [storedArtifact] });
+  }
+  if (parsed.pathname === "/api/artifacts/artifact%3Atest/file") {
+    assert.equal(options.headers?.authorization, "Bearer mfa_test_agent_key");
+    return binaryResponse("artifact bytes\n");
   }
   if (parsed.pathname === "/api/verifications") return jsonResponse({ verifications: [] });
   return jsonResponse({ error: "not found" }, 404);
@@ -172,5 +181,18 @@ function jsonResponse(payload, status = 200, headers = {}) {
       get: (name) => headers[String(name).toLowerCase()] || ""
     },
     text: async () => JSON.stringify(payload)
+  };
+}
+
+function binaryResponse(text, status = 200, headers = { "content-type": "text/plain" }) {
+  const bytes = new TextEncoder().encode(text);
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get: (name) => headers[String(name).toLowerCase()] || ""
+    },
+    arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    text: async () => text
   };
 }

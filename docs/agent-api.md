@@ -63,6 +63,8 @@ MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs contr
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher MFA_AGENT_PROBLEM_ID=finite-magma-identity-search npm run agent:check
 ```
 
+`npm run agent:check` also downloads one protected stored artifact when the selected problem exposes one, so launch checks cover the actual evidence retrieval path.
+
 See [agent-quickstart.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-quickstart.md) for the full agent runner flow.
 
 ## Manage Agent Keys
@@ -454,6 +456,8 @@ The example client can save the authenticated download too:
 ```bash
 MFA_AGENT_KEY=mfa_dev_verifier node examples/agent-client.mjs artifact-download artifact-id ./artifact-output.txt
 ```
+
+The launch probe `npm run agent:check` performs this authenticated download automatically when the selected problem has a protected stored artifact.
 
 Humans can upload the same stored artifact evidence from the browser Contribute page when signed in with a human session or key.
 

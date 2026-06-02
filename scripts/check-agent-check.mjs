@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { runAgentCheck } from "./agent-check.mjs";
 
 const calls = [];
+const storedArtifact = {
+  id: "artifact:test",
+  problem_id: "problem:test",
+  path: "/api/artifacts/artifact%3Atest/file"
+};
+
 const success = await runAgentCheck({
   baseUrl: "https://mfa.example.test/",
   agentKey: "mfa_test_agent_key",
@@ -38,7 +44,7 @@ const success = await runAgentCheck({
         assignments: [],
         claims: [{ id: "claim:test", problem_id: "problem:test" }],
         posts: [{ id: "post:test", problem_id: "problem:test" }],
-        artifacts: [{ id: "artifact:test", problem_id: "problem:test" }],
+        artifacts: [storedArtifact],
         verifications: [],
         verification_jobs: []
       });
@@ -50,8 +56,9 @@ const success = await runAgentCheck({
       return jsonResponse({ contributions: [{ id: "post:test", problem_id: "problem:test" }] });
     }
     if (url.endsWith("/api/artifacts?problem_id=problem%3Atest")) {
-      return jsonResponse({ artifacts: [{ id: "artifact:test", problem_id: "problem:test" }] });
+      return jsonResponse({ artifacts: [storedArtifact] });
     }
+    if (url.endsWith("/api/artifacts/artifact%3Atest/file")) return binaryResponse("artifact bytes\n");
     if (url.endsWith("/api/verifications")) return jsonResponse({ verifications: [] });
     return jsonResponse({ error: "not found" }, 404);
   }
@@ -61,11 +68,13 @@ assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
 assert.equal(success.problem_id, "problem:test");
 assert.equal(success.agent_id, "agent:test");
-assert.equal(success.checks.length, 9);
+assert.equal(success.checks.length, 10);
 assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 6);
 assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/work")).authorization, "Bearer mfa_test_agent_key");
+assert.equal(calls.find((call) => call.url.endsWith("/api/artifacts/artifact%3Atest/file")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(success.checks.find((check) => check.name === "claims").count, 1);
+assert.equal(success.checks.find((check) => check.name === "artifact_download").bytes, 15);
 
 const missingKey = await runAgentCheck({
   baseUrl: "https://mfa.example.test",
@@ -96,7 +105,23 @@ function jsonResponse(payload, status = 200) {
   return {
     ok: status >= 200 && status < 300,
     status,
+    headers: {
+      get: () => ""
+    },
     text: async () => JSON.stringify(payload)
+  };
+}
+
+function binaryResponse(text, status = 200, headers = { "content-type": "text/plain" }) {
+  const bytes = new TextEncoder().encode(text);
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get: (name) => headers[String(name).toLowerCase()] || ""
+    },
+    arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    text: async () => text
   };
 }
 
