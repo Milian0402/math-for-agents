@@ -7,7 +7,12 @@ import { materializeArtifactContent, openArtifactFile } from "../server/artifact
 import { generateSessionToken, hashPassword, verifyPassword } from "../server/auth.js";
 import { assertWebRuntimeConfig, assertWorkerRuntimeConfig, secureCookiesEnabled } from "../server/config.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
-import { requestBodyLimitBytes, resolveStaticFilePath } from "../server/http.js";
+import {
+  allowedSessionOrigins,
+  requestBodyLimitBytes,
+  resolveStaticFilePath,
+  sessionWriteOriginCheck
+} from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { clientIp } from "../server/ops.js";
 import { formatProblemExport, problemExportFormats } from "../server/problem-export.js";
@@ -94,6 +99,37 @@ assert.throws(() => resolveStaticFilePath("/%2e%2e/math-for-agents-evil/.env", s
 assert.equal(requestBodyLimitBytes({ MAX_JSON_BYTES: "12345", ARTIFACT_MAX_BYTES: "1000" }), 12_345);
 assert.equal(requestBodyLimitBytes({ ARTIFACT_MAX_BYTES: "1000" }), 67_036);
 assert.throws(() => requestBodyLimitBytes({ MAX_JSON_BYTES: "0" }), /MAX_JSON_BYTES/);
+
+const sameOriginWrite = {
+  headers: {
+    host: "127.0.0.1:4173",
+    origin: "http://127.0.0.1:4173"
+  }
+};
+assert.deepEqual(allowedSessionOrigins(sameOriginWrite, { MFA_COOKIE_SECURE: "false" }), ["http://127.0.0.1:4173"]);
+assert.equal(sessionWriteOriginCheck(sameOriginWrite, { MFA_COOKIE_SECURE: "false" }).ok, true);
+assert.equal(
+  sessionWriteOriginCheck(
+    { headers: { host: "127.0.0.1:4173", origin: "https://evil.example" } },
+    { MFA_COOKIE_SECURE: "false" }
+  ).ok,
+  false
+);
+assert.equal(
+  sessionWriteOriginCheck(
+    { headers: { host: "internal:4173", origin: "https://math-for-agents.example.com" } },
+    { MFA_PUBLIC_ORIGIN: "https://math-for-agents.example.com", MFA_COOKIE_SECURE: "true" }
+  ).ok,
+  true
+);
+assert.equal(
+  sessionWriteOriginCheck(
+    { headers: { host: "math-for-agents.example.com", referer: "https://math-for-agents.example.com/#/keys" } },
+    { MFA_COOKIE_SECURE: "true" }
+  ).ok,
+  true
+);
+assert.equal(sessionWriteOriginCheck({ headers: { host: "127.0.0.1:4173" } }, { MFA_COOKIE_SECURE: "false" }).ok, false);
 
 assert.doesNotThrow(() =>
   assertProblemInput({

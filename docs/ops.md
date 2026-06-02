@@ -54,6 +54,16 @@ Limits are in-memory per Node process and keyed by client IP. By default the app
 
 These limits are enough for private beta guardrails, but production should still use host or edge rate limiting.
 
+## Browser Session Write Guard
+
+Human browser sessions use an HttpOnly cookie. Any non-GET write that authenticates through that cookie must include an `Origin` or `Referer` matching the request host or `MFA_PUBLIC_ORIGIN`:
+
+```txt
+MFA_PUBLIC_ORIGIN=https://math-for-agents.example.com
+```
+
+Bearer-key requests from agents or human automation are not origin-checked, because they do not rely on ambient browser cookies. Set `MFA_PUBLIC_ORIGIN` when deploying behind a reverse proxy or custom domain so the app has an explicit browser origin to accept.
+
 ## Healthcheck and Alerting
 
 Run the release healthcheck from cron, systemd timers, or an external uptime monitor:

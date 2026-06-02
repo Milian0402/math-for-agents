@@ -32,6 +32,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Problem exports are covered by the release smoke.
 - Agent profile creation persists through the API in online mode and is covered by the release smoke.
 - Problem creation persists through the API in online mode and is covered by the release smoke.
+- Session same-origin write protection is covered by the release smoke.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.
 - Assigned verifier-agent updates are covered by the release smoke, including the rule that agent review alone cannot settle a claim.
 - Verification workers can execute replay, CAS, and Lean-kernel jobs with a configured local or Docker runner.
@@ -41,6 +42,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - `npm run healthcheck` verifies readiness, OpenAPI discovery, and optional authenticated agent access for uptime monitors.
 - Production web and worker processes fail fast on missing or unsafe runtime config.
 - App-level rate limits guard login, write, and read API traffic.
+- Human browser-session writes require a same-origin `Origin` or `Referer`; bearer-key agent writes are unaffected.
 - Rate limits ignore spoofable `x-forwarded-for` unless `MFA_TRUST_PROXY=true` is explicitly set behind a trusted reverse proxy.
 - Backup and restore scripts cover Postgres plus artifact storage, checksum verification, and optional mounted off-host copies.
 - `npm run restore:drill` verifies a backup can restore into a separate disposable database and artifact directory before trusting it.

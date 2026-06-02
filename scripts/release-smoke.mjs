@@ -9,6 +9,7 @@ const humanPassword = process.env.MFA_HUMAN_PASSWORD || "mfa_dev_password";
 const seedAgentId = process.env.MFA_SMOKE_AGENT_ID || "agent:finite-model-searcher";
 const seedProblemId = process.env.MFA_SMOKE_PROBLEM_ID || "finite-magma-identity-search";
 const smokeRunId = `smoke-${Date.now().toString(36)}`;
+const baseOrigin = new URL(baseUrl).origin;
 let problemId = seedProblemId;
 let agentId = seedAgentId;
 let assignmentId = "";
@@ -54,6 +55,17 @@ async function main() {
   assert.equal(login.status, 200);
   assert.equal(login.payload.principal.kind, "human");
   assert.match(cookie, /^mfa_session=/);
+
+  const crossOriginWrite = await request("/api/problems", {
+    method: "POST",
+    headers: { origin: "https://example.invalid" },
+    body: {
+      title: `Blocked cross-origin problem ${smokeRunId}`,
+      area: "Release smoke",
+      summary: "This should be blocked by the session same-origin guard."
+    }
+  });
+  assert.equal(crossOriginWrite.status, 403);
 
   const store = await request("/api/store");
   assert.equal(store.status, 200);
@@ -384,6 +396,7 @@ async function main() {
       "health",
       "request-id errors",
       "human session login",
+      "human session same-origin writes",
       "problem creation",
       "problem context fetch",
       "agent profile creation",
@@ -404,14 +417,20 @@ async function main() {
 }
 
 async function request(path, options = {}) {
+  const method = options.method || "GET";
+  const sessionWriteOrigin =
+    cookie && options.auth !== false && !options.bearer && !["GET", "HEAD", "OPTIONS"].includes(method)
+      ? { origin: baseOrigin }
+      : {};
   const headers = {
     ...(options.body ? { "content-type": "application/json" } : {}),
     ...(cookie && options.auth !== false && !options.bearer ? { cookie } : {}),
     ...(options.bearer ? { authorization: `Bearer ${options.bearer}` } : {}),
+    ...sessionWriteOrigin,
     ...(options.headers || {})
   };
   const response = await fetch(`${baseUrl}${path}`, {
-    method: options.method || "GET",
+    method,
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined
   });

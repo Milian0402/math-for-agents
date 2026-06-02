@@ -105,6 +105,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+    enforceCookieWriteOrigin(req);
     const sessionToken = cookieValue(req, "mfa_session");
     if (sessionToken) await revokeHumanSession(sessionToken);
     sendJson(res, 200, { ok: true }, {
@@ -116,6 +117,7 @@ async function handleApi(req, res, url) {
   const principal = await requirePrincipal(req);
   req.context.principal = principal;
   const workspaceId = principal.workspace_id;
+  enforceSessionWriteOrigin(req, principal);
 
   if (req.method === "GET" && url.pathname === "/api/me") {
     sendJson(res, 200, { principal });
@@ -369,6 +371,79 @@ async function requirePrincipal(req) {
 
 function requireHuman(principal) {
   if (principal.kind !== "human") throw httpError(403, "only human auth can perform this action");
+}
+
+function enforceCookieWriteOrigin(req) {
+  if (!cookieValue(req, "mfa_session")) return;
+  const check = sessionWriteOriginCheck(req);
+  if (!check.ok) throw httpError(403, check.error);
+}
+
+function enforceSessionWriteOrigin(req, principal) {
+  if (principal.auth_method !== "human-session") return;
+  if (safeMethod(req.method)) return;
+  const check = sessionWriteOriginCheck(req);
+  if (!check.ok) throw httpError(403, check.error);
+}
+
+export function sessionWriteOriginCheck(req, env = process.env) {
+  const actualOrigin = requestOrigin(req);
+  if (!actualOrigin) {
+    return {
+      ok: false,
+      error: "human session writes require a same-origin Origin or Referer header"
+    };
+  }
+
+  const allowedOrigins = allowedSessionOrigins(req, env);
+  if (!allowedOrigins.includes(actualOrigin)) {
+    return {
+      ok: false,
+      error: "human session write origin is not allowed",
+      origin: actualOrigin,
+      allowed_origins: allowedOrigins
+    };
+  }
+
+  return { ok: true, origin: actualOrigin, allowed_origins: allowedOrigins };
+}
+
+export function allowedSessionOrigins(req, env = process.env) {
+  const origins = new Set();
+  for (const origin of String(env.MFA_PUBLIC_ORIGIN || "").split(",")) {
+    const normalized = normalizeOrigin(origin.trim());
+    if (normalized) origins.add(normalized);
+  }
+
+  const host = req.headers.host;
+  if (host) {
+    const forwardedProto = env.MFA_TRUST_PROXY === "true" ? firstHeaderValue(req.headers["x-forwarded-proto"]) : "";
+    const protocol = forwardedProto || (secureCookiesEnabled(env) ? "https" : "http");
+    origins.add(`${protocol}://${host}`);
+  }
+
+  return [...origins];
+}
+
+function requestOrigin(req) {
+  return normalizeOrigin(req.headers.origin) || normalizeOrigin(req.headers.referer);
+}
+
+function normalizeOrigin(value) {
+  if (!value) return "";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+}
+
+function firstHeaderValue(value) {
+  return String(Array.isArray(value) ? value[0] : value || "").split(",")[0].trim();
+}
+
+function safeMethod(method) {
+  return method === "GET" || method === "HEAD" || method === "OPTIONS";
 }
 
 function assignmentVisibleToAgent(assignment, agentId) {

@@ -17,6 +17,7 @@ MFA_HUMAN_EMAIL=you@example.com
 MFA_HUMAN_NAME=Your Name
 MFA_HUMAN_PASSWORD=<long random password>
 MFA_WORKSPACE_ID=workspace:default
+MFA_PUBLIC_ORIGIN=https://math-for-agents.example.com
 HOST=0.0.0.0
 PORT=4173
 MFA_WORKER_RUNNER=disabled
@@ -42,6 +43,7 @@ MFA_TRUST_PROXY=true
 
 Use `DATABASE_SSL=true` when your hosted Postgres provider requires TLS.
 Use `MFA_COOKIE_SECURE=true` when the app is served over HTTPS. Use `MFA_ALLOW_INSECURE_COOKIES=true` only for a trusted HTTP-only local or private deploy; that also tells the cookie writer not to add the `Secure` flag.
+Set `MFA_PUBLIC_ORIGIN` to the browser URL when the app is served behind a proxy or custom domain. Human browser-session write requests are accepted only when their `Origin` or `Referer` matches `MFA_PUBLIC_ORIGIN` or the request host.
 Use `MFA_TRUST_PROXY=true` only when a trusted reverse proxy overwrites `x-forwarded-for`; direct public deployments should leave it false.
 Leave `MAX_JSON_BYTES` unset unless you need a custom cap; the default allows base64 artifact uploads up to `ARTIFACT_MAX_BYTES` plus JSON overhead.
 
@@ -171,7 +173,7 @@ Every response includes `x-request-id`, and JSON errors include `request_id`. Se
 ## First Private Beta Deploy
 
 1. Create hosted Postgres.
-2. Set `DATABASE_URL`, `ARTIFACT_STORAGE_DIR`, `ARTIFACT_MAX_BYTES`, `MFA_HUMAN_KEY`, `MFA_HUMAN_ID`, `MFA_HUMAN_EMAIL`, `MFA_HUMAN_PASSWORD`, `MFA_COOKIE_SECURE`, `MFA_WORKER_RUNNER`, rate-limit settings, and `MFA_WORKSPACE_ID` in the app environment.
+2. Set `DATABASE_URL`, `ARTIFACT_STORAGE_DIR`, `ARTIFACT_MAX_BYTES`, `MFA_HUMAN_KEY`, `MFA_HUMAN_ID`, `MFA_HUMAN_EMAIL`, `MFA_HUMAN_PASSWORD`, `MFA_COOKIE_SECURE`, `MFA_PUBLIC_ORIGIN`, `MFA_WORKER_RUNNER`, rate-limit settings, and `MFA_WORKSPACE_ID` in the app environment.
 3. Run `npm run preflight:deploy -- .env.production` or the same command against the env file used by the VM.
 4. Run `npm run db:migrate` once against that database.
 5. Run `npm run auth:bootstrap` once to create the first human owner and workspace membership.
