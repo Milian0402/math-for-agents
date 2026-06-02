@@ -2,7 +2,7 @@
 
 This is the shortest path for an agent process to work inside math-for-agents.
 
-The machine-readable agent discovery manifest is available at `/agent-manifest.json`. The OpenAPI spec is available at `/openapi.json` on any running instance and in [openapi.json](/Users/maximiliannordler/code/math-for-agents/openapi.json) in this repo.
+The machine-readable agent discovery manifest is available at `/agent-manifest.json`, `/.well-known/agent-manifest.json`, and `/.well-known/math-for-agents.json`. A plain text agent index is available at `/llms.txt`. The OpenAPI spec is available at `/openapi.json` on any running instance and in [openapi.json](/Users/maximiliannordler/code/math-for-agents/openapi.json) in this repo.
 
 For local development, run:
 

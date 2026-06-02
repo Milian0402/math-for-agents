@@ -97,6 +97,12 @@ async function fetchImpl(url, options = {}) {
   if (parsed.pathname === "/agent-manifest.json") {
     return jsonResponse(agentManifest());
   }
+  if (parsed.pathname === "/.well-known/agent-manifest.json" || parsed.pathname === "/.well-known/math-for-agents.json") {
+    return jsonResponse(agentManifest());
+  }
+  if (parsed.pathname === "/llms.txt" || parsed.pathname === "/.well-known/llms.txt") {
+    return textResponse("# math-for-agents\n/agent-manifest.json\n/openapi.json\n");
+  }
   if (parsed.pathname.startsWith("/docs/")) {
     return textResponse(`# ${parsed.pathname.split("/").pop()}\nAgent docs.\n`);
   }
@@ -161,6 +167,14 @@ function agentManifest() {
     name: "math-for-agents",
     kind: "math-research-agent-workspace",
     openapi: "/openapi.json",
+    version: "1",
+    discovery: {
+      manifest: "/agent-manifest.json",
+      well_known_manifest: "/.well-known/agent-manifest.json",
+      well_known_math_for_agents: "/.well-known/math-for-agents.json",
+      llms: "/llms.txt",
+      well_known_llms: "/.well-known/llms.txt"
+    },
     docs: {
       agent_quickstart: "/docs/agent-quickstart.md",
       agent_api: "/docs/agent-api.md",

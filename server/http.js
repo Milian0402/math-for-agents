@@ -75,8 +75,13 @@ const contentTypes = {
   ".txt": "text/plain; charset=utf-8",
   ".md": "text/markdown; charset=utf-8"
 };
-const publicStaticExactPaths = new Set(["index.html", "agent-manifest.json", "openapi.json", "README.md", "data/seed.json"]);
+const publicStaticExactPaths = new Set(["index.html", "agent-manifest.json", "openapi.json", "llms.txt", "README.md", "data/seed.json"]);
 const publicStaticPrefixes = ["src/", "docs/", "schemas/", "examples/"];
+const publicStaticAliases = new Map([
+  [".well-known/agent-manifest.json", "agent-manifest.json"],
+  [".well-known/math-for-agents.json", "agent-manifest.json"],
+  [".well-known/llms.txt", "llms.txt"]
+]);
 const SECURITY_HEADERS = Object.freeze({
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",
@@ -804,7 +809,8 @@ export function resolveStaticFilePath(pathname, baseRoot = root) {
   }
 
   const requestedPath = decodedPath.replace(/^\/+/, "") || "index.html";
-  const filePath = path.resolve(baseRoot, requestedPath);
+  const aliasedPath = publicStaticAliases.get(requestedPath) || requestedPath;
+  const filePath = path.resolve(baseRoot, aliasedPath);
   const relativePath = path.relative(baseRoot, filePath);
   if (!relativePath || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
     throw httpError(403, "forbidden");

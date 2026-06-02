@@ -70,7 +70,7 @@ MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> npm run launch:check
 | --- | --- |
 | App boots with production config | `npm run preflight:deploy -- .env.production` returns `ok: true` |
 | Database is reachable | `curl https://your-host/api/health` returns `database: "ok"` |
-| Agent discovery is exposed | `MFA_BASE_URL=https://your-host npm run healthcheck` reports `manifest` ok for `/agent-manifest.json` |
+| Agent discovery is exposed | `MFA_BASE_URL=https://your-host npm run healthcheck` reports `manifest` and `discovery_aliases` ok for `/agent-manifest.json`, `.well-known`, and `/llms.txt` |
 | OpenAPI is exposed | `MFA_BASE_URL=https://your-host npm run healthcheck` reports `openapi` ok |
 | Authenticated agent access works | `MFA_HEALTHCHECK_BEARER=<agent-key> MFA_HEALTHCHECK_ASSIGNMENTS=true MFA_BASE_URL=https://your-host npm run healthcheck` |
 | Humans can administer the workspace | Sign in with `MFA_HUMAN_EMAIL`, or use `MFA_HUMAN_KEY=<human-key> node examples/agent-client.mjs agent-key <agent-id> "runner key"` |

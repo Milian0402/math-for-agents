@@ -3,6 +3,13 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_BASE_URL = "http://127.0.0.1:4173";
 const DEFAULT_TIMEOUT_MS = 5_000;
 const REQUIRED_DOCS = ["agent_quickstart", "agent_api", "agent_protocol"];
+const REQUIRED_DISCOVERY = {
+  manifest: "/agent-manifest.json",
+  well_known_manifest: "/.well-known/agent-manifest.json",
+  well_known_math_for_agents: "/.well-known/math-for-agents.json",
+  llms: "/llms.txt",
+  well_known_llms: "/.well-known/llms.txt"
+};
 
 export async function runHealthcheck(options = {}) {
   const baseUrl = normalizeBaseUrl(options.baseUrl || process.env.MFA_BASE_URL || DEFAULT_BASE_URL);
@@ -14,6 +21,7 @@ export async function runHealthcheck(options = {}) {
   const startedAt = Date.now();
   const checks = [];
   let manifestDocs = {};
+  let manifestDiscovery = {};
 
   await runCheck(checks, "health", async () => {
     const payload = await requestJson(fetchImpl, `${baseUrl}/api/health`, { timeoutMs });
@@ -28,13 +36,34 @@ export async function runHealthcheck(options = {}) {
     assertEqual(payload.name, "math-for-agents", "manifest.name must be math-for-agents");
     assertEqual(payload.kind, "math-research-agent-workspace", "manifest.kind must be math-research-agent-workspace");
     assertEqual(payload.openapi, "/openapi.json", "manifest.openapi must point to /openapi.json");
+    assertManifestDiscovery(payload.discovery);
     assertManifestDocs(payload.docs);
     assertManifestEndpoints(payload.core_endpoints);
+    manifestDiscovery = payload.discovery;
     manifestDocs = payload.docs;
     return {
       openapi: payload.openapi,
+      discovery: Object.keys(payload.discovery || {}).length,
       endpoints: payload.core_endpoints.length
     };
+  });
+
+  await runCheck(checks, "discovery_aliases", async () => {
+    const aliases = {};
+    for (const key of ["well_known_manifest", "well_known_math_for_agents"]) {
+      const payload = await requestJson(fetchImpl, `${baseUrl}${manifestDiscovery[key]}`, { timeoutMs });
+      assertEqual(payload.name, "math-for-agents", `${manifestDiscovery[key]} must return the agent manifest`);
+      assertEqual(payload.kind, "math-research-agent-workspace", `${manifestDiscovery[key]} must return the agent manifest`);
+      aliases[key] = payload.version || "unknown";
+    }
+    for (const key of ["llms", "well_known_llms"]) {
+      const text = await requestText(fetchImpl, `${baseUrl}${manifestDiscovery[key]}`, { timeoutMs });
+      if (!text.includes("/agent-manifest.json") || !text.includes("/openapi.json")) {
+        throw new Error(`${manifestDiscovery[key]} must point agents to the manifest and OpenAPI spec`);
+      }
+      aliases[key] = text.length;
+    }
+    return { aliases };
   });
 
   await runCheck(checks, "docs", async () => {
@@ -168,6 +197,14 @@ function assertManifestDocs(docs) {
   for (const [key, value] of Object.entries(docs || {})) {
     if (typeof value !== "string" || !value.startsWith("/docs/")) {
       throw new Error(`manifest docs must include a /docs/ path for ${key}`);
+    }
+  }
+}
+
+function assertManifestDiscovery(discovery) {
+  for (const [key, expectedPath] of Object.entries(REQUIRED_DISCOVERY)) {
+    if (discovery?.[key] !== expectedPath) {
+      throw new Error(`manifest discovery must include ${key} at ${expectedPath}`);
     }
   }
 }

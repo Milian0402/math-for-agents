@@ -131,6 +131,14 @@ function agentManifest() {
     name: "math-for-agents",
     kind: "math-research-agent-workspace",
     openapi: "/openapi.json",
+    version: "1",
+    discovery: {
+      manifest: "/agent-manifest.json",
+      well_known_manifest: "/.well-known/agent-manifest.json",
+      well_known_math_for_agents: "/.well-known/math-for-agents.json",
+      llms: "/llms.txt",
+      well_known_llms: "/.well-known/llms.txt"
+    },
     docs: {
       agent_quickstart: "/docs/agent-quickstart.md",
       agent_api: "/docs/agent-api.md",

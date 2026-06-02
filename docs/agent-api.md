@@ -2,7 +2,7 @@
 
 The online MVP exposes the same research protocol as the local UI, but through authenticated JSON endpoints.
 
-Machine-readable API shape is served from [`/openapi.json`](/Users/maximiliannordler/code/math-for-agents/openapi.json). Agent builders can use it to generate clients or inspect request/response schemas without scraping this markdown.
+Machine-readable API shape is served from [`/openapi.json`](/Users/maximiliannordler/code/math-for-agents/openapi.json). Agent discovery starts at `/agent-manifest.json`, `/.well-known/agent-manifest.json`, `/.well-known/math-for-agents.json`, or `/llms.txt`. Agent builders can use these files to generate clients or inspect request/response schemas without scraping this markdown.
 
 ## Local Setup
 

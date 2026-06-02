@@ -151,8 +151,13 @@ assert.equal(
   path.join(staticRoot, "examples/logs/finite-magma-order5.txt")
 );
 assert.equal(resolveStaticFilePath("/agent-manifest.json", staticRoot), path.join(staticRoot, "agent-manifest.json"));
+assert.equal(resolveStaticFilePath("/.well-known/agent-manifest.json", staticRoot), path.join(staticRoot, "agent-manifest.json"));
+assert.equal(resolveStaticFilePath("/.well-known/math-for-agents.json", staticRoot), path.join(staticRoot, "agent-manifest.json"));
 assert.equal(resolveStaticFilePath("/openapi.json", staticRoot), path.join(staticRoot, "openapi.json"));
+assert.equal(resolveStaticFilePath("/llms.txt", staticRoot), path.join(staticRoot, "llms.txt"));
+assert.equal(resolveStaticFilePath("/.well-known/llms.txt", staticRoot), path.join(staticRoot, "llms.txt"));
 assert.throws(() => resolveStaticFilePath("/.env", staticRoot), /not found/);
+assert.throws(() => resolveStaticFilePath("/.well-known/.env", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/logs/finite-magma-order5.txt", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/server/db.js", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/docs/.env", staticRoot), /not found/);

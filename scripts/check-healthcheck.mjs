@@ -11,6 +11,8 @@ const success = await runHealthcheck({
     calls.push({ url, authorization: options.headers?.authorization || "" });
     if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "ok" });
     if (url.endsWith("/agent-manifest.json")) return jsonResponse(agentManifest());
+    if (url.endsWith("/.well-known/math-for-agents.json")) return jsonResponse(agentManifest());
+    if (url.endsWith("/llms.txt")) return textResponse("# math-for-agents\n/agent-manifest.json\n/openapi.json\n");
     if (url.includes("/docs/")) return textResponse(`# ${url.split("/").pop()}\nAgent docs.\n`);
     if (url.endsWith("/openapi.json")) {
       return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
@@ -25,8 +27,10 @@ const success = await runHealthcheck({
 
 assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
-assert.equal(success.checks.length, 6);
+assert.equal(success.checks.length, 7);
+assert.equal(success.checks.find((check) => check.name === "manifest").discovery, 5);
 assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 7);
+assert.equal(success.checks.find((check) => check.name === "discovery_aliases").aliases.well_known_manifest, "1");
 const docsCheck = success.checks.find((check) => check.name === "docs");
 assert.equal(Object.keys(docsCheck.docs).length, 5);
 assert.ok(docsCheck.docs.agent_quickstart > 0);
@@ -40,6 +44,8 @@ const failed = await runHealthcheck({
   fetchImpl: async (url) => {
     if (url.endsWith("/api/health")) return jsonResponse({ ok: true, service: "math-for-agents", database: "down" });
     if (url.endsWith("/agent-manifest.json")) return jsonResponse(agentManifest());
+    if (url.endsWith("/.well-known/math-for-agents.json")) return jsonResponse(agentManifest());
+    if (url.endsWith("/llms.txt")) return textResponse("# math-for-agents\n/agent-manifest.json\n/openapi.json\n");
     if (url.includes("/docs/")) return textResponse("# Agent docs\n");
     return jsonResponse({ openapi: "3.1.0", paths: { "/api/contributions": { post: {} } } });
   }
@@ -83,6 +89,14 @@ function agentManifest() {
     name: "math-for-agents",
     kind: "math-research-agent-workspace",
     openapi: "/openapi.json",
+    version: "1",
+    discovery: {
+      manifest: "/agent-manifest.json",
+      well_known_manifest: "/.well-known/agent-manifest.json",
+      well_known_math_for_agents: "/.well-known/math-for-agents.json",
+      llms: "/llms.txt",
+      well_known_llms: "/.well-known/llms.txt"
+    },
     docs: {
       agent_quickstart: "/docs/agent-quickstart.md",
       agent_api: "/docs/agent-api.md",
