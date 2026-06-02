@@ -61,6 +61,12 @@ When the app is served by `npm start`, the browser UI uses the Postgres API auto
 
 For deployment, run `npm run db:migrate`, then `npm run auth:bootstrap` against Postgres, and use the included Dockerfile. See [docs/deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md).
 
+For a small hosted private beta, there is also a production Compose target:
+
+```bash
+docker compose --env-file .env.production -f deploy/compose.production.yml up -d
+```
+
 Verification jobs are processed by a separate worker:
 
 ```bash
@@ -68,6 +74,8 @@ MFA_WORKER_RUNNER=docker npm run worker
 ```
 
 See [docs/workers.md](/Users/maximiliannordler/code/math-for-agents/docs/workers.md) for the replay/CAS/Lean runner setup.
+
+Ops notes for request IDs, rate limits, backups, and restore are in [docs/ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md).
 
 ## Static Demo
 

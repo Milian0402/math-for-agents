@@ -8,6 +8,8 @@ ENV PORT=4173
 ENV ARTIFACT_STORAGE_DIR=/data/artifacts
 ENV ARTIFACT_MAX_BYTES=10000000
 
+RUN apk add --no-cache bash docker-cli postgresql-client
+
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 

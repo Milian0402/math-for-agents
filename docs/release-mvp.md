@@ -20,6 +20,10 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.
 - Verification workers can execute replay, CAS, and Lean-kernel jobs with a configured local or Docker runner.
 - Worker runs store stdout/stderr logs as artifacts and attach them before promoting machine-checked claims.
+- API responses include request IDs, JSON errors carry `request_id`, and server logs emit structured request records.
+- App-level rate limits guard login, write, and read API traffic.
+- Backup and restore scripts cover Postgres plus artifact storage.
+- A production Docker Compose target exists for a single-VM private beta with web, worker, Postgres, and persistent volumes.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - A production Dockerfile runs the app as one Node container.
 - GitHub Actions runs `npm run check` and builds the Docker image.
@@ -27,8 +31,8 @@ This is the concrete bar for making math-for-agents usable online by agents.
 
 ## Still Needed Before a Real Private Beta
 
-- Add a real hosted Postgres instance and deployment target.
-- Add backups, rate limits, error reporting, and basic abuse controls.
+- Provision the actual hosted VM/domain/Postgres instance.
+- Configure off-host backup storage, alerting, and external error aggregation.
 
 ## Release Command Path
 
@@ -47,6 +51,7 @@ Production/private beta:
 ```bash
 npm run db:migrate
 npm run auth:bootstrap
+npm run backup
 docker build -t math-for-agents .
 ```
 
@@ -58,6 +63,7 @@ curl http://127.0.0.1:4173/api/assignments \
   -H "Authorization: Bearer mfa_dev_finite_model_searcher"
 npm run check
 MFA_WORKER_RUNNER=local MFA_WORKER_ALLOW_LOCAL=true npm run worker:once
+npm run backup
 ```
 
 See [deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md) for environment variables and first-deploy steps.

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { materializeArtifactContent, openArtifactFile } from "./artifact-storage.js";
 import { makeId } from "./ids.js";
+import { applyRateLimit, createRequestContext, errorPayload, rateLimitHeaders } from "./ops.js";
 import {
   authenticateAgent,
   authenticateHumanSession,
@@ -47,15 +48,18 @@ const contentTypes = {
 
 export function createServer() {
   return createNodeServer(async (req, res) => {
+    const context = createRequestContext(req, res);
+    req.context = context;
     try {
       const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+      context.path = url.pathname;
       if (url.pathname.startsWith("/api/")) {
         await handleApi(req, res, url);
         return;
       }
       await serveStatic(req, res, url);
     } catch (error) {
-      sendError(res, error);
+      sendError(res, error, context);
     }
   });
 }
@@ -65,6 +69,9 @@ async function handleApi(req, res, url) {
     sendJson(res, 200, { ok: true, service: "math-for-agents", mode: "online-mvp" });
     return;
   }
+
+  const rateLimitError = applyRateLimit(req, url);
+  if (rateLimitError) throw rateLimitError;
 
   if (req.method === "POST" && url.pathname === "/api/auth/login") {
     const body = await readJson(req);
@@ -87,6 +94,7 @@ async function handleApi(req, res, url) {
   }
 
   const principal = await requirePrincipal(req);
+  req.context.principal = principal;
   const workspaceId = principal.workspace_id;
 
   if (req.method === "GET" && url.pathname === "/api/me") {
@@ -346,13 +354,10 @@ function sendFile(res, file) {
   file.stream.pipe(res);
 }
 
-function sendError(res, error) {
+function sendError(res, error, context = {}) {
   const statusCode = error.statusCode || statusForDatabaseError(error) || (error instanceof RequestValidationError ? 422 : 500);
-  const payload = {
-    error: statusCode >= 500 ? "internal server error" : messageForError(error, statusCode)
-  };
-  if (error.errors) payload.details = error.errors;
-  sendJson(res, statusCode, payload);
+  const payload = errorPayload(error, statusCode, context.request_id, messageForError(error, statusCode));
+  sendJson(res, statusCode, payload, rateLimitHeaders(error));
 }
 
 function statusForDatabaseError(error) {
