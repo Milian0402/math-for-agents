@@ -129,6 +129,11 @@ export async function createArtifact(workspaceId, input) {
   return artifact;
 }
 
+export async function getArtifact(workspaceId, artifactId) {
+  const result = await query("select * from artifacts where workspace_id = $1 and id = $2", [workspaceId, artifactId]);
+  return result.rows[0] || null;
+}
+
 export async function createAssignment(workspaceId, owner, input) {
   const now = new Date().toISOString();
   const assignment = {

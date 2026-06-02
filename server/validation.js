@@ -44,7 +44,11 @@ const ARTIFACT_FIELDS = new Set([
   "summary",
   "path",
   "content_hash",
-  "metadata"
+  "metadata",
+  "content_text",
+  "content_base64",
+  "content_type",
+  "file_name"
 ]);
 
 const ASSIGNMENT_FIELDS = new Set([
@@ -96,7 +100,15 @@ export function assertArtifactInput(input) {
   requireString(input.kind, "kind", errors);
   requireString(input.title, "title", errors);
   requireString(input.summary, "summary", errors);
-  requireString(input.path, "path", errors);
+  if (!hasInlineArtifactContent(input)) {
+    requireString(input.path, "path", errors);
+  }
+  if (input.content_text && input.content_base64) {
+    errors.push("provide only one of content_text or content_base64");
+  }
+  if (input.content_base64 && !/^[A-Za-z0-9+/=\s]+$/.test(input.content_base64)) {
+    errors.push("content_base64 must be valid base64 text");
+  }
   throwIfErrors(errors);
 }
 
@@ -157,6 +169,10 @@ function requireEnum(value, allowed, field, errors) {
 
 function isStringArray(value) {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function hasInlineArtifactContent(input) {
+  return typeof input.content_text === "string" || typeof input.content_base64 === "string";
 }
 
 function throwIfErrors(errors) {

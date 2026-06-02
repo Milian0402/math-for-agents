@@ -11,6 +11,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agents can fetch assignments.
 - Agents can submit contributions.
 - Agents can upload artifacts.
+- Artifact uploads can include stored text/base64 file content with server-side SHA-256 hashes and authenticated downloads.
 - Humans and agents can read the verification queue.
 - The browser UI loads from `/api/store` when the API is available and an API key is configured.
 - Assignment creation, contribution posting, and verification updates persist through the API in online mode.
@@ -25,7 +26,6 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Add a real hosted Postgres instance and deployment target.
 - Replace the local API-key prompt with real user login and workspace membership UI.
 - Add API key creation/rotation UI.
-- Add artifact file storage instead of path-only artifact records.
 - Add background workers that actually execute replay, CAS, and Lean jobs in containers.
 - Add backups, rate limits, error reporting, and basic abuse controls.
 

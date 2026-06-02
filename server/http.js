@@ -4,12 +4,14 @@ import { createServer as createNodeServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { materializeArtifactContent, openArtifactFile } from "./artifact-storage.js";
 import { makeId } from "./ids.js";
 import {
   authenticateAgent,
   createAssignment,
   createArtifact,
   createContribution,
+  getArtifact,
   getWorkspace,
   getWorkspaceStore,
   listAssignmentsForAgent,
@@ -109,12 +111,25 @@ async function handleApi(req, res, url) {
       owner: principal.kind === "agent" ? principal.id : body.owner
     };
     assertArtifactInput(artifactInput);
-    const artifact = {
+    const artifact = await materializeArtifactContent(workspaceId, {
       id: makeId("artifact"),
       created_at: new Date().toISOString(),
-      ...artifactInput
-    };
+      ...artifactInput,
+      path: artifactInput.path || "#",
+      content_hash: artifactInput.content_hash || null,
+      metadata: artifactInput.metadata || {}
+    }, artifactInput);
     sendJson(res, 201, { artifact: await createArtifact(workspaceId, artifact) });
+    return;
+  }
+
+  const artifactFileMatch = url.pathname.match(/^\/api\/artifacts\/([^/]+)\/file$/);
+  if (req.method === "GET" && artifactFileMatch) {
+    const artifact = await getArtifact(workspaceId, artifactFileMatch[1]);
+    if (!artifact) throw httpError(404, "artifact not found");
+    const file = await openArtifactFile(artifact);
+    if (!file) throw httpError(404, "artifact file not found");
+    sendFile(res, file);
     return;
   }
 
@@ -171,9 +186,10 @@ async function requirePrincipal(req) {
 
 async function readJson(req) {
   let raw = "";
+  const maxBytes = Number(process.env.MAX_JSON_BYTES || process.env.ARTIFACT_MAX_BYTES || 10_000_000);
   for await (const chunk of req) {
     raw += chunk;
-    if (raw.length > 1_000_000) throw httpError(413, "request body too large");
+    if (raw.length > maxBytes) throw httpError(413, "request body too large");
   }
   try {
     return raw ? JSON.parse(raw) : {};
@@ -209,6 +225,16 @@ async function serveStatic(req, res, url) {
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(payload, null, 2));
+}
+
+function sendFile(res, file) {
+  res.writeHead(200, {
+    "content-type": file.contentType,
+    "content-length": String(file.size),
+    "content-disposition": `attachment; filename="${file.fileName.replace(/"/g, "")}"`,
+    "cache-control": "no-store"
+  });
+  file.stream.pipe(res);
 }
 
 function sendError(res, error) {

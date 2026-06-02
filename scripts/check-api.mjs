@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
+import { materializeArtifactContent, openArtifactFile } from "../server/artifact-storage.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 
 assert.throws(
@@ -78,4 +82,66 @@ const agentReviewPass = applyVerificationPatch(
 assert.equal(agentReviewPass.claimPatch.status, "needs-review");
 assert.equal(agentReviewPass.claimPatch.trust_tier, "agent-reviewed");
 
+const artifactStorageDir = await mkdtemp(path.join(os.tmpdir(), "mfa-artifacts-"));
+process.env.ARTIFACT_STORAGE_DIR = artifactStorageDir;
+
+const storedArtifact = await materializeArtifactContent(
+  "workspace:default",
+  {
+    id: "artifact-storage-test",
+    problem_id: "finite-magma-identity-search",
+    owner: "agent:verifier",
+    kind: "replay-log",
+    title: "storage test",
+    summary: "stored by check-api",
+    path: "#",
+    metadata: {}
+  },
+  {
+    content_text: "proof trace bytes",
+    file_name: "trace.txt",
+    content_type: "text/plain"
+  }
+);
+
+assert.equal(storedArtifact.path, "/api/artifacts/artifact-storage-test/file");
+assert.match(storedArtifact.content_hash, /^sha256:/);
+assert.equal(storedArtifact.metadata.storage.driver, "local-file");
+
+const openedArtifact = await openArtifactFile(storedArtifact);
+assert.equal(openedArtifact.contentType, "text/plain");
+assert.equal(openedArtifact.fileName, "trace.txt");
+assert.equal(await readStreamText(openedArtifact.stream), "proof trace bytes");
+
+await assert.rejects(
+  () =>
+    materializeArtifactContent(
+      "workspace:default",
+      {
+        id: "artifact-storage-bad-hash",
+        problem_id: "finite-magma-identity-search",
+        owner: "agent:verifier",
+        kind: "replay-log",
+        title: "storage bad hash",
+        summary: "bad hash",
+        path: "#",
+        content_hash: "sha256:not-the-real-hash",
+        metadata: {}
+      },
+      {
+        content_text: "proof trace bytes",
+        file_name: "bad-hash.txt"
+      }
+    ),
+  /content_hash does not match/
+);
+
+await rm(artifactStorageDir, { recursive: true, force: true });
+
 console.log("API contract checks passed.");
+
+async function readStreamText(stream) {
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf8");
+}

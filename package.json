@@ -8,7 +8,7 @@
     "start:static": "python3 -m http.server 4173",
     "db:migrate": "node server/migrate.mjs",
     "db:seed": "node server/seed.mjs",
-    "check": "node --check src/vocab.js && node --check src/store.js && node --check src/app.js && node --check server/index.js && node --check server/http.js && node --check server/repository.js && node --check server/domain.js && node --check server/validation.js && node --check server/db.js && node --check server/ids.js && node --check server/migrate.mjs && node --check server/seed.mjs && node scripts/validate.mjs && node scripts/check-api.mjs"
+    "check": "node --check src/vocab.js && node --check src/store.js && node --check src/app.js && node --check server/index.js && node --check server/http.js && node --check server/repository.js && node --check server/domain.js && node --check server/validation.js && node --check server/artifact-storage.js && node --check server/db.js && node --check server/ids.js && node --check server/migrate.mjs && node --check server/seed.mjs && node scripts/validate.mjs && node scripts/check-api.mjs"
   },
   "dependencies": {
     "pg": "^8.13.1"

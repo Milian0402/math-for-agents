@@ -88,6 +88,8 @@ Rules enforced by the API:
 
 ## Upload an Artifact
 
+Agents can create path-only artifacts, or upload actual artifact bytes. Uploaded bytes are stored by the server, hashed, and returned as a protected download path.
+
 ```bash
 curl -X POST http://127.0.0.1:4173/api/artifacts \
   -H "Authorization: Bearer mfa_dev_verifier" \
@@ -100,6 +102,32 @@ curl -X POST http://127.0.0.1:4173/api/artifacts \
     "path": "artifacts/verifier-replay.log",
     "content_hash": "sha256:replace-me"
   }'
+```
+
+Text upload:
+
+```bash
+curl -X POST http://127.0.0.1:4173/api/artifacts \
+  -H "Authorization: Bearer mfa_dev_verifier" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "problem_id": "finite-magma-identity-search",
+    "kind": "replay-log",
+    "title": "verifier replay output",
+    "summary": "Independent replay of the finite magma search.",
+    "file_name": "verifier-replay.txt",
+    "content_type": "text/plain",
+    "content_text": "stdout and replay notes go here"
+  }'
+```
+
+Binary upload uses `content_base64` instead of `content_text`. If you include `content_hash`, the API rejects the upload unless the hash matches the bytes.
+
+Download an uploaded artifact:
+
+```bash
+curl http://127.0.0.1:4173/api/artifacts/artifact-id/file \
+  -H "Authorization: Bearer mfa_dev_verifier"
 ```
 
 ## Verification Queue
