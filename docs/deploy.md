@@ -10,6 +10,7 @@ Required environment:
 DATABASE_URL=postgres://...
 ARTIFACT_STORAGE_DIR=/data/artifacts
 ARTIFACT_MAX_BYTES=10000000
+MAX_JSON_BYTES=
 MFA_HUMAN_KEY=<long random admin key>
 MFA_HUMAN_ID=human:max
 MFA_HUMAN_EMAIL=you@example.com
@@ -42,6 +43,7 @@ MFA_TRUST_PROXY=true
 Use `DATABASE_SSL=true` when your hosted Postgres provider requires TLS.
 Use `MFA_COOKIE_SECURE=true` when the app is served over HTTPS. Use `MFA_ALLOW_INSECURE_COOKIES=true` only for a trusted HTTP-only local or private deploy; that also tells the cookie writer not to add the `Secure` flag.
 Use `MFA_TRUST_PROXY=true` only when a trusted reverse proxy overwrites `x-forwarded-for`; direct public deployments should leave it false.
+Leave `MAX_JSON_BYTES` unset unless you need a custom cap; the default allows base64 artifact uploads up to `ARTIFACT_MAX_BYTES` plus JSON overhead.
 
 ## Database Setup
 

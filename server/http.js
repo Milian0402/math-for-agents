@@ -296,17 +296,27 @@ function requireHuman(principal) {
 }
 
 async function readJson(req) {
-  let raw = "";
-  const maxBytes = Number(process.env.MAX_JSON_BYTES || process.env.ARTIFACT_MAX_BYTES || 10_000_000);
+  const chunks = [];
+  let receivedBytes = 0;
+  const maxBytes = requestBodyLimitBytes();
   for await (const chunk of req) {
-    raw += chunk;
-    if (raw.length > maxBytes) throw httpError(413, "request body too large");
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    receivedBytes += buffer.length;
+    if (receivedBytes > maxBytes) throw httpError(413, "request body too large");
+    chunks.push(buffer);
   }
+  const raw = Buffer.concat(chunks, receivedBytes).toString("utf8");
   try {
     return raw ? JSON.parse(raw) : {};
   } catch {
     throw httpError(400, "request body must be valid JSON");
   }
+}
+
+export function requestBodyLimitBytes(env = process.env) {
+  if (env.MAX_JSON_BYTES) return positiveInteger(env.MAX_JSON_BYTES, "MAX_JSON_BYTES");
+  const artifactMaxBytes = positiveInteger(env.ARTIFACT_MAX_BYTES || 10_000_000, "ARTIFACT_MAX_BYTES");
+  return Math.ceil(artifactMaxBytes * 1.5) + 65_536;
 }
 
 async function serveStatic(req, res, url) {
@@ -418,4 +428,12 @@ function httpError(statusCode, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+}
+
+function positiveInteger(value, name) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
 }

@@ -7,7 +7,7 @@ import { materializeArtifactContent, openArtifactFile } from "../server/artifact
 import { generateSessionToken, hashPassword, verifyPassword } from "../server/auth.js";
 import { assertWebRuntimeConfig, assertWorkerRuntimeConfig, secureCookiesEnabled } from "../server/config.js";
 import { applyVerificationPatch, buildContribution } from "../server/domain.js";
-import { resolveStaticFilePath } from "../server/http.js";
+import { requestBodyLimitBytes, resolveStaticFilePath } from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { clientIp } from "../server/ops.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
@@ -88,6 +88,10 @@ assert.throws(() => resolveStaticFilePath("/.env", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/server/db.js", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/docs/.env", staticRoot), /not found/);
 assert.throws(() => resolveStaticFilePath("/%2e%2e/math-for-agents-evil/.env", staticRoot), /forbidden/);
+
+assert.equal(requestBodyLimitBytes({ MAX_JSON_BYTES: "12345", ARTIFACT_MAX_BYTES: "1000" }), 12_345);
+assert.equal(requestBodyLimitBytes({ ARTIFACT_MAX_BYTES: "1000" }), 67_036);
+assert.throws(() => requestBodyLimitBytes({ MAX_JSON_BYTES: "0" }), /MAX_JSON_BYTES/);
 
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },

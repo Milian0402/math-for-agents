@@ -10,6 +10,8 @@ Every HTTP response includes `x-request-id`. Error responses also include `reque
 
 The web process serves only the frontend, public docs/spec files, schemas, examples, and bundled sample logs. Dotfiles, runtime env files, server code, scripts, packages, and dependency directories are not served as static files.
 
+JSON request bodies are capped by bytes, not JavaScript string length. Leave `MAX_JSON_BYTES` unset for the default, which covers base64 overhead for artifact uploads up to `ARTIFACT_MAX_BYTES`.
+
 The server writes one JSON log line per request unless disabled:
 
 ```txt

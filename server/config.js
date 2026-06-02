@@ -41,6 +41,9 @@ function commonRuntimeErrors(env) {
   if (env.ARTIFACT_MAX_BYTES) {
     requirePositiveInteger(env, "ARTIFACT_MAX_BYTES", errors);
   }
+  if (env.MAX_JSON_BYTES) {
+    requirePositiveInteger(env, "MAX_JSON_BYTES", errors);
+  }
 
   if (isProduction(env)) {
     requireEnv(env, "ARTIFACT_STORAGE_DIR", errors);
