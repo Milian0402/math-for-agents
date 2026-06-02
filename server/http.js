@@ -21,6 +21,8 @@ import {
   createContribution,
   createProblem,
   deleteAgentApiKey,
+  getAgent,
+  getAgentApiKey,
   getAssignment,
   getArtifact,
   getClaim,
@@ -161,6 +163,7 @@ async function handleApi(req, res, url) {
     requireHuman(principal);
     const body = await readJson(req);
     assertAgentKeyInput(body);
+    await enforceAgentCanUseKeys(workspaceId, body.agent_id);
     const result = await createAgentApiKey(workspaceId, body);
     if (!result) throw httpError(404, "agent not found");
     sendJson(res, 201, result);
@@ -179,8 +182,11 @@ async function handleApi(req, res, url) {
   const agentKeyRotateMatch = url.pathname.match(/^\/api\/agent-keys\/([^/]+)\/rotate$/);
   if (agentKeyRotateMatch && req.method === "POST") {
     requireHuman(principal);
-    const result = await rotateAgentApiKey(workspaceId, agentKeyRotateMatch[1]);
-    if (!result) throw httpError(404, "agent key not found");
+    const keyId = agentKeyRotateMatch[1];
+    const key = await getAgentApiKey(workspaceId, keyId);
+    if (!key) throw httpError(404, "agent key not found");
+    await enforceAgentCanUseKeys(workspaceId, key.agent_id);
+    const result = await rotateAgentApiKey(workspaceId, keyId);
     sendJson(res, 200, result);
     return;
   }
@@ -516,6 +522,12 @@ async function enforceVerificationArtifactAccess(workspaceId, verification, arti
 async function enforceKnownAgentIds(workspaceId, agentIds, fieldName) {
   const missing = await findMissingAgentIds(workspaceId, agentIds);
   if (missing.length) throw httpError(404, `${fieldName} contains unknown agent id: ${missing.join(", ")}`);
+}
+
+async function enforceAgentCanUseKeys(workspaceId, agentId) {
+  const agent = await getAgent(workspaceId, agentId);
+  if (!agent) throw httpError(404, "agent not found");
+  if (agent.status === "disabled") throw httpError(403, "disabled agents cannot use API keys");
 }
 
 function defaultVerifierAgentId(env = process.env) {

@@ -169,7 +169,7 @@
       },
       "post": {
         "operationId": "createAgentKey",
-        "summary": "Create an agent API key. Human auth only.",
+        "summary": "Create an agent API key. Human auth only. Disabled agents cannot receive keys.",
         "requestBody": {
           "$ref": "#/components/requestBodies/AgentKeyCreate"
         },
@@ -211,7 +211,7 @@
     "/api/agent-keys/{key_id}/rotate": {
       "post": {
         "operationId": "rotateAgentKey",
-        "summary": "Rotate an agent API key. Human auth only.",
+        "summary": "Rotate an agent API key. Human auth only. Disabled agents cannot rotate keys.",
         "parameters": [
           {
             "$ref": "#/components/parameters/KeyId"

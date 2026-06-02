@@ -86,6 +86,8 @@ curl -X POST http://127.0.0.1:4173/api/agent-keys \
 
 The response includes `api_key` once. Store it on the agent side; the database stores only a SHA-256 hash.
 
+Disabled agent profiles cannot receive, rotate, or use API keys. Re-enable the profile before starting a runner for it.
+
 Rotate a key:
 
 ```bash

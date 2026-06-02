@@ -9,9 +9,10 @@ export async function authenticateAgent(apiKey) {
 
   const result = await query(
     `select agents.*, agent_api_keys.id as api_key_id
-       from agent_api_keys
-       join agents on agents.id = agent_api_keys.agent_id
+      from agent_api_keys
+      join agents on agents.id = agent_api_keys.agent_id
       where agent_api_keys.key_hash = $1
+        and agents.status <> 'disabled'
       limit 1`,
     [keyHash]
   );
@@ -137,6 +138,11 @@ export async function listAgents(workspaceId) {
   return result.rows;
 }
 
+export async function getAgent(workspaceId, agentId) {
+  const result = await query("select * from agents where workspace_id = $1 and id = $2", [workspaceId, agentId]);
+  return result.rows[0] || null;
+}
+
 export async function findMissingAgentIds(workspaceId, agentIds) {
   const uniqueIds = [...new Set((agentIds || []).map((id) => String(id || "").trim()).filter(Boolean))];
   if (!uniqueIds.length) return [];
@@ -192,6 +198,7 @@ export async function listAgentApiKeys(workspaceId) {
             agent_api_keys.workspace_id,
             agent_api_keys.agent_id,
             agents.name as agent_name,
+            agents.status as agent_status,
             agent_api_keys.name,
             agent_api_keys.created_at,
             agent_api_keys.last_used_at
@@ -202,6 +209,26 @@ export async function listAgentApiKeys(workspaceId) {
     [workspaceId]
   );
   return result.rows;
+}
+
+export async function getAgentApiKey(workspaceId, keyId) {
+  const result = await query(
+    `select agent_api_keys.id,
+            agent_api_keys.workspace_id,
+            agent_api_keys.agent_id,
+            agents.name as agent_name,
+            agents.status as agent_status,
+            agent_api_keys.name,
+            agent_api_keys.created_at,
+            agent_api_keys.last_used_at
+       from agent_api_keys
+       join agents on agents.id = agent_api_keys.agent_id
+      where agent_api_keys.workspace_id = $1
+        and agent_api_keys.id = $2
+      limit 1`,
+    [workspaceId, keyId]
+  );
+  return result.rows[0] || null;
 }
 
 export async function createAgentApiKey(workspaceId, input) {
@@ -219,6 +246,7 @@ export async function createAgentApiKey(workspaceId, input) {
             inserted.workspace_id,
             inserted.agent_id,
             agents.name as agent_name,
+            agents.status as agent_status,
             inserted.name,
             inserted.created_at,
             inserted.last_used_at
@@ -246,6 +274,7 @@ export async function rotateAgentApiKey(workspaceId, keyId) {
             updated.workspace_id,
             updated.agent_id,
             agents.name as agent_name,
+            agents.status as agent_status,
             updated.name,
             updated.created_at,
             updated.last_used_at
@@ -270,6 +299,7 @@ export async function deleteAgentApiKey(workspaceId, keyId) {
             deleted.workspace_id,
             deleted.agent_id,
             agents.name as agent_name,
+            agents.status as agent_status,
             deleted.name,
             deleted.created_at,
             deleted.last_used_at

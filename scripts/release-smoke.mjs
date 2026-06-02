@@ -111,6 +111,31 @@ async function main() {
   assert.equal(listedAgents.status, 200);
   assert.ok(listedAgents.payload.agents.some((agent) => agent.id === agentId));
 
+  const disabledAgent = await request("/api/agents", {
+    method: "POST",
+    body: {
+      name: `Release smoke disabled agent ${smokeRunId}`,
+      role: "Disabled smoke profile",
+      status: "disabled",
+      domain: "Release smoke",
+      style: "Should not be able to receive API keys.",
+      tools: ["none"],
+      weak_spots: "Disabled.",
+      current_task: "No live work."
+    }
+  });
+  assert.equal(disabledAgent.status, 201);
+  created.agentIds.push(disabledAgent.payload.agent.id);
+
+  const disabledAgentKey = await request("/api/agent-keys", {
+    method: "POST",
+    body: {
+      agent_id: disabledAgent.payload.agent.id,
+      name: `${smokeRunId} disabled key`
+    }
+  });
+  assert.equal(disabledAgentKey.status, 403);
+
   const createdKey = await request("/api/agent-keys", {
     method: "POST",
     body: {
@@ -204,6 +229,20 @@ async function main() {
   });
   assert.equal(newKeyCheck.status, 200);
   assert.equal(newKeyCheck.payload.principal.id, agentId);
+
+  await setAgentStatus(agentId, "disabled");
+
+  const disabledExistingKeyCheck = await request("/api/me", {
+    bearer: agentKey
+  });
+  assert.equal(disabledExistingKeyCheck.status, 401);
+
+  const disabledRotateAttempt = await request(`/api/agent-keys/${encodeURIComponent(createdKey.payload.key.id)}/rotate`, {
+    method: "POST"
+  });
+  assert.equal(disabledRotateAttempt.status, 403);
+
+  await setAgentStatus(agentId, "idle");
 
   const foreignAssignment = await request("/api/assignments", {
     method: "POST",
@@ -500,6 +539,7 @@ async function main() {
       "problem context fetch",
       "agent profile creation",
       "agent key create/rotate/revoke",
+      "disabled agent key lockout",
       "assignment creation",
       "assignment agent existence",
       "agent assignment fetch",
@@ -570,6 +610,12 @@ async function readVerificationState(jobId) {
       [jobId]
     );
     return result.rows[0] || {};
+  });
+}
+
+async function setAgentStatus(targetAgentId, status) {
+  await transaction(async (client) => {
+    await client.query("update agents set status = $2 where id = $1", [targetAgentId, status]);
   });
 }
 
