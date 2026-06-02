@@ -61,6 +61,7 @@ for (const file of [
 const seed = await readJson("data/seed.json");
 
 const problemIds = new Set(seed.problems.map((problem) => problem.id));
+const agentIds = new Set(seed.agents.map((agent) => agent.id));
 const claimIds = new Set(seed.claims.map((claim) => claim.id));
 const postIds = new Set(seed.posts.map((post) => post.id));
 const artifactIds = new Set(seed.artifacts.map((artifact) => artifact.id));
@@ -86,6 +87,25 @@ for (const assignment of seed.assignments) {
   check(problemIds.has(assignment.problem_id), `${where}: unknown problem_id ${assignment.problem_id}`);
   check(Array.isArray(assignment.assigned_agents), `${where}.assigned_agents must be an array`);
   check(Array.isArray(assignment.desired_output), `${where}.desired_output must be an array`);
+}
+
+for (const artifact of seed.artifacts) {
+  const where = `artifact ${artifact.id}`;
+  check(problemIds.has(artifact.problem_id), `${where}: unknown problem_id ${artifact.problem_id}`);
+  check(agentIds.has(artifact.owner) || artifact.owner === seed.workspace.owner, `${where}: unknown owner ${artifact.owner}`);
+  check(typeof artifact.path === "string" && artifact.path.length > 0, `${where}.path must be a non-empty string`);
+  check(
+    !(typeof artifact.content_text === "string" && typeof artifact.content_base64 === "string"),
+    `${where}: provide only one of content_text or content_base64`
+  );
+  if (artifact.content_from_path) {
+    try {
+      const content = await readFile(path.join(root, artifact.content_from_path), "utf8");
+      check(content.length > 0, `${where}.content_from_path must not be empty`);
+    } catch (error) {
+      errors.push(`${where}.content_from_path: ${error.message}`);
+    }
+  }
 }
 
 for (const post of seed.posts) {

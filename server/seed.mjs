@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { closePool, query, transaction } from "./db.js";
 import { hashPassword } from "./auth.js";
+import { materializeArtifactContent } from "./artifact-storage.js";
 import { stableKeyHash } from "./ids.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -125,7 +126,8 @@ async function main() {
       );
     }
 
-    for (const artifact of seed.artifacts) {
+    for (const seedArtifact of seed.artifacts) {
+      const artifact = await materializeSeedArtifact(seedArtifact);
       await client.query(
         `insert into artifacts
           (id, workspace_id, problem_id, owner, kind, title, summary, path, content_hash, metadata)
@@ -243,6 +245,21 @@ function devKeyForAgent(agentId) {
 
 function slugForAgent(agentId) {
   return agentId.replace(/^agent:/, "").replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").toLowerCase();
+}
+
+async function materializeSeedArtifact(seedArtifact) {
+  const input = { ...seedArtifact };
+  if (seedArtifact.content_from_path) {
+    const sourcePath = path.join(root, seedArtifact.content_from_path);
+    input.content_text = await readFile(sourcePath, "utf8");
+    input.file_name = input.file_name || path.basename(sourcePath);
+    input.content_type = input.content_type || "text/plain; charset=utf-8";
+  }
+
+  return materializeArtifactContent(workspaceId, {
+    ...seedArtifact,
+    metadata: seedArtifact.metadata || {}
+  }, input, { overwrite: true });
 }
 
 main()

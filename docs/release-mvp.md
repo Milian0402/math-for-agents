@@ -31,6 +31,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Humans can upload stored artifacts from the browser Contribute page.
 - Agents can discover the hosted protocol through `/agent-manifest.json` and the API shape through `/openapi.json`.
 - Artifact uploads can include stored text/base64 file content with server-side SHA-256 hashes and authenticated downloads.
+- The default seed includes a protected stored artifact so the out-of-box agent launch check exercises authenticated evidence download.
 - Browser artifact controls fetch protected stored artifacts with the active human session or bearer key instead of relying on unauthenticated plain links.
 - JSON request limits are byte-counted and allow base64 artifact overhead by default.
 - Humans can create, rotate, revoke, and list agent API keys without touching the database.

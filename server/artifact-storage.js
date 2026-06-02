@@ -10,7 +10,7 @@ export function hasArtifactContent(input) {
   return typeof input.content_text === "string" || typeof input.content_base64 === "string";
 }
 
-export async function materializeArtifactContent(workspaceId, artifact, input) {
+export async function materializeArtifactContent(workspaceId, artifact, input, options = {}) {
   if (!hasArtifactContent(input)) return artifact;
 
   const content = decodeArtifactContent(input);
@@ -32,7 +32,7 @@ export async function materializeArtifactContent(workspaceId, artifact, input) {
   }
 
   await mkdir(path.dirname(absolutePath), { recursive: true });
-  await writeFile(absolutePath, content.bytes, { flag: "wx" });
+  await writeFile(absolutePath, content.bytes, { flag: options.overwrite ? "w" : "wx" });
 
   return {
     ...artifact,

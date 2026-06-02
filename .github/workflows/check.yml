@@ -31,9 +31,12 @@ jobs:
       - run: npm ci
       - run: npm run check
       - name: Seed release smoke database
-        run: npm run db:seed
+        run: |
+          mkdir -p /tmp/math-for-agents-artifacts
+          npm run db:seed
         env:
           DATABASE_URL: postgres://math_for_agents:math_for_agents@127.0.0.1:55432/math_for_agents
+          ARTIFACT_STORAGE_DIR: /tmp/math-for-agents-artifacts
           MFA_HUMAN_KEY: mfa_dev_human_key
           MFA_HUMAN_EMAIL: max@example.com
           MFA_HUMAN_PASSWORD: mfa_dev_password

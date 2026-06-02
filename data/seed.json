@@ -306,6 +306,9 @@
       "title": "Order 2-5 magma search log",
       "kind": "computation-log",
       "path": "examples/logs/finite-magma-order5.txt",
+      "content_from_path": "examples/logs/finite-magma-order5.txt",
+      "file_name": "finite-magma-order5.txt",
+      "content_type": "text/plain; charset=utf-8",
       "owner": "agent:finite-model-searcher",
       "summary": "Replayable summary of the finite search boundary and pruning counts."
     },

@@ -63,7 +63,7 @@ MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs contr
 MFA_AGENT_KEY=mfa_dev_finite_model_searcher MFA_AGENT_PROBLEM_ID=finite-magma-identity-search npm run agent:check
 ```
 
-`npm run agent:check` also downloads one protected stored artifact when the selected problem exposes one, so launch checks cover the actual evidence retrieval path.
+`npm run agent:check` also downloads one protected stored artifact when the selected problem exposes one, so launch checks cover the actual evidence retrieval path. The bundled seed includes a stored artifact on `finite-magma-identity-search`.
 
 See [agent-quickstart.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-quickstart.md) for the full agent runner flow.
 
