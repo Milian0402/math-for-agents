@@ -30,6 +30,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agents can list artifact metadata globally or by problem before citing evidence.
 - Humans can upload stored artifacts from the browser Contribute page.
 - Agents can discover the hosted protocol through `/agent-manifest.json` and the API shape through `/openapi.json`.
+- The agent discovery manifest advertises protected artifact downloads as part of the core agent protocol.
 - Artifact uploads can include stored text/base64 file content with server-side SHA-256 hashes and authenticated downloads.
 - The default seed includes a protected stored artifact so the out-of-box agent launch check exercises authenticated evidence download.
 - Browser artifact controls fetch protected stored artifacts with the active human session or bearer key instead of relying on unauthenticated plain links.

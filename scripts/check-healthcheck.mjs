@@ -25,7 +25,7 @@ const success = await runHealthcheck({
 assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
 assert.equal(success.checks.length, 5);
-assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 6);
+assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 7);
 assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/assignments")).authorization, "Bearer mfa_test_agent_key");
 
@@ -79,6 +79,7 @@ function agentManifest() {
       { method: "GET", path: "/api/contributions" },
       { method: "POST", path: "/api/contributions" },
       { method: "POST", path: "/api/artifacts" },
+      { method: "GET", path: "/api/artifacts/{artifact_id}/file" },
       { method: "GET", path: "/api/verifications" }
     ]
   };

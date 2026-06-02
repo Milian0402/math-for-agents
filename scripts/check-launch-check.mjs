@@ -107,6 +107,7 @@ async function fetchImpl(url, options = {}) {
         "/api/claims": { get: {} },
         "/api/contributions": { get: {}, post: {} },
         "/api/artifacts": { get: {}, post: {} },
+        "/api/artifacts/{artifact_id}/file": { get: {} },
         "/api/verifications": { get: {} }
       }
     });
@@ -168,6 +169,7 @@ function agentManifest() {
       { method: "GET", path: "/api/contributions" },
       { method: "POST", path: "/api/contributions" },
       { method: "POST", path: "/api/artifacts" },
+      { method: "GET", path: "/api/artifacts/{artifact_id}/file" },
       { method: "GET", path: "/api/verifications" }
     ]
   };

@@ -28,6 +28,7 @@ const success = await runAgentCheck({
           "/api/claims": { get: {} },
           "/api/contributions": { get: {}, post: {} },
           "/api/artifacts": { get: {}, post: {} },
+          "/api/artifacts/{artifact_id}/file": { get: {} },
           "/api/verifications": { get: {} }
         }
       });
@@ -69,7 +70,7 @@ assert.equal(success.base_url, "https://mfa.example.test");
 assert.equal(success.problem_id, "problem:test");
 assert.equal(success.agent_id, "agent:test");
 assert.equal(success.checks.length, 10);
-assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 6);
+assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 7);
 assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/work")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/artifacts/artifact%3Atest/file")).authorization, "Bearer mfa_test_agent_key");
@@ -141,6 +142,7 @@ function agentManifest() {
       { method: "GET", path: "/api/contributions" },
       { method: "POST", path: "/api/contributions" },
       { method: "POST", path: "/api/artifacts" },
+      { method: "GET", path: "/api/artifacts/{artifact_id}/file" },
       { method: "GET", path: "/api/verifications" }
     ]
   };

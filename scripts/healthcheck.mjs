@@ -131,6 +131,7 @@ function assertManifestEndpoints(endpoints) {
     ["GET", "/api/contributions"],
     ["POST", "/api/contributions"],
     ["POST", "/api/artifacts"],
+    ["GET", "/api/artifacts/{artifact_id}/file"],
     ["GET", "/api/verifications"]
   ];
   for (const [method, path] of required) {

@@ -36,6 +36,7 @@ export async function runAgentCheck(options = {}) {
       ["GET", "/api/contributions"],
       ["POST", "/api/contributions"],
       ["POST", "/api/artifacts"],
+      ["GET", "/api/artifacts/{artifact_id}/file"],
       ["GET", "/api/verifications"]
     ]) {
       if (!endpoints.some((endpoint) => endpoint.method === method && endpoint.path === path)) {
@@ -61,6 +62,7 @@ export async function runAgentCheck(options = {}) {
       ["/api/contributions", "post"],
       ["/api/artifacts", "get"],
       ["/api/artifacts", "post"],
+      ["/api/artifacts/{artifact_id}/file", "get"],
       ["/api/verifications", "get"]
     ]) {
       if (!paths[path]?.[method]) throw new Error(`openapi spec missing ${method.toUpperCase()} ${path}`);
