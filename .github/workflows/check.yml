@@ -69,4 +69,16 @@ jobs:
           MFA_BASE_URL: http://127.0.0.1:4173
           MFA_AGENT_KEY: mfa_dev_finite_model_searcher
           MFA_AGENT_PROBLEM_ID: finite-magma-identity-search
+      - name: Run combined launch check
+        run: |
+          npm run env:production -- \
+            --origin https://math-for-agents.example.com \
+            --email max@example.com \
+            --backup-remote-host /mnt/math-for-agents-backups \
+            --output /tmp/math-for-agents.env.production
+          npm run launch:check -- \
+            --env-file /tmp/math-for-agents.env.production \
+            --base-url http://127.0.0.1:4173 \
+            --agent-key mfa_dev_finite_model_searcher \
+            --problem-id finite-magma-identity-search
       - run: docker build -t math-for-agents .

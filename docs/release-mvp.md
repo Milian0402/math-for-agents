@@ -95,7 +95,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - `npm run agents:bootstrap-verifier` creates the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
 - A production Dockerfile runs the app as one Node container.
 - `npm run dev:setup` prepares the local online MVP path with `.env`, Docker Postgres, and seeded dev data.
-- GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, and builds the Docker image.
+- GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, runs the combined `npm run launch:check`, and builds the Docker image.
 - `npm run check` covers frontend syntax, seed validation, OpenAPI route coverage, and backend contract rules.
 - `npm run smoke:release` proves the live online MVP flow end to end against a running local server and Postgres, including fresh agent and problem creation.
 
