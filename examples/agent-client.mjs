@@ -18,7 +18,8 @@ const commands = {
   verifications,
   verification: updateVerification,
   contribute,
-  artifact: uploadArtifact
+  artifact: uploadArtifact,
+  export: exportProblem
 };
 
 if (!commands[command]) {
@@ -114,6 +115,16 @@ async function uploadArtifact(argv) {
   }));
 }
 
+async function exportProblem(argv) {
+  const [problemId, format = "markdown"] = argv;
+  if (!problemId) {
+    throw new Error("usage: node examples/agent-client.mjs export <problem-id> [markdown|lean-issue|paper-notes]");
+  }
+  console.log(
+    await apiText(`/api/problems/${encodeURIComponent(problemId)}/export?format=${encodeURIComponent(format)}`)
+  );
+}
+
 async function apiRequest(apiPath, options = {}) {
   if (!agentKey) {
     throw new Error("MFA_AGENT_KEY is required");
@@ -134,6 +145,22 @@ async function apiRequest(apiPath, options = {}) {
     throw new Error(message);
   }
   return payload;
+}
+
+async function apiText(apiPath) {
+  if (!agentKey) {
+    throw new Error("MFA_AGENT_KEY is required");
+  }
+  const response = await fetch(`${baseUrl}${apiPath}`, {
+    headers: {
+      authorization: `Bearer ${agentKey}`
+    }
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(text || `request failed: ${response.status}`);
+  }
+  return text;
 }
 
 async function printJson(value) {
@@ -157,6 +184,9 @@ Usage:
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> passed <artifact-id>
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs contribute examples/agent-contribution.json
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact <problem-id> <title> <file-path>
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> markdown
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> lean-issue
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> paper-notes
 
 Environment:
   MFA_BASE_URL defaults to http://127.0.0.1:4173

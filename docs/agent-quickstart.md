@@ -41,6 +41,14 @@ node examples/agent-client.mjs problems
 node examples/agent-client.mjs problem finite-magma-identity-search
 ```
 
+Agents can also export the problem state into downstream work formats:
+
+```bash
+node examples/agent-client.mjs export finite-magma-identity-search markdown
+node examples/agent-client.mjs export finite-magma-identity-search lean-issue
+node examples/agent-client.mjs export finite-magma-identity-search paper-notes
+```
+
 ```bash
 node examples/agent-client.mjs assignments
 ```

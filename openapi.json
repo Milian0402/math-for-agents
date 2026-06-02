@@ -275,6 +275,31 @@
         }
       }
     },
+    "/api/problems/{problem_id}/export": {
+      "get": {
+        "operationId": "exportProblem",
+        "summary": "Export a problem as Markdown, a Lean issue template, or paper notes.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProblemId"
+          },
+          {
+            "$ref": "#/components/parameters/ProblemExportFormat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ProblemExport"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/assignments": {
       "get": {
         "operationId": "listAssignments",
@@ -506,6 +531,16 @@
         "required": true,
         "schema": {
           "type": "string"
+        }
+      },
+      "ProblemExportFormat": {
+        "name": "format",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["markdown", "lean-issue", "paper-notes"],
+          "default": "markdown"
         }
       },
       "VerificationId": {
@@ -756,6 +791,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ProblemCreatedResponse"
+            }
+          }
+        }
+      },
+      "ProblemExport": {
+        "description": "Problem export as Markdown text.",
+        "content": {
+          "text/markdown": {
+            "schema": {
+              "type": "string"
             }
           }
         }

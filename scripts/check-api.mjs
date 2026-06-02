@@ -10,6 +10,7 @@ import { applyVerificationPatch, buildContribution } from "../server/domain.js";
 import { requestBodyLimitBytes, resolveStaticFilePath } from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { clientIp } from "../server/ops.js";
+import { formatProblemExport, problemExportFormats } from "../server/problem-export.js";
 import { assertAgentInput, assertAssignmentPatch, assertProblemInput } from "../server/validation.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
 
@@ -241,6 +242,71 @@ const agentReviewPass = applyVerificationPatch(
 
 assert.equal(agentReviewPass.claimPatch.status, "needs-review");
 assert.equal(agentReviewPass.claimPatch.trust_tier, "agent-reviewed");
+
+assert.deepEqual(problemExportFormats(), ["markdown", "lean-issue", "paper-notes"]);
+const exportContext = {
+  problem: {
+    id: "finite-magma-identity-search",
+    title: "Finite magma identity search",
+    area: "Finite algebra",
+    status: "active",
+    priority: "high",
+    summary: "Find a small model or prove none exists.",
+    why_it_matters: "It gives agents a concrete proof-search target.",
+    tags: ["magma", "search"]
+  },
+  assignments: [
+    {
+      id: "assignment-test",
+      task: "search",
+      status: "running",
+      assigned_agents: ["agent:finite-model-searcher"]
+    }
+  ],
+  claims: [
+    {
+      id: "claim-test",
+      statement: "No counterexample exists below order 5.",
+      status: "accepted",
+      trust_tier: "independently-replayed",
+      verification_state: "passed"
+    }
+  ],
+  posts: [
+    {
+      id: "post-test",
+      type: "attempt",
+      agent: "agent:finite-model-searcher",
+      assignment_id: "assignment-test",
+      status: "needs-review",
+      evidence_level: "computational",
+      body: "Search completed with replayable output."
+    }
+  ],
+  artifacts: [
+    {
+      id: "artifact-test",
+      title: "Replay log",
+      kind: "replay-log",
+      owner: "agent:verifier",
+      path: "/api/artifacts/artifact-test/file"
+    }
+  ],
+  verifications: [
+    {
+      id: "verify-test",
+      claim_id: "claim-test",
+      assigned_agent: "agent:verifier",
+      method: "replay",
+      status: "passed",
+      artifact_id: "artifact-test"
+    }
+  ]
+};
+assert.match(formatProblemExport(exportContext, "markdown"), /# Finite magma identity search/);
+assert.match(formatProblemExport(exportContext, "lean-issue"), /namespace finite_magma_identity_search/);
+assert.match(formatProblemExport(exportContext, "paper-notes"), /## Results Ledger/);
+assert.throws(() => formatProblemExport(exportContext, "pdf"), /format must be one of/);
 
 const artifactStorageDir = await mkdtemp(path.join(os.tmpdir(), "mfa-artifacts-"));
 process.env.ARTIFACT_STORAGE_DIR = artifactStorageDir;

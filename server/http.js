@@ -9,6 +9,7 @@ import { secureCookiesEnabled } from "./config.js";
 import { checkDatabaseHealth } from "./db.js";
 import { makeId } from "./ids.js";
 import { applyRateLimit, createRequestContext, errorPayload, rateLimitHeaders } from "./ops.js";
+import { formatProblemExport } from "./problem-export.js";
 import {
   authenticateAgent,
   authenticateHumanSession,
@@ -188,6 +189,21 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     assertProblemInput(body);
     sendJson(res, 201, { problem: await createProblem(workspaceId, body) });
+    return;
+  }
+
+  const problemExportMatch = url.pathname.match(/^\/api\/problems\/([^/]+)\/export$/);
+  if (problemExportMatch && req.method === "GET") {
+    const problemId = decodeURIComponent(problemExportMatch[1]);
+    const context = await getProblemContext(workspaceId, problemId);
+    if (!context) throw httpError(404, "problem not found");
+    const format = url.searchParams.get("format") || "markdown";
+    sendText(
+      res,
+      200,
+      formatProblemExport(context, format),
+      exportFileName(context.problem, format)
+    );
     return;
   }
 
@@ -435,6 +451,24 @@ function isPublicStaticPath(publicPath) {
 function sendJson(res, statusCode, payload, headers = {}) {
   res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8", ...headers });
   res.end(JSON.stringify(payload, null, 2));
+}
+
+function sendText(res, statusCode, body, fileName) {
+  res.writeHead(statusCode, {
+    "content-type": "text/markdown; charset=utf-8",
+    "content-disposition": `attachment; filename="${fileName.replace(/"/g, "")}"`,
+    "cache-control": "no-store"
+  });
+  res.end(body);
+}
+
+function exportFileName(problem, format) {
+  const slug = String(problem.id || problem.title || "problem")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72) || "problem";
+  return `${slug}.${format}.md`;
 }
 
 function cookieValue(req, name) {

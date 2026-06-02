@@ -23,6 +23,7 @@ const expectedOperations = [
   ["GET", "/api/problems", "listProblems", true],
   ["POST", "/api/problems", "createProblem", true],
   ["GET", "/api/problems/{problem_id}", "getProblemContext", true],
+  ["GET", "/api/problems/{problem_id}/export", "exportProblem", true],
   ["GET", "/api/assignments", "listAssignments", true],
   ["POST", "/api/assignments", "createAssignment", true],
   ["PATCH", "/api/assignments/{assignment_id}", "updateAssignment", true],
@@ -75,6 +76,8 @@ assert.ok(server.includes("const assignmentMatch = url.pathname.match"), "server
 assert.ok(server.includes('assignmentMatch && req.method === "PATCH"'), "server method marker missing: PATCH /api/assignments/{assignment_id}");
 assert.ok(server.includes("const problemMatch = url.pathname.match"), "server route marker missing: GET /api/problems/{problem_id}");
 assert.ok(server.includes('problemMatch && req.method === "GET"'), "server method marker missing: GET /api/problems/{problem_id}");
+assert.ok(server.includes("const problemExportMatch = url.pathname.match"), "server route marker missing: GET /api/problems/{problem_id}/export");
+assert.ok(server.includes('problemExportMatch && req.method === "GET"'), "server method marker missing: GET /api/problems/{problem_id}/export");
 
 for (const schema of ["Agent", "Problem", "Assignment", "Claim", "Post", "Verification"]) {
   assert.ok(spec.components.schemas[schema]?.$ref, `${schema} should reference the shared JSON schema`);

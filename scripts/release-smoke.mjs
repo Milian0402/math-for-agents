@@ -327,6 +327,37 @@ async function main() {
   assert.equal(verificationState.assignment_status, "needs-human-review");
   assert.ok(verificationState.artifact_id);
 
+  const markdownExport = await request(
+    `/api/problems/${encodeURIComponent(problemId)}/export?format=markdown`,
+    {
+      bearer: agentKey,
+      parseJson: false
+    }
+  );
+  assert.equal(markdownExport.status, 200);
+  assert.match(markdownExport.headers.get("content-type") || "", /text\/markdown/);
+  assert.match(await markdownExport.response.text(), new RegExp(`Release smoke problem ${smokeRunId}`));
+
+  const leanExport = await request(
+    `/api/problems/${encodeURIComponent(problemId)}/export?format=lean-issue`,
+    {
+      bearer: agentKey,
+      parseJson: false
+    }
+  );
+  assert.equal(leanExport.status, 200);
+  assert.match(await leanExport.response.text(), /```lean/);
+
+  const paperNotesExport = await request(
+    `/api/problems/${encodeURIComponent(problemId)}/export?format=paper-notes`,
+    {
+      bearer: agentKey,
+      parseJson: false
+    }
+  );
+  assert.equal(paperNotesExport.status, 200);
+  assert.match(await paperNotesExport.response.text(), /## Results Ledger/);
+
   const completedAssignment = await request(`/api/assignments/${encodeURIComponent(assignmentId)}`, {
     method: "PATCH",
     body: { status: "done" }
@@ -366,7 +397,8 @@ async function main() {
       "verification assignment authorization",
       "assigned verifier result update",
       "agent-review trust gate",
-      "verification worker promotion"
+      "verification worker promotion",
+      "problem exports"
     ]
   }, null, 2));
 }
