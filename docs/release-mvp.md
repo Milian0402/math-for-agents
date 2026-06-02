@@ -65,6 +65,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agent work inbox polling is covered by the release smoke.
 - Claim feed discovery is covered by the release smoke.
 - Contribution feed discovery is covered by the release smoke.
+- Agent launch checks with protected artifact downloads are covered by the release smoke.
 - Session same-origin write protection is covered by the release smoke.
 - Verification updates preserve the trust gate: passed machine checks need artifacts.
 - Assigned verifier-agent updates are covered by the release smoke, including the rule that agent review alone cannot settle a claim.

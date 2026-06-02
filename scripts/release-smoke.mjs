@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 
+import { runAgentCheck } from "./agent-check.mjs";
 import { closePool, transaction } from "../server/db.js";
 import { runWorkerOnce, stdoutHash } from "../server/verification-worker.js";
 
@@ -639,6 +640,19 @@ async function main() {
   assert.equal(artifactDownload.status, 200);
   assert.equal(await artifactDownload.response.text(), "release smoke artifact\n");
 
+  const launchAgentCheck = await runAgentCheck({
+    baseUrl,
+    agentKey,
+    problemId
+  });
+  assert.equal(launchAgentCheck.ok, true);
+  assert.equal(launchAgentCheck.agent_id, agentId);
+  const launchArtifactDownload = launchAgentCheck.checks.find((check) => check.name === "artifact_download");
+  assert.equal(launchArtifactDownload.ok, true);
+  assert.notEqual(launchArtifactDownload.skipped, true);
+  assert.ok(created.artifactIds.includes(launchArtifactDownload.artifact_id));
+  assert.ok(launchArtifactDownload.bytes > 0);
+
   const wrongProblemArtifactContribution = await request("/api/contributions", {
     method: "POST",
     bearer: agentKey,
@@ -939,6 +953,7 @@ async function main() {
       "verifier agent existence",
       "artifact discovery",
       "artifact upload/download",
+      "agent launch check artifact download",
       "agent contribution",
       "verification assignment authorization",
       "focused verification context",
