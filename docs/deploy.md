@@ -124,7 +124,7 @@ docker compose --env-file .env.production -f deploy/compose.production.yml up -d
 
 The compose target runs Postgres, the web/API container, and a worker sharing the same artifact volume.
 
-`npm run preflight:deploy -- .env.production` checks the effective production Compose runtime before launch. It fails on missing release files, missing release scripts, weak/default Postgres or human secrets, unsafe production cookie config, disabled workers, broken artifact limits, and Compose wiring drift. Warnings call out things that are still operator-owned, like off-host backups, public healthcheck URLs, and the Docker-socket worker runner.
+`npm run preflight:deploy -- .env.production` checks the effective production Compose runtime before launch. It fails on missing release files, missing release scripts, weak/default Postgres or human secrets, missing default verifier config, non-HTTPS or mismatched public origins, unsafe production cookie config, disabled workers, broken artifact limits, and Compose wiring drift. Warnings call out things that are still operator-owned, like off-host backups and the Docker-socket worker runner.
 
 The compose file also includes an `ops` profile so healthchecks and backups run in the same release image:
 

@@ -103,6 +103,21 @@ export async function runDeployPreflight(options = {}) {
     requireNonPlaceholder(webEnv.DATABASE_URL, "DATABASE_URL");
   });
 
+  addCheck(checks, "public origin env", () => {
+    const baseOrigin = requirePublicHttpsOrigin(webEnv.MFA_BASE_URL, "MFA_BASE_URL");
+    const publicOrigins = requirePublicHttpsOriginList(webEnv.MFA_PUBLIC_ORIGIN, "MFA_PUBLIC_ORIGIN");
+    if (!publicOrigins.includes(baseOrigin)) {
+      throw new Error("MFA_PUBLIC_ORIGIN must include the MFA_BASE_URL origin");
+    }
+  });
+
+  addCheck(checks, "default verifier env", () => {
+    requireNonPlaceholder(webEnv.MFA_DEFAULT_VERIFIER_AGENT_ID, "MFA_DEFAULT_VERIFIER_AGENT_ID");
+    if (!String(webEnv.MFA_DEFAULT_VERIFIER_AGENT_ID).startsWith("agent:")) {
+      throw new Error("MFA_DEFAULT_VERIFIER_AGENT_ID must start with agent:");
+    }
+  });
+
   addCheck(checks, "web runtime config", () => assertWebRuntimeConfig(webEnv));
   addCheck(checks, "worker runtime config", () => assertWorkerRuntimeConfig(workerEnv));
 
@@ -115,9 +130,6 @@ export async function runDeployPreflight(options = {}) {
 
   if (!envFile) warnings.push("no env file was loaded; checked current process env only");
   if (!env.BACKUP_REMOTE_DIR) warnings.push("BACKUP_REMOTE_DIR is not set; configure mounted off-host storage before real beta traffic");
-  if (!env.MFA_BASE_URL || /^https?:\/\/(127\.0\.0\.1|localhost)/.test(env.MFA_BASE_URL)) {
-    warnings.push("MFA_BASE_URL is not a public/private-beta URL; healthcheck examples will still point at localhost");
-  }
   if (workerEnv.MFA_WORKER_RUNNER === "docker") {
     warnings.push("docker worker runner uses the host Docker socket; run it only on a dedicated VM");
   }
@@ -223,6 +235,36 @@ function requireNonPlaceholder(value, name) {
   if (/^<.*>$/.test(normalized) || /^(changeme|change-me|password|secret)$/i.test(normalized)) {
     throw new Error(`${name} must not be a placeholder`);
   }
+}
+
+function requirePublicHttpsOriginList(value, name) {
+  const origins = String(value || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map((origin) => requirePublicHttpsOrigin(origin, name));
+  if (!origins.length) throw new Error(`${name} is required`);
+  return origins;
+}
+
+function requirePublicHttpsOrigin(value, name) {
+  requireNonPlaceholder(value, name);
+  let url;
+  try {
+    url = new URL(String(value).trim());
+  } catch {
+    throw new Error(`${name} must be a valid HTTPS origin`);
+  }
+  if (url.protocol !== "https:") {
+    throw new Error(`${name} must use https:// for a private beta launch`);
+  }
+  if (["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
+    throw new Error(`${name} must not point at localhost for a private beta launch`);
+  }
+  if (url.pathname !== "/" || url.search || url.hash) {
+    throw new Error(`${name} must be an origin only, without a path, query, or hash`);
+  }
+  return url.origin;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

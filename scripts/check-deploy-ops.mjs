@@ -21,6 +21,7 @@ includesAll(
     'command: ["npm", "run", "healthcheck"]',
     'command: ["npm", "run", "backup"]',
     "MFA_BASE_URL:",
+    "MFA_PUBLIC_ORIGIN: ${MFA_PUBLIC_ORIGIN:?MFA_PUBLIC_ORIGIN is required}",
     "BACKUP_DIR: /data/backups",
     "BACKUP_REMOTE_DIR:",
     "${BACKUP_DIR_HOST:-../backups}:/data/backups",
@@ -33,7 +34,7 @@ includesAll(
 const envExample = await text(".env.example");
 includesAll(
   envExample,
-  ["MFA_PUBLIC_PORT=", "BACKUP_DIR_HOST=", "BACKUP_REMOTE_DIR_HOST=", "MFA_BASE_URL="],
+  ["MFA_PUBLIC_PORT=", "MFA_PUBLIC_ORIGIN=", "BACKUP_DIR_HOST=", "BACKUP_REMOTE_DIR_HOST=", "MFA_BASE_URL="],
   "env example"
 );
 

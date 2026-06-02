@@ -43,7 +43,8 @@ try {
       "MFA_WORKER_RUNNER=docker",
       "ARTIFACT_MAX_BYTES=10000000",
       "BACKUP_REMOTE_DIR=/mnt/math-for-agents-backups",
-      "MFA_BASE_URL=https://math-for-agents.example.com"
+      "MFA_BASE_URL=https://math-for-agents.example.com",
+      "MFA_PUBLIC_ORIGIN=https://math-for-agents.example.com"
     ].join("\n")
   );
 
@@ -75,6 +76,8 @@ try {
     baseEnv: {}
   });
   assert.equal(bad.ok, false);
+  assert.ok(bad.checks.some((check) => !check.ok && check.name === "public origin env"));
+  assert.ok(bad.checks.some((check) => !check.ok && check.name === "default verifier env"));
   assert.ok(bad.checks.some((check) => !check.ok && check.error.includes("POSTGRES_PASSWORD")));
   assert.ok(bad.checks.some((check) => !check.ok && check.name === "web runtime config"));
   assert.ok(bad.checks.some((check) => !check.ok && check.name === "worker runtime config"));
@@ -97,6 +100,84 @@ try {
   });
   assert.equal(reserved.ok, false);
   assert.ok(reserved.checks.some((check) => !check.ok && check.error.includes("URL-reserved")));
+
+  const mismatchEnv = path.join(tmp, ".env.production.mismatch");
+  await writeFile(
+    mismatchEnv,
+    [
+      "POSTGRES_PASSWORD=privatebetapostgres32",
+      "MFA_HUMAN_EMAIL=max@example.com",
+      "MFA_HUMAN_PASSWORD=private-beta-human-password",
+      "MFA_HUMAN_KEY=mfa_private_beta_key_32_chars",
+      "MFA_DEFAULT_VERIFIER_AGENT_ID=agent:private-beta-verifier",
+      "MFA_COOKIE_SECURE=true",
+      "MFA_WORKER_RUNNER=docker",
+      "ARTIFACT_MAX_BYTES=10000000",
+      "BACKUP_REMOTE_DIR=/mnt/math-for-agents-backups",
+      "MFA_BASE_URL=https://math-for-agents.example.com",
+      "MFA_PUBLIC_ORIGIN=https://other.example.com"
+    ].join("\n")
+  );
+
+  const mismatch = await runDeployPreflight({
+    cwd: process.cwd(),
+    envFile: mismatchEnv,
+    baseEnv: {}
+  });
+  assert.equal(mismatch.ok, false);
+  assert.ok(mismatch.checks.some((check) => !check.ok && check.error.includes("MFA_PUBLIC_ORIGIN must include")));
+
+  const localUrlEnv = path.join(tmp, ".env.production.local-url");
+  await writeFile(
+    localUrlEnv,
+    [
+      "POSTGRES_PASSWORD=privatebetapostgres32",
+      "MFA_HUMAN_EMAIL=max@example.com",
+      "MFA_HUMAN_PASSWORD=private-beta-human-password",
+      "MFA_HUMAN_KEY=mfa_private_beta_key_32_chars",
+      "MFA_DEFAULT_VERIFIER_AGENT_ID=agent:private-beta-verifier",
+      "MFA_COOKIE_SECURE=true",
+      "MFA_WORKER_RUNNER=docker",
+      "ARTIFACT_MAX_BYTES=10000000",
+      "BACKUP_REMOTE_DIR=/mnt/math-for-agents-backups",
+      "MFA_BASE_URL=http://127.0.0.1:4173",
+      "MFA_PUBLIC_ORIGIN=http://127.0.0.1:4173"
+    ].join("\n")
+  );
+
+  const localUrl = await runDeployPreflight({
+    cwd: process.cwd(),
+    envFile: localUrlEnv,
+    baseEnv: {}
+  });
+  assert.equal(localUrl.ok, false);
+  assert.ok(localUrl.checks.some((check) => !check.ok && check.error.includes("https://")));
+
+  const badVerifierEnv = path.join(tmp, ".env.production.bad-verifier");
+  await writeFile(
+    badVerifierEnv,
+    [
+      "POSTGRES_PASSWORD=privatebetapostgres32",
+      "MFA_HUMAN_EMAIL=max@example.com",
+      "MFA_HUMAN_PASSWORD=private-beta-human-password",
+      "MFA_HUMAN_KEY=mfa_private_beta_key_32_chars",
+      "MFA_DEFAULT_VERIFIER_AGENT_ID=private-beta-verifier",
+      "MFA_COOKIE_SECURE=true",
+      "MFA_WORKER_RUNNER=docker",
+      "ARTIFACT_MAX_BYTES=10000000",
+      "BACKUP_REMOTE_DIR=/mnt/math-for-agents-backups",
+      "MFA_BASE_URL=https://math-for-agents.example.com",
+      "MFA_PUBLIC_ORIGIN=https://math-for-agents.example.com"
+    ].join("\n")
+  );
+
+  const badVerifier = await runDeployPreflight({
+    cwd: process.cwd(),
+    envFile: badVerifierEnv,
+    baseEnv: {}
+  });
+  assert.equal(badVerifier.ok, false);
+  assert.ok(badVerifier.checks.some((check) => !check.ok && check.error.includes("agent:")));
 } finally {
   await rm(tmp, { recursive: true, force: true });
 }
