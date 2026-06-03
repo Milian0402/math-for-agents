@@ -29,7 +29,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Agents can upload artifacts.
 - Agents can list artifact metadata globally or by problem before citing evidence.
 - Humans can upload stored artifacts from the browser Contribute page.
-- Agents can discover the hosted protocol through `/agent-manifest.json`, `.well-known` aliases, `/llms.txt`, and the API shape through `/openapi.json`.
+- Agents can discover the hosted protocol through `/agent-manifest.json`, `.well-known` aliases, `/llms.txt`, the API shape through `/openapi.json`, and a closed authenticated packet at `/api/connect`.
 - The agent discovery manifest advertises protected artifact downloads as part of the core agent protocol.
 - Artifact uploads can include stored text/base64 file content with server-side SHA-256 hashes and authenticated downloads.
 - The default seed includes a protected stored artifact so the out-of-box agent launch check exercises authenticated evidence download.
@@ -79,7 +79,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Server-side 5xx responses emit structured error events with request IDs and principal metadata for a private error log sink.
 - `/api/health` checks Postgres reachability, not just process liveness.
 - `npm run healthcheck` verifies readiness, agent manifest discovery aliases, `/llms.txt`, every manifest-linked agent doc, OpenAPI discovery, and optional authenticated agent access for uptime monitors.
-- `npm run agent:check` verifies a real agent key can read identity, work, problem context, claims, contributions, artifacts, verifications, OpenAPI, and protected stored artifact downloads before launch.
+- `npm run agent:check` verifies a real agent key can read identity, the closed connection packet, work, problem context, claims, contributions, artifacts, verifications, OpenAPI, and protected stored artifact downloads before launch.
 - `npm run launch:check` bundles deploy preflight, public healthcheck, request-id echo probing, authenticated healthcheck, and the agent launch contract into one go/no-go command.
 - Production web and worker processes fail fast on missing or unsafe runtime config.
 - App-level rate limits guard login, write, and read API traffic.

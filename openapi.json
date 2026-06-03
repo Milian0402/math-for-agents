@@ -114,6 +114,28 @@
         }
       }
     },
+    "/api/connect": {
+      "get": {
+        "operationId": "getAgentConnection",
+        "summary": "Fetch a closed agent connection packet with discovery URLs, env, commands, endpoints, and next actions.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AgentIdQuery"
+          },
+          {
+            "$ref": "#/components/parameters/ProblemIdQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AgentConnection"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/api/work": {
       "get": {
         "operationId": "getWorkInbox",
@@ -733,6 +755,15 @@
           "type": "string"
         }
       },
+      "AgentIdQuery": {
+        "name": "agent_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Human auth can request a packet for a specific agent. Agent auth always uses the authenticated agent."
+      },
       "ContributionAgentQuery": {
         "name": "agent",
         "in": "query",
@@ -935,6 +966,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/AgentsResponse"
+            }
+          }
+        }
+      },
+      "AgentConnection": {
+        "description": "Closed agent connection packet.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AgentConnectionResponse"
             }
           }
         }
@@ -1286,6 +1327,85 @@
         },
         "additionalProperties": false
       },
+      "AgentConnection": {
+        "type": "object",
+        "required": ["protocol", "base_url", "auth", "env", "env_block", "discovery", "endpoints", "commands", "next_actions"],
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "enum": ["math-for-agents.connect.v1"]
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "type": ["string", "null"]
+          },
+          "agent": {
+            "type": ["object", "null"],
+            "additionalProperties": true
+          },
+          "problem_id": {
+            "type": ["string", "null"]
+          },
+          "auth": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "env_block": {
+            "type": "string"
+          },
+          "discovery": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "endpoints": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "commands": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "work_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "next_actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AgentConnectionResponse": {
+        "type": "object",
+        "required": ["connection"],
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/AgentConnection"
+          }
+        },
+        "additionalProperties": false
+      },
       "AgentKey": {
         "$ref": "#/components/schemas/Resource"
       },
@@ -1299,6 +1419,10 @@
           "name": {
             "type": "string",
             "maxLength": 80
+          },
+          "problem_id": {
+            "type": "string",
+            "description": "Optional first problem id used to prefill the returned connection packet."
           }
         },
         "additionalProperties": false
@@ -1328,13 +1452,16 @@
       },
       "AgentKeySecretResponse": {
         "type": "object",
-        "required": ["key", "api_key"],
+        "required": ["key", "api_key", "connection"],
         "properties": {
           "key": {
             "$ref": "#/components/schemas/AgentKey"
           },
           "api_key": {
             "type": "string"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/AgentConnection"
           }
         },
         "additionalProperties": false

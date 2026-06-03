@@ -7,6 +7,7 @@ let runtime = createRuntime();
 
 const commands = {
   help,
+  connect,
   me,
   work,
   agents,
@@ -70,6 +71,12 @@ async function me() {
   await printJson(await apiRequest("/api/me"));
 }
 
+async function connect(argv) {
+  const problemId = argv[0] || "";
+  const query = problemId ? `?problem_id=${encodeURIComponent(problemId)}` : "";
+  await printJson(await apiRequest(`/api/connect${query}`));
+}
+
 async function work() {
   await printJson(await apiRequest("/api/work"));
 }
@@ -107,21 +114,23 @@ async function listAgentKeys() {
 }
 
 async function createAgentKey(argv) {
-  const [agentId, ...nameParts] = argv;
+  const { args, problemId } = parseProblemOption(argv);
+  const [agentId, ...nameParts] = args;
   if (!agentId) throw new Error("usage: node examples/agent-client.mjs agent-key <agent-id> [name]");
-  await printJson(await apiRequest("/api/agent-keys", {
-    method: "POST",
-    body: {
-      agent_id: agentId,
-      name: nameParts.join(" ").trim() || "agent client key"
-    }
-  }));
+  const body = {
+    agent_id: agentId,
+    name: nameParts.join(" ").trim() || "agent client key"
+  };
+  if (problemId) body.problem_id = problemId;
+  await printJson(await apiRequest("/api/agent-keys", { method: "POST", body }));
 }
 
 async function rotateAgentKey(argv) {
-  const keyId = argv[0];
+  const { args, problemId } = parseProblemOption(argv);
+  const keyId = args[0];
   if (!keyId) throw new Error("usage: node examples/agent-client.mjs agent-key-rotate <key-id>");
-  await printJson(await apiRequest(`/api/agent-keys/${encodeURIComponent(keyId)}/rotate`, {
+  const query = problemId ? `?problem_id=${encodeURIComponent(problemId)}` : "";
+  await printJson(await apiRequest(`/api/agent-keys/${encodeURIComponent(keyId)}/rotate${query}`, {
     method: "POST"
   }));
 }
@@ -360,6 +369,22 @@ function safeFileName(value) {
   return String(value || "artifact").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "artifact";
 }
 
+function parseProblemOption(argv) {
+  const args = [];
+  let problemId = "";
+  for (let index = 0; index < argv.length; index += 1) {
+    const value = argv[index];
+    if (value === "--problem") {
+      problemId = argv[index + 1] || "";
+      if (!problemId) throw new Error("--problem requires a problem id");
+      index += 1;
+      continue;
+    }
+    args.push(value);
+  }
+  return { args, problemId };
+}
+
 function help() {
   runtime.stdout.write(`math-for-agents agent client
 
@@ -368,10 +393,11 @@ Usage:
   MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-create agent.json
   MFA_HUMAN_KEY=<key> node examples/agent-client.mjs assignment-create assignment.json
   MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-keys
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key agent:id "runner key"
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key-rotate key-id
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key agent:id "runner key" --problem problem:id
+  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key-rotate key-id --problem problem:id
   MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key-revoke key-id
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs me
+  MFA_AGENT_KEY=<key> node examples/agent-client.mjs connect [problem-id]
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs work
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs agents
   MFA_AGENT_KEY=<key> node examples/agent-client.mjs agent-status running "working assignment-id"
@@ -406,6 +432,7 @@ Environment:
 
 function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
+  if (value === "connection") return "connect";
   if (value === "verify") return "verification";
   if (value === "create-agent") return "agent-create";
   if (value === "create-problem") return "problem-create";

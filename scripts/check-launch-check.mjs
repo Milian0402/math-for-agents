@@ -111,6 +111,7 @@ async function fetchImpl(url, options = {}) {
       openapi: "3.1.0",
       paths: {
         "/api/me": { get: {} },
+        "/api/connect": { get: {} },
         "/api/work": { get: {} },
         "/api/problems/{problem_id}": { get: {} },
         "/api/claims": { get: {} },
@@ -124,6 +125,32 @@ async function fetchImpl(url, options = {}) {
   if (parsed.pathname === "/api/me") {
     assert.equal(options.headers?.authorization, "Bearer mfa_test_agent_key");
     return jsonResponse({ principal: { kind: "agent", id: "agent:test", workspace_id: "workspace:test" } });
+  }
+  if (parsed.pathname === "/api/connect" && parsed.search === "?problem_id=problem%3Atest") {
+    assert.equal(options.headers?.authorization, "Bearer mfa_test_agent_key");
+    return jsonResponse({
+      connection: {
+        protocol: "math-for-agents.connect.v1",
+        base_url: "https://math-for-agents.example.com",
+        problem_id: "problem:test",
+        env: {
+          MFA_BASE_URL: "https://math-for-agents.example.com",
+          MFA_AGENT_KEY: "<agent-key>",
+          MFA_AGENT_PROBLEM_ID: "problem:test"
+        },
+        discovery: {
+          manifest: "https://math-for-agents.example.com/agent-manifest.json",
+          openapi: "https://math-for-agents.example.com/openapi.json"
+        },
+        endpoints: {
+          work: "/api/work"
+        },
+        commands: {
+          check: "npm run agent:check"
+        },
+        next_actions: ["Fetch work."]
+      }
+    });
   }
   if (parsed.pathname === "/api/assignments") {
     assert.equal(options.headers?.authorization, "Bearer mfa_test_agent_key");
@@ -183,6 +210,7 @@ function agentManifest() {
       launch_check: "/docs/private-beta-launch.md"
     },
     core_endpoints: [
+      { method: "GET", path: "/api/connect" },
       { method: "GET", path: "/api/work" },
       { method: "GET", path: "/api/claims" },
       { method: "GET", path: "/api/contributions" },

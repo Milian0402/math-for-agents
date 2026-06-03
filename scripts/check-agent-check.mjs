@@ -23,6 +23,7 @@ const success = await runAgentCheck({
         openapi: "3.1.0",
         paths: {
           "/api/me": { get: {} },
+          "/api/connect": { get: {} },
           "/api/work": { get: {} },
           "/api/problems/{problem_id}": { get: {} },
           "/api/claims": { get: {} },
@@ -35,6 +36,31 @@ const success = await runAgentCheck({
     }
     if (url.endsWith("/api/me")) {
       return jsonResponse({ principal: { kind: "agent", id: "agent:test", workspace_id: "workspace:test" } });
+    }
+    if (url.endsWith("/api/connect?problem_id=problem%3Atest")) {
+      return jsonResponse({
+        connection: {
+          protocol: "math-for-agents.connect.v1",
+          base_url: "https://mfa.example.test",
+          problem_id: "problem:test",
+          env: {
+            MFA_BASE_URL: "https://mfa.example.test",
+            MFA_AGENT_KEY: "<agent-key>",
+            MFA_AGENT_PROBLEM_ID: "problem:test"
+          },
+          discovery: {
+            manifest: "https://mfa.example.test/agent-manifest.json",
+            openapi: "https://mfa.example.test/openapi.json"
+          },
+          endpoints: {
+            work: "/api/work"
+          },
+          commands: {
+            check: "npm run agent:check"
+          },
+          next_actions: ["Fetch work."]
+        }
+      });
     }
     if (url.endsWith("/api/work")) {
       return jsonResponse({ agent_id: "agent:test", assignments: [], verifications: [], items: [] });
@@ -69,8 +95,9 @@ assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
 assert.equal(success.problem_id, "problem:test");
 assert.equal(success.agent_id, "agent:test");
-assert.equal(success.checks.length, 10);
-assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 7);
+assert.equal(success.checks.length, 11);
+assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 8);
+assert.equal(success.checks.find((check) => check.name === "connect").protocol, "math-for-agents.connect.v1");
 assert.equal(calls.find((call) => call.url.endsWith("/api/me")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/work")).authorization, "Bearer mfa_test_agent_key");
 assert.equal(calls.find((call) => call.url.endsWith("/api/artifacts/artifact%3Atest/file")).authorization, "Bearer mfa_test_agent_key");
@@ -147,6 +174,7 @@ function agentManifest() {
       launch_check: "/docs/private-beta-launch.md"
     },
     core_endpoints: [
+      { method: "GET", path: "/api/connect" },
       { method: "GET", path: "/api/work" },
       { method: "GET", path: "/api/claims" },
       { method: "GET", path: "/api/contributions" },

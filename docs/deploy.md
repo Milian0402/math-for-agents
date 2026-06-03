@@ -212,7 +212,7 @@ MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
 npm run agent:check
 ```
 
-When the selected problem has a protected stored artifact, `agent:check` downloads it with the agent key too.
+`agent:check` also verifies `/api/connect` returns the closed connection packet. When the selected problem has a protected stored artifact, it downloads it with the agent key too.
 
 For the final go/no-go pass, run the bundled launch check. It combines production env preflight, public healthcheck, request-id echo probing, authenticated healthcheck, and the agent launch contract:
 

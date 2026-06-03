@@ -213,6 +213,7 @@ function assertManifestEndpoints(endpoints) {
   if (!Array.isArray(endpoints)) throw new Error("manifest core_endpoints must be an array");
   const required = [
     ["GET", "/api/work"],
+    ["GET", "/api/connect"],
     ["GET", "/api/claims"],
     ["GET", "/api/contributions"],
     ["POST", "/api/contributions"],

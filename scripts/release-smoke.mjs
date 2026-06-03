@@ -204,13 +204,28 @@ async function main() {
     method: "POST",
     body: {
       agent_id: agentId,
-      name: smokeRunId
+      name: smokeRunId,
+      problem_id: problemId
     }
   });
   assert.equal(createdKey.status, 201);
   created.keyIds.push(createdKey.payload.key.id);
   const firstAgentKey = createdKey.payload.api_key;
   assert.match(firstAgentKey, /^mfa_/);
+  assert.equal(createdKey.payload.connection.protocol, "math-for-agents.connect.v1");
+  assert.equal(createdKey.payload.connection.env.MFA_AGENT_KEY, firstAgentKey);
+  assert.equal(createdKey.payload.connection.env.MFA_AGENT_PROBLEM_ID, problemId);
+  assert.match(createdKey.payload.connection.discovery.connect, /\/api\/connect$/);
+
+  const missingProblemKey = await request("/api/agent-keys", {
+    method: "POST",
+    body: {
+      agent_id: agentId,
+      name: `${smokeRunId} missing problem key`,
+      problem_id: `problem:missing-${smokeRunId}`
+    }
+  });
+  assert.equal(missingProblemKey.status, 404);
 
   const listedContributions = await request(`/api/contributions?problem_id=${encodeURIComponent(problemId)}`, {
     bearer: firstAgentKey
@@ -385,11 +400,16 @@ async function main() {
   });
   assert.equal(agentDoneAttempt.status, 403);
 
-  const rotatedKey = await request(`/api/agent-keys/${encodeURIComponent(createdKey.payload.key.id)}/rotate`, {
-    method: "POST"
-  });
+  const rotatedKey = await request(
+    `/api/agent-keys/${encodeURIComponent(createdKey.payload.key.id)}/rotate?problem_id=${encodeURIComponent(problemId)}`,
+    {
+      method: "POST"
+    }
+  );
   assert.equal(rotatedKey.status, 200);
   const agentKey = rotatedKey.payload.api_key;
+  assert.equal(rotatedKey.payload.connection.env.MFA_AGENT_KEY, agentKey);
+  assert.equal(rotatedKey.payload.connection.problem_id, problemId);
 
   const oldKeyCheck = await request("/api/me", {
     bearer: firstAgentKey
@@ -401,6 +421,20 @@ async function main() {
   });
   assert.equal(newKeyCheck.status, 200);
   assert.equal(newKeyCheck.payload.principal.id, agentId);
+
+  const connectPacket = await request(`/api/connect?problem_id=${encodeURIComponent(problemId)}`, {
+    bearer: agentKey
+  });
+  assert.equal(connectPacket.status, 200);
+  assert.equal(connectPacket.payload.connection.protocol, "math-for-agents.connect.v1");
+  assert.equal(connectPacket.payload.connection.agent.id, agentId);
+  assert.equal(connectPacket.payload.connection.problem_id, problemId);
+  assert.ok(connectPacket.payload.connection.next_actions.length >= 4);
+
+  const missingConnectProblem = await request(`/api/connect?problem_id=${encodeURIComponent(`problem:missing-${smokeRunId}`)}`, {
+    bearer: agentKey
+  });
+  assert.equal(missingConnectProblem.status, 404);
 
   const agentHeartbeat = await request(`/api/agents/${encodeURIComponent(agentId)}`, {
     method: "PATCH",
@@ -934,6 +968,7 @@ async function main() {
       "agent profile creation",
       "agent status heartbeat",
       "agent key create/rotate/revoke",
+      "agent connect packet",
       "disabled agent key lockout",
       "principal attribution provenance",
       "assignment creation",

@@ -29,7 +29,7 @@ assert.equal(success.ok, true);
 assert.equal(success.base_url, "https://mfa.example.test");
 assert.equal(success.checks.length, 7);
 assert.equal(success.checks.find((check) => check.name === "manifest").discovery, 5);
-assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 7);
+assert.equal(success.checks.find((check) => check.name === "manifest").endpoints, 8);
 assert.equal(success.checks.find((check) => check.name === "discovery_aliases").aliases.well_known_manifest, "1");
 const docsCheck = success.checks.find((check) => check.name === "docs");
 assert.equal(Object.keys(docsCheck.docs).length, 5);
@@ -105,6 +105,7 @@ function agentManifest() {
       launch_check: "/docs/private-beta-launch.md"
     },
     core_endpoints: [
+      { method: "GET", path: "/api/connect" },
       { method: "GET", path: "/api/work" },
       { method: "GET", path: "/api/claims" },
       { method: "GET", path: "/api/contributions" },

@@ -68,8 +68,8 @@ try {
   await runAgentClient(["agent-create", agentPath], options);
   await runAgentClient(["assign", assignmentPath], options);
   await runAgentClient(["agent-keys"], options);
-  await runAgentClient(["agent-key", "agent:launch", "beta runner"], options);
-  await runAgentClient(["agent-key-rotate", "key:launch"], options);
+  await runAgentClient(["agent-key", "agent:launch", "beta runner", "--problem", "problem:launch"], options);
+  await runAgentClient(["agent-key-rotate", "key:launch", "--problem", "problem:launch"], options);
   await runAgentClient(["agent-key-revoke", "key:launch"], options);
 
   assert.deepEqual(
@@ -80,7 +80,7 @@ try {
       "POST /api/assignments",
       "GET /api/agent-keys",
       "POST /api/agent-keys",
-      "POST /api/agent-keys/key%3Alaunch/rotate",
+      "POST /api/agent-keys/key%3Alaunch/rotate?problem_id=problem%3Alaunch",
       "DELETE /api/agent-keys/key%3Alaunch"
     ]
   );
@@ -88,25 +88,44 @@ try {
   assert.equal(calls[0].body.title, "Launch theorem");
   assert.equal(calls[1].body.name, "Launch agent");
   assert.equal(calls[2].body.problem_id, "problem:launch");
-  assert.deepEqual(calls[4].body, { agent_id: "agent:launch", name: "beta runner" });
+  assert.deepEqual(calls[4].body, { agent_id: "agent:launch", name: "beta runner", problem_id: "problem:launch" });
   assert.ok(stdout.chunks.some((chunk) => chunk.includes('"api_key"')));
 
   const agentCalls = [];
+  await runAgentClient(["connect", "problem:launch"], {
+    env: {
+      MFA_BASE_URL: "https://math-for-agents.example.com",
+      MFA_AGENT_KEY: "mfa_agent_launch_key"
+    },
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url);
+      agentCalls.push({
+        path: `${parsed.pathname}${parsed.search}`,
+        authorization: options.headers?.authorization || ""
+      });
+      return jsonResponse({ connection: { protocol: "math-for-agents.connect.v1" } });
+    },
+    stdout
+  });
   await runAgentClient(["work"], {
     env: {
       MFA_BASE_URL: "https://math-for-agents.example.com",
       MFA_AGENT_KEY: "mfa_agent_launch_key"
     },
     fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url);
       agentCalls.push({
-        path: new URL(url).pathname,
+        path: `${parsed.pathname}${parsed.search}`,
         authorization: options.headers?.authorization || ""
       });
       return jsonResponse({ assignments: [], verifications: [], items: [] });
     },
     stdout
   });
-  assert.deepEqual(agentCalls, [{ path: "/api/work", authorization: "Bearer mfa_agent_launch_key" }]);
+  assert.deepEqual(agentCalls, [
+    { path: "/api/connect?problem_id=problem%3Alaunch", authorization: "Bearer mfa_agent_launch_key" },
+    { path: "/api/work", authorization: "Bearer mfa_agent_launch_key" }
+  ]);
 } finally {
   await rm(tmp, { recursive: true, force: true });
 }
@@ -119,7 +138,7 @@ async function fetchImpl(url, options = {}) {
   const body = options.body ? JSON.parse(options.body) : null;
   calls.push({
     method,
-    path: parsed.pathname,
+    path: `${parsed.pathname}${parsed.search}`,
     authorization: options.headers?.authorization || "",
     body
   });

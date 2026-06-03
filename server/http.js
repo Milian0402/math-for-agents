@@ -170,6 +170,28 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/connect") {
+    const problemId = url.searchParams.get("problem_id")?.trim?.() || "";
+    if (problemId) await enforceProblemExists(workspaceId, problemId);
+    const requestedAgentId = url.searchParams.get("agent_id")?.trim?.() || "";
+    const agentId = principal.kind === "agent" ? principal.id : requestedAgentId;
+    const agent = agentId ? await getAgent(workspaceId, agentId) : null;
+    if (agentId && !agent) throw httpError(404, "agent not found");
+    const [assignments, verifications] = agentId
+      ? await Promise.all([listAssignmentsForAgent(workspaceId, agentId), listVerificationQueue(workspaceId, agentId)])
+      : [[], []];
+    sendJson(res, 200, {
+      connection: buildAgentConnectionPacket(req, {
+        principal,
+        agent,
+        problemId,
+        assignments,
+        verifications
+      })
+    });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/work") {
     const agentId = principal.kind === "agent" ? principal.id : url.searchParams.get("agent_id") || "";
     if (!agentId) throw httpError(400, "agent_id is required for human work inbox lookup");
@@ -227,9 +249,30 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     assertAgentKeyInput(body);
     await enforceAgentCanUseKeys(workspaceId, body.agent_id);
+    const problemId = body.problem_id?.trim?.() || "";
+    if (problemId) await enforceProblemExists(workspaceId, problemId);
     const result = await createAgentApiKey(workspaceId, body);
     if (!result) throw httpError(404, "agent not found");
-    sendJson(res, 201, result);
+    sendJson(res, 201, {
+      ...result,
+      connection: buildAgentConnectionPacket(req, {
+        principal: {
+          kind: "agent",
+          id: result.key.agent_id,
+          name: result.key.agent_name,
+          workspace_id: result.key.workspace_id,
+          role: "agent",
+          auth_method: "agent-key"
+        },
+        agent: {
+          id: result.key.agent_id,
+          name: result.key.agent_name,
+          status: result.key.agent_status
+        },
+        agentKey: result.api_key,
+        problemId
+      })
+    });
     return;
   }
 
@@ -249,8 +292,30 @@ async function handleApi(req, res, url) {
     const key = await getAgentApiKey(workspaceId, keyId);
     if (!key) throw httpError(404, "agent key not found");
     await enforceAgentCanUseKeys(workspaceId, key.agent_id);
+    const problemId = url.searchParams.get("problem_id")?.trim?.() || "";
+    if (problemId) await enforceProblemExists(workspaceId, problemId);
     const result = await rotateAgentApiKey(workspaceId, keyId);
-    sendJson(res, 200, result);
+    if (!result) throw httpError(404, "agent key not found");
+    sendJson(res, 200, {
+      ...result,
+      connection: buildAgentConnectionPacket(req, {
+        principal: {
+          kind: "agent",
+          id: result.key.agent_id,
+          name: result.key.agent_name,
+          workspace_id: result.key.workspace_id,
+          role: "agent",
+          auth_method: "agent-key"
+        },
+        agent: {
+          id: result.key.agent_id,
+          name: result.key.agent_name,
+          status: result.key.agent_status
+        },
+        agentKey: result.api_key,
+        problemId
+      })
+    });
     return;
   }
 
@@ -621,6 +686,113 @@ function workInboxItems(assignments, verifications) {
       context_path: `/api/assignments/${encodeURIComponent(assignment.id)}`
     }));
   return [...verificationItems, ...assignmentItems];
+}
+
+function buildAgentConnectionPacket(req, {
+  principal,
+  agent = null,
+  agentKey = "<agent-key>",
+  problemId = "",
+  assignments = [],
+  verifications = []
+} = {}) {
+  const baseUrl = publicBaseUrl(req);
+  const agentId = agent?.id || (principal?.kind === "agent" ? principal.id : "");
+  const problemToken = problemId || "<problem-id>";
+  const env = {
+    MFA_BASE_URL: baseUrl,
+    MFA_AGENT_KEY: agentKey || "<agent-key>",
+    MFA_AGENT_PROBLEM_ID: problemToken
+  };
+  const envBlock = Object.entries(env)
+    .map(([key, value]) => `${key}=${shellValue(value)}`)
+    .join("\n");
+
+  return {
+    protocol: "math-for-agents.connect.v1",
+    issued_at: new Date().toISOString(),
+    base_url: baseUrl,
+    workspace_id: principal?.workspace_id || agent?.workspace_id || null,
+    agent: agentId ? {
+      id: agentId,
+      name: agent?.name || principal?.name || agentId,
+      status: agent?.status || null
+    } : null,
+    problem_id: problemId || null,
+    auth: {
+      type: "bearer",
+      header: "Authorization: Bearer <agent-key>",
+      env: "MFA_AGENT_KEY",
+      secret_shown_once: agentKey !== "<agent-key>"
+    },
+    env,
+    env_block: envBlock,
+    discovery: {
+      llms: `${baseUrl}/llms.txt`,
+      manifest: `${baseUrl}/agent-manifest.json`,
+      well_known_manifest: `${baseUrl}/.well-known/agent-manifest.json`,
+      openapi: `${baseUrl}/openapi.json`,
+      connect: `${baseUrl}/api/connect`
+    },
+    endpoints: {
+      identity: "/api/me",
+      connect: problemId ? `/api/connect?problem_id=${encodeURIComponent(problemId)}` : "/api/connect",
+      work: "/api/work",
+      problem: `/api/problems/${encodeURIComponent(problemToken)}`,
+      claims: `/api/claims?problem_id=${encodeURIComponent(problemToken)}`,
+      contributions: `/api/contributions?problem_id=${encodeURIComponent(problemToken)}`,
+      artifacts: `/api/artifacts?problem_id=${encodeURIComponent(problemToken)}`,
+      verifications: "/api/verifications"
+    },
+    commands: {
+      check: `${envBlock}\nnpm run agent:check`,
+      work: `${envBlock}\nnode examples/agent-client.mjs work`,
+      heartbeat: `${envBlock}\nnode examples/agent-client.mjs agent-status running "connected to math-for-agents"`
+    },
+    work_summary: {
+      assignments: assignments.length,
+      verifications: verifications.length,
+      items: workInboxItems(assignments, verifications).slice(0, 10)
+    },
+    next_actions: [
+      "Run commands.check and require ok: true before doing research work.",
+      "Fetch endpoints.work, then fetch the context_path for the first visible assignment or verification.",
+      "Patch assigned work to claimed or running before spending serious compute.",
+      "Upload artifacts for computations, proof files, logs, notebooks, or formal output.",
+      "Post contributions with precise claims, dependencies, replay metadata, and artifact references.",
+      "Use verification endpoints only for checks assigned to this agent id."
+    ]
+  };
+}
+
+function publicBaseUrl(req, env = process.env) {
+  const configured = normalizePublicUrl(env.MFA_BASE_URL || firstConfiguredOrigin(env.MFA_PUBLIC_ORIGIN));
+  if (configured) return configured;
+  if (env.VERCEL_URL) return normalizePublicUrl(`https://${String(env.VERCEL_URL).replace(/^https?:\/\//, "")}`);
+  const host = req.headers.host || "127.0.0.1:4173";
+  const forwardedProto = env.MFA_TRUST_PROXY === "true" ? firstHeaderValue(req.headers["x-forwarded-proto"]) : "";
+  const protocol = forwardedProto || (secureCookiesEnabled(env) ? "https" : "http");
+  return `${protocol}://${host}`.replace(/\/+$/, "");
+}
+
+function firstConfiguredOrigin(value) {
+  return String(value || "").split(",")[0].trim();
+}
+
+function normalizePublicUrl(value) {
+  const normalized = String(value || "").trim().replace(/\/+$/, "");
+  if (!normalized) return "";
+  try {
+    return new URL(normalized).origin;
+  } catch {
+    return "";
+  }
+}
+
+function shellValue(value) {
+  const text = String(value || "");
+  if (/^[A-Za-z0-9_./:=@-]+$/.test(text)) return text;
+  return `'${text.replace(/'/g, "'\\''")}'`;
 }
 
 async function enforceContributionAssignmentAccess(workspaceId, principal, body) {

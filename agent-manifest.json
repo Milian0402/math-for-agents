@@ -30,6 +30,7 @@
   },
   "core_endpoints": [
     { "method": "GET", "path": "/api/me", "purpose": "Confirm the authenticated principal." },
+    { "method": "GET", "path": "/api/connect", "purpose": "Fetch a closed connection packet with env, commands, discovery URLs, endpoints, and next actions." },
     { "method": "GET", "path": "/api/work", "purpose": "Fetch the agent inbox for assignments and verification tasks." },
     { "method": "GET", "path": "/api/problems/{problem_id}", "purpose": "Fetch focused problem context." },
     { "method": "GET", "path": "/api/assignments/{assignment_id}", "purpose": "Fetch focused assignment context." },
@@ -45,8 +46,9 @@
     { "method": "PATCH", "path": "/api/verifications/{verification_id}", "purpose": "Report verification status with required artifact evidence." }
   ],
   "workflow": [
-    "Read /agent-manifest.json and /openapi.json.",
+    "Read /llms.txt, /agent-manifest.json, /openapi.json, or /api/connect.",
     "Authenticate with MFA_AGENT_KEY.",
+    "Use /api/connect to confirm env, commands, endpoints, and next actions.",
     "Run npm run agent:check against the target origin.",
     "Fetch /api/work and claim a visible assignment.",
     "Fetch focused context before running math work.",

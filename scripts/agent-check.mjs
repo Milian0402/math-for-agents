@@ -32,6 +32,7 @@ export async function runAgentCheck(options = {}) {
     const endpoints = Array.isArray(payload.core_endpoints) ? payload.core_endpoints : [];
     for (const [method, path] of [
       ["GET", "/api/work"],
+      ["GET", "/api/connect"],
       ["GET", "/api/claims"],
       ["GET", "/api/contributions"],
       ["POST", "/api/contributions"],
@@ -78,6 +79,29 @@ export async function runAgentCheck(options = {}) {
     return {
       principal_id: principal.id,
       workspace_id: principal.workspace_id
+    };
+  });
+
+  await runCheck(checks, "connect", async () => {
+    const payload = await requestJson(fetchImpl, `${baseUrl}/api/connect?problem_id=${encodeURIComponent(problemId)}`, {
+      timeoutMs,
+      bearer: agentKey
+    });
+    const connection = payload.connection || null;
+    assertEqual(connection?.protocol, "math-for-agents.connect.v1", "connect packet must declare protocol v1");
+    assertEqual(connection?.base_url, baseUrl, "connect packet base_url must match MFA_BASE_URL");
+    assertEqual(connection?.problem_id, problemId, "connect packet problem_id must match MFA_AGENT_PROBLEM_ID");
+    assertEqual(connection?.env?.MFA_BASE_URL, baseUrl, "connect packet must include MFA_BASE_URL env");
+    assertEqual(connection?.env?.MFA_AGENT_PROBLEM_ID, problemId, "connect packet must include MFA_AGENT_PROBLEM_ID env");
+    if (!connection?.discovery?.manifest || !connection?.discovery?.openapi) {
+      throw new Error("connect packet must include discovery manifest and openapi URLs");
+    }
+    if (!connection?.endpoints?.work || !connection?.commands?.check) {
+      throw new Error("connect packet must include work endpoint and check command");
+    }
+    return {
+      protocol: connection.protocol,
+      actions: connection.next_actions?.length || 0
     };
   });
 

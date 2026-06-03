@@ -65,7 +65,7 @@ const ASSIGNMENT_FIELDS = new Set([
 
 const ASSIGNMENT_PATCH_FIELDS = new Set(["status"]);
 
-const AGENT_KEY_FIELDS = new Set(["agent_id", "name"]);
+const AGENT_KEY_FIELDS = new Set(["agent_id", "name", "problem_id"]);
 
 const AGENT_FIELDS = new Set([
   "name",
@@ -173,6 +173,7 @@ export function assertAgentKeyInput(input) {
   if (!rejectUnknownFields(input, AGENT_KEY_FIELDS, errors)) return throwIfErrors(errors);
   requireString(input.agent_id, "agent_id", errors);
   requireString(input.name, "name", errors);
+  if (input.problem_id !== undefined) requireString(input.problem_id, "problem_id", errors);
   if (typeof input.name === "string" && input.name.trim().length > 80) {
     errors.push("name must be 80 characters or fewer");
   }

@@ -127,7 +127,7 @@ MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
 npm run agent:check
 ```
 
-If the selected problem exposes a protected stored artifact, this check downloads it with the same agent key.
+This also verifies `/api/connect` returns a complete connection packet. If the selected problem exposes a protected stored artifact, this check downloads it with the same agent key.
 
 For the final operator go/no-go pass, run:
 

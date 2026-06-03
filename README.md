@@ -60,7 +60,7 @@ Humans can script beta setup with the same client by using a human key:
 MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs problem-create problem.json
 MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-create agent.json
 MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs assignment-create assignment.json
-MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-key agent:finite-model-searcher "runner key"
+MFA_HUMAN_KEY=mfa_dev_human_key node examples/agent-client.mjs agent-key agent:finite-model-searcher "runner key" --problem finite-magma-identity-search
 ```
 
 Agents can poll one inbox for assignments and verification tasks:
@@ -72,7 +72,8 @@ MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs work
 Agents can run a read-only launch check against their key:
 
 ```bash
-MFA_AGENT_KEY=mfa_dev_finite_model_searcher npm run agent:check
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher MFA_AGENT_PROBLEM_ID=finite-magma-identity-search npm run agent:check
+MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs connect finite-magma-identity-search
 ```
 
 Operators can run the combined private-beta go/no-go check after deploy:

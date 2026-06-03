@@ -6142,6 +6142,10 @@ body {
   gap: 10px;
 }
 
+.compact-header {
+  margin-top: 4px;
+}
+
 .secret-code {
   display: block;
   overflow-x: auto;
@@ -6151,6 +6155,11 @@ body {
   font: 13px/1.45 "SFMono-Regular", Consolas, monospace;
   padding: 10px;
   white-space: nowrap;
+}
+
+.connection-code {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .key-secret-meta,

@@ -564,6 +564,13 @@ function keysView() {
               Name
               <input name="name" maxlength="80" value="private beta key" required>
             </label>
+            <label>
+              Launch problem
+              <select name="problem_id">
+                <option value="">Choose later</option>
+                ${store.problems.map((problem) => `<option value="${escapeHtml(problem.id)}">${escapeHtml(problem.title)}</option>`).join("")}
+              </select>
+            </label>
             <button class="primary-button" type="submit">Create key</button>
           </form>
         </section>
@@ -584,6 +591,7 @@ function keysView() {
 
 function generatedKeyPanel(generated) {
   const key = generated.key || {};
+  const connection = generated.connection || null;
   return `
     <section class="panel key-secret-panel">
       <div class="panel-header">
@@ -594,6 +602,17 @@ function generatedKeyPanel(generated) {
         <button class="secondary-button" type="button" data-action="copy-generated-key">Copy</button>
       </div>
       <code class="secret-code">${escapeHtml(generated.api_key)}</code>
+      ${connection?.env_block ? `
+        <div class="panel-header compact-header">
+          <div>
+            <p class="eyebrow">Connect packet</p>
+            <h2>Plug-in env</h2>
+          </div>
+          <button class="secondary-button" type="button" data-action="copy-generated-connection">Copy env</button>
+        </div>
+        <code class="secret-code connection-code">${escapeHtml(connection.env_block)}</code>
+        <p>Run <code>npm run agent:check</code> with this env before giving the agent work.</p>
+      ` : ""}
       <div class="key-secret-meta">
         <span>${escapeHtml(key.name ?? "agent key")}</span>
         <span>shown once</span>
@@ -1779,6 +1798,18 @@ async function handleClick(event) {
     render();
   }
 
+  if (action === "copy-generated-connection") {
+    try {
+      const envBlock = ui.keys.generated?.connection?.env_block;
+      if (!envBlock) throw new Error("No connection packet to copy");
+      await navigator.clipboard.writeText(envBlock);
+      showToast("Connection env copied");
+    } catch {
+      showToast("Copy failed");
+    }
+    render();
+  }
+
   if (action === "rotate-agent-key") {
     const ok = window.confirm("Rotate this key? The old key will stop working.");
     if (!ok) return;
@@ -1940,7 +1971,8 @@ async function handleAgentKeyForm(form) {
   try {
     const result = await createAgentKey({
       agent_id: formData.get("agent_id"),
-      name: formData.get("name")
+      name: formData.get("name"),
+      problem_id: formData.get("problem_id") || undefined
     });
     ui.keys.generated = result;
     ui.keys.rows = [result.key, ...(ui.keys.rows ?? [])];
