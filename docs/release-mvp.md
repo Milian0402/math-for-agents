@@ -86,6 +86,8 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - Human browser-session writes require a same-origin `Origin` or `Referer`; bearer-key agent writes are unaffected.
 - Rate limits ignore spoofable `x-forwarded-for` unless `MFA_TRUST_PROXY=true` is explicitly set behind a trusted reverse proxy.
 - Backup and restore scripts cover Postgres plus artifact storage, checksum verification, and optional mounted off-host copies.
+- Vercel Blob backups export private stored artifact bytes into `artifacts.tar.gz` with `artifact-export-manifest.json`.
+- `npm run artifacts:export` can export protected stored artifact bytes through the configured artifact storage driver for backup inspection.
 - `npm run restore:drill` verifies a backup can restore into a separate disposable database and artifact directory before trusting it.
 - A production Docker Compose target exists for a single-VM private beta with web, worker, Postgres, and persistent volumes.
 - The production Compose target includes `ops` profile services for release healthchecks and verified backups.
