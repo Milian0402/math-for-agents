@@ -6,7 +6,9 @@ import { pathToFileURL } from "node:url";
 import { assertWebRuntimeConfig, assertWorkerRuntimeConfig } from "../server/config.js";
 
 const REQUIRED_FILES = [
+  "api/index.js",
   "Dockerfile",
+  "vercel.json",
   "deploy/compose.production.yml",
   "deploy/caddy/Caddyfile.example",
   "deploy/systemd/math-for-agents-healthcheck.service.example",
@@ -51,6 +53,15 @@ const COMPOSE_MARKERS = [
   "/var/run/docker.sock:/var/run/docker.sock"
 ];
 
+const VERCEL_MARKERS = [
+  '"functions"',
+  '"api/index.js"',
+  '"includeFiles"',
+  '"rewrites"',
+  '"/(.*)"',
+  '"/api/index"'
+];
+
 const RESERVED_URL_CHARS = /[\s:/?#\[\]@]/;
 
 export async function runDeployPreflight(options = {}) {
@@ -82,6 +93,17 @@ export async function runDeployPreflight(options = {}) {
     }
   });
 
+  await addAsyncCheck(checks, "vercel function shape", async () => {
+    const config = await readFile(path.join(cwd, "vercel.json"), "utf8");
+    JSON.parse(config);
+    for (const marker of VERCEL_MARKERS) {
+      if (!config.includes(marker)) throw new Error(`vercel.json missing marker: ${marker}`);
+    }
+    const handler = await readFile(path.join(cwd, "api/index.js"), "utf8");
+    if (!handler.includes("createServer")) throw new Error("api/index.js must adapt the shared Node server");
+    if (!handler.includes("assertWebRuntimeConfig")) throw new Error("api/index.js must fail fast on bad runtime config");
+  });
+
   addCheck(checks, "human owner env", () => {
     requireNonPlaceholder(webEnv.MFA_HUMAN_EMAIL, "MFA_HUMAN_EMAIL");
     if (!webEnv.MFA_HUMAN_EMAIL.includes("@")) throw new Error("MFA_HUMAN_EMAIL must be an email address");
@@ -104,6 +126,9 @@ export async function runDeployPreflight(options = {}) {
       return;
     }
     requireNonPlaceholder(webEnv.DATABASE_URL, "DATABASE_URL");
+    if (mode === "vercel" && webEnv.DATABASE_SSL !== "true") {
+      throw new Error("DATABASE_SSL=true is required for the Vercel launch target");
+    }
   });
 
   addCheck(checks, "public origin env", () => {
@@ -122,7 +147,16 @@ export async function runDeployPreflight(options = {}) {
   });
 
   addCheck(checks, "web runtime config", () => assertWebRuntimeConfig(webEnv));
-  addCheck(checks, "worker runtime config", () => assertWorkerRuntimeConfig(workerEnv));
+  if (mode === "vercel") {
+    addCheck(checks, "vercel artifact storage", () => {
+      if (webEnv.ARTIFACT_STORAGE_DRIVER !== "vercel-blob") {
+        throw new Error("ARTIFACT_STORAGE_DRIVER=vercel-blob is required for the Vercel launch target");
+      }
+      requireNonPlaceholder(webEnv.BLOB_READ_WRITE_TOKEN, "BLOB_READ_WRITE_TOKEN");
+    });
+  } else {
+    addCheck(checks, "worker runtime config", () => assertWorkerRuntimeConfig(workerEnv));
+  }
 
   addCheck(checks, "artifact limits", () => {
     const maxBytes = Number(webEnv.ARTIFACT_MAX_BYTES);
@@ -133,6 +167,9 @@ export async function runDeployPreflight(options = {}) {
 
   if (!envFile) warnings.push("no env file was loaded; checked current process env only");
   if (!env.BACKUP_REMOTE_DIR) warnings.push("BACKUP_REMOTE_DIR is not set; configure mounted off-host storage before real beta traffic");
+  if (mode === "vercel") {
+    warnings.push("Vercel deploy runs the web/API function only; run verification workers and scheduled backups outside Vercel");
+  }
   if (workerEnv.MFA_WORKER_RUNNER === "docker") {
     warnings.push("docker worker runner uses the host Docker socket; run it only on a dedicated VM");
   }
@@ -150,13 +187,15 @@ export async function runDeployPreflight(options = {}) {
 }
 
 export function buildEffectiveEnvironments(env) {
-  const mode = env.POSTGRES_PASSWORD ? "compose" : "standalone";
+  const requestedTarget = String(env.MFA_DEPLOY_TARGET || "").trim().toLowerCase();
+  const mode = requestedTarget === "vercel" || env.VERCEL === "1" ? "vercel" : env.POSTGRES_PASSWORD ? "compose" : "standalone";
   const databaseUrl =
     mode === "compose"
       ? `postgres://${env.POSTGRES_USER || "math_for_agents"}:${env.POSTGRES_PASSWORD || ""}@db:5432/${
           env.POSTGRES_DB || "math_for_agents"
         }`
       : env.DATABASE_URL || "";
+  const artifactStorageDriver = env.ARTIFACT_STORAGE_DRIVER || (mode === "vercel" ? "vercel-blob" : "local-file");
   const cookieSecure =
     env.MFA_COOKIE_SECURE !== undefined
       ? env.MFA_COOKIE_SECURE
@@ -169,8 +208,10 @@ export function buildEffectiveEnvironments(env) {
     NODE_ENV: "production",
     DATABASE_URL: databaseUrl,
     DATABASE_SSL: mode === "compose" ? "false" : env.DATABASE_SSL || "false",
+    ARTIFACT_STORAGE_DRIVER: artifactStorageDriver,
     ARTIFACT_STORAGE_DIR: mode === "compose" ? "/data/artifacts" : env.ARTIFACT_STORAGE_DIR || "",
     ARTIFACT_MAX_BYTES: env.ARTIFACT_MAX_BYTES || "10000000",
+    BLOB_READ_WRITE_TOKEN: env.BLOB_READ_WRITE_TOKEN || "",
     MFA_COOKIE_SECURE: cookieSecure
   };
 
@@ -179,7 +220,7 @@ export function buildEffectiveEnvironments(env) {
     webEnv: common,
     workerEnv: {
       ...common,
-      MFA_WORKER_RUNNER: env.MFA_WORKER_RUNNER || "docker"
+      MFA_WORKER_RUNNER: env.MFA_WORKER_RUNNER || (mode === "vercel" ? "disabled" : "docker")
     }
   };
 }

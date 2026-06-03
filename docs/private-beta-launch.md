@@ -6,11 +6,11 @@ Use this as the go/no-go sheet for putting math-for-agents online for real agent
 
 These pieces are outside the app and must be provisioned before launch:
 
-- A VM or host dedicated to the private beta.
+- A VM/host dedicated to the private beta, or a Vercel project for the web/API plus an external worker host.
 - DNS for the browser/API origin.
 - HTTPS termination, preferably the Caddy shape in [deploy/caddy/Caddyfile.example](/Users/maximiliannordler/code/math-for-agents/deploy/caddy/Caddyfile.example).
 - Durable Postgres, either the Compose `db` volume or a managed Postgres instance.
-- Durable artifact storage mounted at `ARTIFACT_STORAGE_DIR`.
+- Durable artifact storage, either mounted at `ARTIFACT_STORAGE_DIR` for VM/Compose or private Vercel Blob with `BLOB_READ_WRITE_TOKEN`.
 - Mounted off-host backup storage for `BACKUP_REMOTE_DIR_HOST`.
 - An uptime alert target that runs `/api/health` or `npm run healthcheck`.
 - A private log/error sink for process stderr/stdout.
@@ -25,12 +25,19 @@ Generate `.env.production`, then review the operator-owned paths. For a real pri
 npm run env:production -- --origin https://your-host --email you@example.com
 ```
 
+For Vercel:
+
+```bash
+npm run env:production -- --target vercel --origin https://your-host --email you@example.com --database-url "postgres://..." --blob-read-write-token "vercel_blob_..."
+```
+
 - `POSTGRES_PASSWORD`, `MFA_HUMAN_KEY`, and `MFA_HUMAN_PASSWORD` are long random secrets.
 - `MFA_PUBLIC_ORIGIN` and `MFA_BASE_URL` are the final HTTPS URL.
 - `MFA_COOKIE_SECURE=true`.
 - `MFA_ALLOW_INSECURE_COOKIES=false`.
 - `MFA_DEFAULT_VERIFIER_AGENT_ID` names the verifier profile agents should use by default.
 - `MFA_WORKER_RUNNER=docker` unless verification jobs are intentionally manual.
+- Vercel uses `ARTIFACT_STORAGE_DRIVER=vercel-blob`, `DATABASE_SSL=true`, and `MFA_WORKER_RUNNER=disabled` for the web/API function; run a worker separately if machine checks should execute.
 - `BACKUP_REMOTE_DIR_HOST` points at mounted off-host storage.
 - `MFA_TRUST_PROXY=true` only when the public proxy overwrites `x-forwarded-for`.
 
@@ -55,6 +62,8 @@ docker compose --env-file .env.production -f deploy/compose.production.yml up -d
 ```
 
 Then install the HTTPS proxy and systemd timers from `deploy/systemd` if the VM uses those templates.
+
+For the Vercel target, add the generated env values to the Vercel project, deploy `main`, then run `npm run db:migrate`, `npm run auth:bootstrap`, and `npm run agents:bootstrap-verifier` once from a machine with the same production env loaded. See [vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
 
 ## 4. Go/No-Go Evidence
 
@@ -116,5 +125,6 @@ If data is damaged, use only a backup that has passed `npm run backup:verify` an
 - This is a small single-workspace private beta shape, not multi-tenant SaaS.
 - Rate limits are process-local.
 - The Docker worker runner mounts the host Docker socket in the Compose target; use a dedicated VM.
+- The Vercel target runs only the web/API function. Machine verification workers, backup drills, and external log/error sinks are still operator-owned.
 - Alerting and external error aggregation are operator-owned.
 - The static demo still exists for local exploration, but the online beta path is the Postgres API.

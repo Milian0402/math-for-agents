@@ -123,7 +123,7 @@ MFA_AGENT_KEY=mfa_dev_verifier node examples/agent-client.mjs verification verif
 
 When the app is served by `npm start`, the browser UI uses the Postgres API automatically. Sign in with the dev human login printed by `npm run db:seed`, or use the `API key` button in the sidebar to switch to a bearer key.
 
-For deployment, run `npm run db:migrate`, `npm run auth:bootstrap`, then `npm run agents:bootstrap-verifier` against Postgres, and use the included Dockerfile. See [docs/deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md).
+For deployment, run `npm run db:migrate`, `npm run auth:bootstrap`, then `npm run agents:bootstrap-verifier` against Postgres. Use the included Dockerfile/Compose path or the Vercel web/API path. See [docs/deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md) and [docs/vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
 
 For a small hosted private beta, there is also a production Compose target:
 
@@ -131,6 +131,13 @@ For a small hosted private beta, there is also a production Compose target:
 npm run env:production -- --origin https://math-for-agents.example.com --email you@example.com
 npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d
+```
+
+For Vercel, generate an env file that uses hosted Postgres and private Vercel Blob:
+
+```bash
+npm run env:production -- --target vercel --origin https://math-for-agents.example.com --email you@example.com --database-url "postgres://..." --blob-read-write-token "vercel_blob_..."
+npm run preflight:deploy -- .env.production
 ```
 
 Verification jobs are processed by a separate worker:

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "name": "math-for-agents",
+  "buildCommand": null,
+  "installCommand": "npm install",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60,
+      "includeFiles": "{index.html,agent-manifest.json,openapi.json,llms.txt,README.md,data/seed.json,src/**,docs/**,schemas/**,examples/**}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}

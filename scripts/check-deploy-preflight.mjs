@@ -27,6 +27,20 @@ assert.equal(effective.webEnv.NODE_ENV, "production");
 assert.equal(effective.webEnv.ARTIFACT_STORAGE_DIR, "/data/artifacts");
 assert.equal(effective.workerEnv.MFA_WORKER_RUNNER, "docker");
 
+const vercelEffective = buildEffectiveEnvironments({
+  MFA_DEPLOY_TARGET: "vercel",
+  DATABASE_URL: "postgres://math_for_agents:strong-password@db.example.com:5432/math_for_agents",
+  DATABASE_SSL: "true",
+  BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_private_beta_token",
+  MFA_HUMAN_EMAIL: "max@example.com",
+  MFA_HUMAN_PASSWORD: "private-beta-human-password",
+  MFA_HUMAN_KEY: "mfa_private_beta_key_32_chars"
+});
+assert.equal(vercelEffective.mode, "vercel");
+assert.equal(vercelEffective.webEnv.ARTIFACT_STORAGE_DRIVER, "vercel-blob");
+assert.equal(vercelEffective.webEnv.ARTIFACT_STORAGE_DIR, "");
+assert.equal(vercelEffective.workerEnv.MFA_WORKER_RUNNER, "disabled");
+
 const tmp = await mkdtemp(path.join(os.tmpdir(), "mfa-preflight-check-"));
 
 try {
@@ -56,6 +70,64 @@ try {
   assert.equal(good.ok, true);
   assert.equal(good.mode, "compose");
   assert.ok(good.checks.every((check) => check.ok));
+
+  const vercelEnv = path.join(tmp, ".env.production.vercel");
+  await writeFile(
+    vercelEnv,
+    [
+      "MFA_DEPLOY_TARGET=vercel",
+      "DATABASE_URL=postgres://math_for_agents:strong-password@db.example.com:5432/math_for_agents",
+      "DATABASE_SSL=true",
+      "ARTIFACT_STORAGE_DRIVER=vercel-blob",
+      "BLOB_READ_WRITE_TOKEN=vercel_blob_rw_private_beta_token",
+      "MFA_HUMAN_EMAIL=max@example.com",
+      "MFA_HUMAN_PASSWORD=private-beta-human-password",
+      "MFA_HUMAN_KEY=mfa_private_beta_key_32_chars",
+      "MFA_DEFAULT_VERIFIER_AGENT_ID=agent:private-beta-verifier",
+      "MFA_COOKIE_SECURE=true",
+      "ARTIFACT_MAX_BYTES=10000000",
+      "MFA_BASE_URL=https://math-for-agents.example.com",
+      "MFA_PUBLIC_ORIGIN=https://math-for-agents.example.com"
+    ].join("\n")
+  );
+
+  const vercel = await runDeployPreflight({
+    cwd: process.cwd(),
+    envFile: vercelEnv,
+    baseEnv: {}
+  });
+  assert.equal(vercel.ok, true);
+  assert.equal(vercel.mode, "vercel");
+  assert.ok(vercel.checks.every((check) => check.ok));
+  assert.ok(vercel.warnings.some((warning) => warning.includes("Vercel deploy runs the web/API function only")));
+
+  const badVercelEnv = path.join(tmp, ".env.production.bad-vercel");
+  await writeFile(
+    badVercelEnv,
+    [
+      "MFA_DEPLOY_TARGET=vercel",
+      "DATABASE_URL=postgres://math_for_agents:strong-password@db.example.com:5432/math_for_agents",
+      "DATABASE_SSL=false",
+      "ARTIFACT_STORAGE_DRIVER=local-file",
+      "MFA_HUMAN_EMAIL=max@example.com",
+      "MFA_HUMAN_PASSWORD=private-beta-human-password",
+      "MFA_HUMAN_KEY=mfa_private_beta_key_32_chars",
+      "MFA_DEFAULT_VERIFIER_AGENT_ID=agent:private-beta-verifier",
+      "MFA_COOKIE_SECURE=true",
+      "ARTIFACT_MAX_BYTES=10000000",
+      "MFA_BASE_URL=https://math-for-agents.example.com",
+      "MFA_PUBLIC_ORIGIN=https://math-for-agents.example.com"
+    ].join("\n")
+  );
+
+  const badVercel = await runDeployPreflight({
+    cwd: process.cwd(),
+    envFile: badVercelEnv,
+    baseEnv: {}
+  });
+  assert.equal(badVercel.ok, false);
+  assert.ok(badVercel.checks.some((check) => !check.ok && check.error.includes("DATABASE_SSL=true")));
+  assert.ok(badVercel.checks.some((check) => !check.ok && check.name === "vercel artifact storage"));
 
   const badEnv = path.join(tmp, ".env.production.bad");
   await writeFile(

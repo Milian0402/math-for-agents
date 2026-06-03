@@ -33,6 +33,7 @@ assert.doesNotThrow(() =>
   assertWebRuntimeConfig({
     NODE_ENV: "production",
     DATABASE_URL: "postgres://math_for_agents:strong-password@db:5432/math_for_agents",
+    ARTIFACT_STORAGE_DRIVER: "local-file",
     ARTIFACT_STORAGE_DIR: "/data/artifacts",
     ARTIFACT_MAX_BYTES: "10000000",
     MFA_COOKIE_SECURE: "true",
@@ -40,6 +41,33 @@ assert.doesNotThrow(() =>
     MFA_HUMAN_PASSWORD: "long-private-beta-password",
     MFA_DEFAULT_VERIFIER_AGENT_ID: "agent:verifier"
   })
+);
+
+assert.doesNotThrow(() =>
+  assertWebRuntimeConfig({
+    NODE_ENV: "production",
+    DATABASE_URL: "postgres://math_for_agents:strong-password@db:5432/math_for_agents",
+    ARTIFACT_STORAGE_DRIVER: "vercel-blob",
+    BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_private_beta_token",
+    ARTIFACT_MAX_BYTES: "10000000",
+    MFA_COOKIE_SECURE: "true",
+    MFA_HUMAN_KEY: "mfa_private_beta_key_32_chars",
+    MFA_HUMAN_PASSWORD: "long-private-beta-password",
+    MFA_DEFAULT_VERIFIER_AGENT_ID: "agent:verifier"
+  })
+);
+
+assert.throws(
+  () =>
+    assertWebRuntimeConfig({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://math_for_agents:strong-password@db:5432/math_for_agents",
+      ARTIFACT_STORAGE_DRIVER: "vercel-blob",
+      ARTIFACT_MAX_BYTES: "10000000",
+      MFA_COOKIE_SECURE: "true",
+      MFA_DEFAULT_VERIFIER_AGENT_ID: "agent:verifier"
+    }),
+  /BLOB_READ_WRITE_TOKEN/
 );
 
 assert.throws(
@@ -456,6 +484,76 @@ const openedArtifact = await openArtifactFile(storedArtifact);
 assert.equal(openedArtifact.contentType, "text/plain");
 assert.equal(openedArtifact.fileName, "trace.txt");
 assert.equal(await readStreamText(openedArtifact.stream), "proof trace bytes");
+
+const originalArtifactStorageDriver = process.env.ARTIFACT_STORAGE_DRIVER;
+process.env.ARTIFACT_STORAGE_DRIVER = "vercel-blob";
+const blobClientCalls = [];
+const fakeBlobClient = {
+  async put(pathname, body, options) {
+    blobClientCalls.push({ type: "put", pathname, body: Buffer.from(body).toString("utf8"), options });
+    return {
+      pathname,
+      contentType: options.contentType,
+      etag: "\"blob-etag\""
+    };
+  },
+  async get(pathname, options) {
+    blobClientCalls.push({ type: "get", pathname, options });
+    return {
+      statusCode: 200,
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("blob proof bytes"));
+          controller.close();
+        }
+      }),
+      blob: {
+        size: 16,
+        contentType: "text/plain"
+      }
+    };
+  }
+};
+
+const blobArtifact = await materializeArtifactContent(
+  "workspace:default",
+  {
+    id: "artifact-blob-test",
+    problem_id: "finite-magma-identity-search",
+    owner: "agent:verifier",
+    kind: "replay-log",
+    title: "blob storage test",
+    summary: "stored by check-api",
+    path: "#",
+    metadata: {}
+  },
+  {
+    content_text: "blob proof bytes",
+    file_name: "blob-trace.txt",
+    content_type: "text/plain"
+  },
+  { blobClient: fakeBlobClient }
+);
+
+assert.equal(blobArtifact.path, "/api/artifacts/artifact-blob-test/file");
+assert.equal(blobArtifact.metadata.storage.driver, "vercel-blob");
+assert.equal(blobArtifact.metadata.storage.access, "private");
+assert.equal(blobArtifact.metadata.storage.key, "workspace-default/artifact-blob-test-blob-trace.txt");
+assert.equal(blobClientCalls[0].type, "put");
+assert.equal(blobClientCalls[0].options.access, "private");
+assert.equal(blobClientCalls[0].options.addRandomSuffix, false);
+
+const openedBlobArtifact = await openArtifactFile(blobArtifact, { blobClient: fakeBlobClient });
+assert.equal(openedBlobArtifact.contentType, "text/plain");
+assert.equal(openedBlobArtifact.fileName, "blob-trace.txt");
+assert.equal(await readStreamText(openedBlobArtifact.stream), "blob proof bytes");
+assert.deepEqual(blobClientCalls[1], {
+  type: "get",
+  pathname: "workspace-default/artifact-blob-test-blob-trace.txt",
+  options: { access: "private" }
+});
+if (originalArtifactStorageDriver === undefined) delete process.env.ARTIFACT_STORAGE_DRIVER;
+else process.env.ARTIFACT_STORAGE_DRIVER = originalArtifactStorageDriver;
 
 await assert.rejects(
   () =>

@@ -3,6 +3,7 @@ import path from "node:path";
 const DEV_HUMAN_KEYS = new Set(["mfa_dev_human_key"]);
 const DEV_HUMAN_PASSWORDS = new Set(["mfa_dev_password"]);
 const VALID_WORKER_RUNNERS = new Set(["disabled", "docker", "local"]);
+const VALID_ARTIFACT_STORAGE_DRIVERS = new Set(["local-file", "vercel-blob"]);
 
 export function assertWebRuntimeConfig(env = process.env) {
   const errors = commonRuntimeErrors(env);
@@ -39,6 +40,10 @@ export function secureCookiesEnabled(env = process.env) {
 function commonRuntimeErrors(env) {
   const errors = [];
   requireEnv(env, "DATABASE_URL", errors);
+  const storageDriver = artifactStorageDriver(env);
+  if (!VALID_ARTIFACT_STORAGE_DRIVERS.has(storageDriver)) {
+    errors.push("ARTIFACT_STORAGE_DRIVER must be one of: local-file, vercel-blob");
+  }
   if (env.ARTIFACT_MAX_BYTES) {
     requirePositiveInteger(env, "ARTIFACT_MAX_BYTES", errors);
   }
@@ -47,17 +52,28 @@ function commonRuntimeErrors(env) {
   }
 
   if (isProduction(env)) {
-    requireEnv(env, "ARTIFACT_STORAGE_DIR", errors);
     requirePositiveInteger(env, "ARTIFACT_MAX_BYTES", errors);
     if (env.DATABASE_URL?.includes("math_for_agents:math_for_agents@")) {
       errors.push("DATABASE_URL must not use the default local development Postgres password in production");
     }
-    if (env.ARTIFACT_STORAGE_DIR && !path.isAbsolute(env.ARTIFACT_STORAGE_DIR)) {
-      errors.push("ARTIFACT_STORAGE_DIR must be an absolute path in production");
+
+    if (storageDriver === "local-file") {
+      requireEnv(env, "ARTIFACT_STORAGE_DIR", errors);
+      if (env.ARTIFACT_STORAGE_DIR && !path.isAbsolute(env.ARTIFACT_STORAGE_DIR)) {
+        errors.push("ARTIFACT_STORAGE_DIR must be an absolute path in production");
+      }
+    }
+
+    if (storageDriver === "vercel-blob") {
+      requireEnv(env, "BLOB_READ_WRITE_TOKEN", errors);
     }
   }
 
   return errors;
+}
+
+export function artifactStorageDriver(env = process.env) {
+  return env.ARTIFACT_STORAGE_DRIVER || "local-file";
 }
 
 function requireSecureCookieConfig(env, errors) {

@@ -1,0 +1,10 @@
+.env
+.env.*
+.git
+.github
+.playwright-cli
+artifacts
+backups
+logs
+node_modules
+output

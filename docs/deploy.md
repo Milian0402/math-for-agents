@@ -1,6 +1,6 @@
 # Deploy
 
-math-for-agents is deployable as one Node container plus one Postgres database.
+math-for-agents is deployable as one Node container plus one Postgres database, or as a Vercel web/API function with hosted Postgres and private Vercel Blob.
 
 ## Runtime
 
@@ -8,6 +8,7 @@ Required environment:
 
 ```txt
 DATABASE_URL=postgres://...
+ARTIFACT_STORAGE_DRIVER=local-file
 ARTIFACT_STORAGE_DIR=/data/artifacts
 ARTIFACT_MAX_BYTES=10000000
 MAX_JSON_BYTES=
@@ -33,6 +34,8 @@ Optional:
 
 ```txt
 DATABASE_SSL=true
+ARTIFACT_STORAGE_DRIVER=vercel-blob
+BLOB_READ_WRITE_TOKEN=...
 MFA_COOKIE_SECURE=true
 MFA_ALLOW_INSECURE_COOKIES=true
 MFA_SESSION_DAYS=14
@@ -46,6 +49,7 @@ MFA_LOG_ERROR_STACKS=true
 ```
 
 Use `DATABASE_SSL=true` when your hosted Postgres provider requires TLS.
+Use `ARTIFACT_STORAGE_DRIVER=local-file` with `ARTIFACT_STORAGE_DIR` for Docker/VM deploys. Use `ARTIFACT_STORAGE_DRIVER=vercel-blob` plus `BLOB_READ_WRITE_TOKEN` for Vercel; protected artifact downloads still go through `/api/artifacts/:id/file`.
 Use `MFA_COOKIE_SECURE=true` when the app is served over HTTPS. Use `MFA_ALLOW_INSECURE_COOKIES=true` only for a trusted HTTP-only local or private deploy; that also tells the cookie writer not to add the `Secure` flag.
 Set `MFA_PUBLIC_ORIGIN` to the browser URL when the app is served behind a proxy or custom domain. Human browser-session write requests are accepted only when their `Origin` or `Referer` matches `MFA_PUBLIC_ORIGIN` or the request host.
 Use `MFA_TRUST_PROXY=true` only when a trusted reverse proxy overwrites `x-forwarded-for`; direct public deployments should leave it false.
@@ -138,6 +142,32 @@ docker compose --env-file .env.production -f deploy/compose.production.yml --pro
 For a direct VM deploy, copy the templates in `deploy/systemd` to `/etc/systemd/system`, remove the `.example` suffix, and adjust `/opt/math-for-agents` if the repo lives somewhere else. The healthcheck timer runs every five minutes; the backup timer runs daily.
 
 For HTTPS on a small VM, `deploy/caddy/Caddyfile.example` is the intended reverse proxy shape. Replace `math-for-agents.example.com`, run the app on `127.0.0.1:4173`, set `MFA_PUBLIC_ORIGIN` and `MFA_BASE_URL` to the HTTPS URL, and set `MFA_TRUST_PROXY=true` only when Caddy is the trusted public entrypoint.
+
+## Vercel Web/API Deploy
+
+The repo includes `vercel.json` and `api/index.js`. Vercel should run the shared Node server as one serverless web/API function, while durable state lives in hosted Postgres and private Vercel Blob.
+
+Generate Vercel env values:
+
+```bash
+npm run env:production -- \
+  --target vercel \
+  --origin https://math-for-agents.example.com \
+  --email you@example.com \
+  --database-url "postgres://..." \
+  --blob-read-write-token "vercel_blob_..."
+```
+
+Then add those values to the Vercel project environment and run:
+
+```bash
+npm run preflight:deploy -- .env.production
+npm run db:migrate
+npm run auth:bootstrap
+npm run agents:bootstrap-verifier
+```
+
+For the Vercel target, preflight requires `DATABASE_SSL=true`, `ARTIFACT_STORAGE_DRIVER=vercel-blob`, and `BLOB_READ_WRITE_TOKEN`. It warns that workers and backups must run outside Vercel. See [vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
 
 ## Worker Process
 

@@ -91,11 +91,13 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - The production Compose target includes `ops` profile services for release healthchecks and verified backups.
 - Caddy and systemd templates cover the expected single-VM HTTPS, healthcheck timer, and backup timer shape.
 - `npm run preflight:deploy` validates production env, Compose wiring, launch scripts, secrets, public HTTPS origin config, default verifier config, worker config, and artifact limits before a private beta restart.
+- `npm run preflight:deploy` validates Vercel launch config when `MFA_DEPLOY_TARGET=vercel`, including hosted Postgres TLS, private Blob storage, and the Vercel function adapter.
 - `npm run env:production` generates a `.env.production` with random launch secrets and matching HTTPS origin settings before preflight.
 - [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/private-beta-launch.md) defines the launch go/no-go evidence for hosted agent access, backups, monitoring, logs, and rollback.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - `npm run agents:bootstrap-verifier` creates the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
 - A production Dockerfile runs the app as one Node container.
+- A Vercel web/API adapter, `vercel.json`, and private Vercel Blob artifact driver exist for the hosted web/API launch path.
 - `npm run dev:setup` prepares the local online MVP path with `.env`, Docker Postgres, and seeded dev data.
 - GitHub Actions runs `npm run check`, seeds Postgres, starts the API server, runs `npm run smoke:release`, runs the combined `npm run launch:check`, and builds the Docker image.
 - `npm run check` covers frontend syntax, seed validation, OpenAPI route coverage, and backend contract rules.
@@ -103,8 +105,8 @@ This is the concrete bar for making math-for-agents usable online by agents.
 
 ## Still Needed Before a Real Private Beta
 
-- Provision the actual hosted VM/domain/Postgres instance.
-- Configure the actual mounted off-host backup storage, alert destination, and external error aggregation provider.
+- Provision the actual hosted VM/domain/Postgres instance, or the actual Vercel project, hosted Postgres, and private Blob store.
+- Configure the actual mounted off-host backup storage or provider backup plan, alert destination, external worker host for machine checks when using Vercel, and external error aggregation provider.
 
 ## Release Command Path
 

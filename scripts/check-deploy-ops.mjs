@@ -34,7 +34,15 @@ includesAll(
 const envExample = await text(".env.example");
 includesAll(
   envExample,
-  ["MFA_PUBLIC_PORT=", "MFA_PUBLIC_ORIGIN=", "BACKUP_DIR_HOST=", "BACKUP_REMOTE_DIR_HOST=", "MFA_BASE_URL="],
+  [
+    "MFA_PUBLIC_PORT=",
+    "MFA_PUBLIC_ORIGIN=",
+    "BACKUP_DIR_HOST=",
+    "BACKUP_REMOTE_DIR_HOST=",
+    "MFA_BASE_URL=",
+    "ARTIFACT_STORAGE_DRIVER=",
+    "BLOB_READ_WRITE_TOKEN="
+  ],
   "env example"
 );
 
@@ -74,6 +82,21 @@ includesAll(
   "deploy docs"
 );
 
+const vercelDocs = await text("docs/vercel.md");
+includesAll(
+  vercelDocs,
+  [
+    "vercel.json",
+    "api/index.js",
+    "ARTIFACT_STORAGE_DRIVER=vercel-blob",
+    "BLOB_READ_WRITE_TOKEN",
+    "npm run preflight:deploy",
+    "npm run agent:check",
+    "external worker"
+  ],
+  "vercel docs"
+);
+
 const opsDocs = await text("docs/ops.md");
 includesAll(
   opsDocs,
@@ -87,6 +110,7 @@ includesAll(
   [
     "Go/No-Go Evidence",
     "npm run env:production",
+    "--target vercel",
     "npm run preflight:deploy -- .env.production",
     "MFA_HEALTHCHECK_BEARER",
     "agent-manifest.json",
