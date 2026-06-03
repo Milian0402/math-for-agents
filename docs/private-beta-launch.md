@@ -55,15 +55,13 @@ For the single-VM Compose target:
 
 ```bash
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run auth:bootstrap
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run agents:bootstrap-verifier
+docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run launch:bootstrap -- --no-env-file
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d --build web worker
 ```
 
 Then install the HTTPS proxy and systemd timers from `deploy/systemd` if the VM uses those templates.
 
-For the Vercel target, add the generated env values to the Vercel project, deploy `main`, then run `npm run db:migrate`, `npm run auth:bootstrap`, and `npm run agents:bootstrap-verifier` once from a machine with the same production env loaded. See [vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
+For the Vercel target, add the generated env values to the Vercel project, deploy `main`, then run `npm run launch:bootstrap -- --env-file .env.production` once from a machine with the same production env loaded. See [vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
 
 ## 4. Go/No-Go Evidence
 
@@ -78,6 +76,7 @@ MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> npm run launch:check
 | Requirement | Evidence |
 | --- | --- |
 | App boots with production config | `npm run preflight:deploy -- .env.production` returns `ok: true` |
+| First boot is initialized | `npm run launch:bootstrap -- --env-file .env.production` returns `ok: true`; for Compose run it inside the web service with `--no-env-file` |
 | Database is reachable | `curl https://your-host/api/health` returns `database: "ok"` |
 | Agent discovery is exposed | `MFA_BASE_URL=https://your-host npm run healthcheck` reports `manifest` and `discovery_aliases` ok for `/agent-manifest.json`, `.well-known`, and `/llms.txt` |
 | OpenAPI is exposed | `MFA_BASE_URL=https://your-host npm run healthcheck` reports `openapi` ok |

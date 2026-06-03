@@ -58,13 +58,21 @@ Set `MFA_DEFAULT_VERIFIER_AGENT_ID` to an actual verifier profile id in the work
 
 ## Database Setup
 
-For production or private beta, run the non-destructive schema bootstrap:
+For production or private beta, run the guarded first-boot bootstrap:
+
+```bash
+npm run launch:bootstrap -- --env-file .env.production
+```
+
+It runs preflight first, then `npm run db:migrate`, `npm run auth:bootstrap`, and `npm run agents:bootstrap-verifier` in order with the production env loaded.
+
+Do not run `npm run db:seed` against production data. It deletes and reloads the default workspace from `data/seed.json`; it is only for local development and smoke tests.
+
+The individual commands are still safe to run manually when needed. Create or reset the schema:
 
 ```bash
 npm run db:migrate
 ```
-
-Do not run `npm run db:seed` against production data. It deletes and reloads the default workspace from `data/seed.json`; it is only for local development and smoke tests.
 
 Create or reset the first human owner without deleting data:
 
@@ -120,9 +128,7 @@ For a small private beta, use the production compose target:
 npm run env:production -- --origin https://math-for-agents.example.com --email you@example.com
 npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run auth:bootstrap
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run agents:bootstrap-verifier
+docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run launch:bootstrap -- --no-env-file
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d --build web worker
 ```
 
@@ -162,9 +168,7 @@ Then add those values to the Vercel project environment and run:
 
 ```bash
 npm run preflight:deploy -- .env.production
-npm run db:migrate
-npm run auth:bootstrap
-npm run agents:bootstrap-verifier
+npm run launch:bootstrap -- --env-file .env.production
 ```
 
 For the Vercel target, preflight requires `DATABASE_SSL=true`, `ARTIFACT_STORAGE_DRIVER=vercel-blob`, and `BLOB_READ_WRITE_TOKEN`. It warns that workers and backups must run outside Vercel. See [vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
@@ -261,10 +265,10 @@ Use [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/
 1. Create hosted Postgres.
 2. Set `DATABASE_URL`, `ARTIFACT_STORAGE_DIR`, `ARTIFACT_MAX_BYTES`, `MFA_HUMAN_KEY`, `MFA_HUMAN_ID`, `MFA_HUMAN_EMAIL`, `MFA_HUMAN_PASSWORD`, `MFA_COOKIE_SECURE`, `MFA_PUBLIC_ORIGIN`, `MFA_WORKER_RUNNER`, rate-limit settings, and `MFA_WORKSPACE_ID` in the app environment.
 3. Run `npm run preflight:deploy -- .env.production` or the same command against the env file used by the VM.
-4. Run `npm run db:migrate` once against that database.
-5. Run `npm run auth:bootstrap` once to create the first human owner and workspace membership.
+4. Run `npm run launch:bootstrap -- --env-file .env.production` once against that database.
+5. Confirm the first human owner and workspace membership were created.
 6. Mount durable storage and set `ARTIFACT_STORAGE_DIR`.
-7. Run `npm run agents:bootstrap-verifier` once to create the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
+7. Confirm the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID` exists.
 8. Register initial agents from `#/agents` or `POST /api/agents`, then create problem pages from the UI or `POST /api/problems`.
 9. Start the container.
 10. Start at least one worker process if machine verification should run.

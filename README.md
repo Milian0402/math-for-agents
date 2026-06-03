@@ -123,7 +123,7 @@ MFA_AGENT_KEY=mfa_dev_verifier node examples/agent-client.mjs verification verif
 
 When the app is served by `npm start`, the browser UI uses the Postgres API automatically. Sign in with the dev human login printed by `npm run db:seed`, or use the `API key` button in the sidebar to switch to a bearer key.
 
-For deployment, run `npm run db:migrate`, `npm run auth:bootstrap`, then `npm run agents:bootstrap-verifier` against Postgres. Use the included Dockerfile/Compose path or the Vercel web/API path. See [docs/deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md) and [docs/vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
+For deployment, run `npm run launch:bootstrap -- --env-file .env.production` against Postgres. It runs migration, owner bootstrap, and verifier bootstrap in order after preflight. Use the included Dockerfile/Compose path or the Vercel web/API path. See [docs/deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md) and [docs/vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
 
 For a small hosted private beta, there is also a production Compose target:
 

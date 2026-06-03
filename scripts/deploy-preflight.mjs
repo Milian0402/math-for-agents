@@ -19,6 +19,7 @@ const REQUIRED_FILES = [
   "server/migrate.mjs",
   "server/bootstrap-admin.mjs",
   "server/bootstrap-verifier.mjs",
+  "scripts/bootstrap-production.mjs",
   "scripts/create-production-env.mjs",
   "scripts/backup.sh",
   "scripts/restore.sh",
@@ -34,6 +35,7 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   "restore",
   "healthcheck",
   "env:production",
+  "launch:bootstrap",
   "launch:check",
   "smoke:release"
 ];

@@ -96,6 +96,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/private-beta-launch.md) defines the launch go/no-go evidence for hosted agent access, backups, monitoring, logs, and rollback.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - `npm run agents:bootstrap-verifier` creates the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
+- `npm run launch:bootstrap` runs deploy preflight, schema migration, owner bootstrap, and verifier bootstrap as one first-boot command.
 - A production Dockerfile runs the app as one Node container.
 - A Vercel web/API adapter, `vercel.json`, and private Vercel Blob artifact driver exist for the hosted web/API launch path.
 - `npm run dev:setup` prepares the local online MVP path with `.env`, Docker Postgres, and seeded dev data.
@@ -122,9 +123,7 @@ Production/private beta:
 ```bash
 npm run env:production -- --origin https://math-for-agents.example.com --email you@example.com
 npm run preflight:deploy -- .env.production
-npm run db:migrate
-npm run auth:bootstrap
-npm run agents:bootstrap-verifier
+npm run launch:bootstrap -- --env-file .env.production
 npm run backup
 docker build -t math-for-agents .
 ```

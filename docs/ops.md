@@ -197,9 +197,7 @@ The concrete hosted target is Docker Compose on a small VM:
 npm run env:production -- --origin https://math-for-agents.example.com --email you@example.com
 npm run preflight:deploy -- .env.production
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d db
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run db:migrate
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run auth:bootstrap
-docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run agents:bootstrap-verifier
+docker compose --env-file .env.production -f deploy/compose.production.yml run --rm web npm run launch:bootstrap -- --no-env-file
 docker compose --env-file .env.production -f deploy/compose.production.yml up -d --build web worker
 ```
 

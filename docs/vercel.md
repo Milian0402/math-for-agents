@@ -60,9 +60,7 @@ After the first deploy, run these commands once from a machine with the producti
 
 ```bash
 npm run preflight:deploy -- .env.production
-npm run db:migrate
-npm run auth:bootstrap
-npm run agents:bootstrap-verifier
+npm run launch:bootstrap -- --env-file .env.production
 ```
 
 Then open:

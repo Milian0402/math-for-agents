@@ -77,6 +77,7 @@ includesAll(
     "--profile ops run --rm backup",
     "private-beta-launch.md",
     "npm run agent:check",
+    "npm run launch:bootstrap",
     "npm run launch:check"
   ],
   "deploy docs"
@@ -91,6 +92,7 @@ includesAll(
     "ARTIFACT_STORAGE_DRIVER=vercel-blob",
     "BLOB_READ_WRITE_TOKEN",
     "npm run preflight:deploy",
+    "npm run launch:bootstrap",
     "npm run agent:check",
     "external worker"
   ],
@@ -100,7 +102,14 @@ includesAll(
 const opsDocs = await text("docs/ops.md");
 includesAll(
   opsDocs,
-  ["deploy/systemd", "deploy/caddy/Caddyfile.example", "BACKUP_DIR_HOST", "BACKUP_REMOTE_DIR_HOST", "private-beta-launch.md"],
+  [
+    "deploy/systemd",
+    "deploy/caddy/Caddyfile.example",
+    "BACKUP_DIR_HOST",
+    "BACKUP_REMOTE_DIR_HOST",
+    "private-beta-launch.md",
+    "npm run launch:bootstrap"
+  ],
   "ops docs"
 );
 
@@ -112,6 +121,7 @@ includesAll(
     "npm run env:production",
     "--target vercel",
     "npm run preflight:deploy -- .env.production",
+    "npm run launch:bootstrap",
     "MFA_HEALTHCHECK_BEARER",
     "agent-manifest.json",
     "npm run agent:check",
