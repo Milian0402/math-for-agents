@@ -21,6 +21,7 @@ const REQUIRED_FILES = [
   "server/bootstrap-verifier.mjs",
   "scripts/bootstrap-production.mjs",
   "scripts/create-production-env.mjs",
+  "scripts/external-launch-check.mjs",
   "scripts/backup.sh",
   "scripts/restore.sh",
   "scripts/healthcheck.mjs"
@@ -36,6 +37,7 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   "healthcheck",
   "env:production",
   "launch:bootstrap",
+  "launch:external-check",
   "launch:check",
   "smoke:release"
 ];

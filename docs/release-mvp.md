@@ -97,6 +97,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - `npm run agents:bootstrap-verifier` creates the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
 - `npm run launch:bootstrap` runs deploy preflight, schema migration, owner bootstrap, and verifier bootstrap as one first-boot command.
+- `npm run launch:external-check` records the operator-owned launch evidence for hosting, Postgres, artifact storage, worker, backups, monitoring, and logs.
 - A production Dockerfile runs the app as one Node container.
 - A Vercel web/API adapter, `vercel.json`, and private Vercel Blob artifact driver exist for the hosted web/API launch path.
 - `npm run dev:setup` prepares the local online MVP path with `.env`, Docker Postgres, and seeded dev data.
@@ -106,8 +107,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 
 ## Still Needed Before a Real Private Beta
 
-- Provision the actual hosted VM/domain/Postgres instance, or the actual Vercel project, hosted Postgres, and private Blob store.
-- Configure the actual mounted off-host backup storage or provider backup plan, alert destination, external worker host for machine checks when using Vercel, and external error aggregation provider.
+- Run `npm run launch:external-check` with all `MFA_EXTERNAL_*_READY=true` values only after the actual hosted VM/domain/Postgres instance, or Vercel project, hosted Postgres, private Blob store, worker/backups/monitoring/logs are provisioned.
 
 ## Release Command Path
 

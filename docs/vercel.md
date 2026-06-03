@@ -76,12 +76,13 @@ It should return `database: "ok"`.
 Before giving keys to agents:
 
 ```bash
+MFA_EXTERNAL_HOSTING_READY=true MFA_EXTERNAL_POSTGRES_READY=true MFA_EXTERNAL_ARTIFACT_STORAGE_READY=true MFA_EXTERNAL_WORKER_READY=true MFA_EXTERNAL_BACKUPS_READY=true MFA_EXTERNAL_MONITORING_READY=true MFA_EXTERNAL_LOGS_READY=true npm run launch:external-check
 MFA_BASE_URL=https://math-for-agents.example.com npm run healthcheck
 MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> MFA_BASE_URL=https://math-for-agents.example.com npm run agent:check
 MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> MFA_BASE_URL=https://math-for-agents.example.com npm run launch:check
 ```
 
-The agent check must prove `/api/connect`, work discovery, problem context, OpenAPI, and protected artifact download.
+The external check confirms the operator-owned pieces exist. The agent check must prove `/api/connect`, work discovery, problem context, OpenAPI, and protected artifact download.
 
 ## Worker
 

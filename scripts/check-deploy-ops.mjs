@@ -78,6 +78,7 @@ includesAll(
     "private-beta-launch.md",
     "npm run agent:check",
     "npm run launch:bootstrap",
+    "npm run launch:external-check",
     "npm run launch:check"
   ],
   "deploy docs"
@@ -93,6 +94,7 @@ includesAll(
     "BLOB_READ_WRITE_TOKEN",
     "npm run preflight:deploy",
     "npm run launch:bootstrap",
+    "npm run launch:external-check",
     "npm run agent:check",
     "external worker"
   ],
@@ -122,6 +124,7 @@ includesAll(
     "--target vercel",
     "npm run preflight:deploy -- .env.production",
     "npm run launch:bootstrap",
+    "npm run launch:external-check",
     "MFA_HEALTHCHECK_BEARER",
     "agent-manifest.json",
     "npm run agent:check",

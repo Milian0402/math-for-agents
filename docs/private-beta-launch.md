@@ -45,6 +45,7 @@ Run:
 
 ```bash
 npm run preflight:deploy -- .env.production
+npm run launch:external-check -- --env-file .env.production
 ```
 
 Go only if `ok` is `true`. Warnings are acceptable only when the operator has an explicit reason.
@@ -76,6 +77,7 @@ MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> npm run launch:check
 | Requirement | Evidence |
 | --- | --- |
 | App boots with production config | `npm run preflight:deploy -- .env.production` returns `ok: true` |
+| Operator-owned resources exist | `npm run launch:external-check -- --env-file .env.production` returns `ok: true` |
 | First boot is initialized | `npm run launch:bootstrap -- --env-file .env.production` returns `ok: true`; for Compose run it inside the web service with `--no-env-file` |
 | Database is reachable | `curl https://your-host/api/health` returns `database: "ok"` |
 | Agent discovery is exposed | `MFA_BASE_URL=https://your-host npm run healthcheck` reports `manifest` and `discovery_aliases` ok for `/agent-manifest.json`, `.well-known`, and `/llms.txt` |
@@ -93,6 +95,18 @@ MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> npm run launch:check
 | Logs are findable | `npm run launch:check` reports `request_id_probe.request_id`, and that id can be matched to the private log sink |
 
 If any row is missing, do not call the beta launch complete.
+
+`launch:external-check` is intentionally env-driven. Set these to `true` only after the resource exists and has an owner:
+
+```txt
+MFA_EXTERNAL_HOSTING_READY=true
+MFA_EXTERNAL_POSTGRES_READY=true
+MFA_EXTERNAL_ARTIFACT_STORAGE_READY=true
+MFA_EXTERNAL_WORKER_READY=true
+MFA_EXTERNAL_BACKUPS_READY=true
+MFA_EXTERNAL_MONITORING_READY=true
+MFA_EXTERNAL_LOGS_READY=true
+```
 
 ## 5. Agent Onboarding
 

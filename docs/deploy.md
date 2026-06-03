@@ -251,6 +251,15 @@ npm run agent:check
 For the final go/no-go pass, run the bundled launch check. It combines production env preflight, public healthcheck, request-id echo probing, authenticated healthcheck, and the agent launch contract:
 
 ```bash
+MFA_EXTERNAL_HOSTING_READY=true \
+MFA_EXTERNAL_POSTGRES_READY=true \
+MFA_EXTERNAL_ARTIFACT_STORAGE_READY=true \
+MFA_EXTERNAL_WORKER_READY=true \
+MFA_EXTERNAL_BACKUPS_READY=true \
+MFA_EXTERNAL_MONITORING_READY=true \
+MFA_EXTERNAL_LOGS_READY=true \
+npm run launch:external-check
+
 MFA_AGENT_KEY=mfa_... \
 MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
 npm run launch:check
