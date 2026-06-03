@@ -46,4 +46,12 @@ hash_file() {
 verify_file "${backup_path}/database.dump" "${backup_path}/database.dump.sha256"
 verify_file "${backup_path}/artifacts.tar.gz" "${backup_path}/artifacts.tar.gz.sha256"
 
+manifest="${backup_path}/manifest.json"
+if [[ ! -f "$manifest" ]]; then
+  echo "missing ${manifest}" >&2
+  exit 1
+fi
+
+node -e 'const fs = require("node:fs"); const manifest = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); for (const key of ["created_at", "database", "database_sha256", "artifacts", "artifacts_sha256", "artifact_storage_driver"]) { if (!manifest[key]) throw new Error(`manifest missing ${key}`); }' "$manifest"
+
 echo "backup verified ${backup_path}"

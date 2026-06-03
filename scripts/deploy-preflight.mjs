@@ -22,6 +22,7 @@ const REQUIRED_FILES = [
   "scripts/bootstrap-production.mjs",
   "scripts/create-production-env.mjs",
   "scripts/external-launch-check.mjs",
+  "scripts/export-artifacts.mjs",
   "scripts/backup.sh",
   "scripts/restore.sh",
   "scripts/healthcheck.mjs"
@@ -31,6 +32,7 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   "db:migrate",
   "auth:bootstrap",
   "agents:bootstrap-verifier",
+  "artifacts:export",
   "backup",
   "backup:verify",
   "restore",

@@ -35,6 +35,16 @@ make_backup() {
   tar -czf "${target}/artifacts.tar.gz" -C "$artifact_src" .
   write_sha256 "${target}/database.dump" "${target}/database.dump.sha256"
   write_sha256 "${target}/artifacts.tar.gz" "${target}/artifacts.tar.gz.sha256"
+  cat > "${target}/manifest.json" <<JSON
+{
+  "created_at": "20260602T000000Z",
+  "database": "database.dump",
+  "database_sha256": "$(hash_file "${target}/database.dump")",
+  "artifacts": "artifacts.tar.gz",
+  "artifacts_sha256": "$(hash_file "${target}/artifacts.tar.gz")",
+  "artifact_storage_driver": "local-file"
+}
+JSON
 }
 
 backup_dir="${tmp_dir}/backup"

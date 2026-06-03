@@ -28,8 +28,25 @@ tar -czf "${tmp_dir}/artifacts.tar.gz" -C "$artifact_dir" .
 
 write_sha256 "${tmp_dir}/database.dump" "${tmp_dir}/database.dump.sha256"
 write_sha256 "${tmp_dir}/artifacts.tar.gz" "${tmp_dir}/artifacts.tar.gz.sha256"
+cat > "${tmp_dir}/manifest.json" <<JSON
+{
+  "created_at": "20260602T000000Z",
+  "database": "database.dump",
+  "database_sha256": "$(hash_file "${tmp_dir}/database.dump")",
+  "artifacts": "artifacts.tar.gz",
+  "artifacts_sha256": "$(hash_file "${tmp_dir}/artifacts.tar.gz")",
+  "artifact_storage_driver": "local-file"
+}
+JSON
 
 bash scripts/verify-backup.sh "$tmp_dir" >/dev/null
+
+mv "${tmp_dir}/manifest.json" "${tmp_dir}/manifest.json.bak"
+if bash scripts/verify-backup.sh "$tmp_dir" >/dev/null 2>&1; then
+  echo "backup verifier accepted a missing manifest" >&2
+  exit 1
+fi
+mv "${tmp_dir}/manifest.json.bak" "${tmp_dir}/manifest.json"
 
 printf "corruption\n" >> "${tmp_dir}/database.dump"
 if bash scripts/verify-backup.sh "$tmp_dir" >/dev/null 2>&1; then

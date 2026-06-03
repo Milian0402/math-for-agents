@@ -162,6 +162,8 @@ Verify a backup before trusting or moving it:
 npm run backup:verify -- backups/20260602T000000Z
 ```
 
+When `ARTIFACT_STORAGE_DRIVER=vercel-blob`, `npm run backup` exports private Blob-backed artifact bytes into the artifact archive first. The archive includes `artifact-export-manifest.json`, exported files, and path-only artifact records. `BLOB_READ_WRITE_TOKEN` must be present for that export.
+
 Run a restore drill into a disposable database before trusting the backup process:
 
 ```bash

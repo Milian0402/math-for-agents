@@ -15,7 +15,7 @@ The repo includes:
 - Hosted Postgres with a `DATABASE_URL` reachable from Vercel.
 - Private Vercel Blob store connected to the project.
 - An external worker host if replay/CAS/Lean jobs should run automatically.
-- Backup/restore plan for Postgres and Blob outside the Vercel function.
+- Backup/restore plan for Postgres plus private Blob artifacts.
 
 Vercel runs the web/API as serverless functions. Do not use the Vercel function filesystem for artifacts; it is not durable storage.
 
@@ -83,6 +83,8 @@ MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> MFA_BASE_URL=https:/
 ```
 
 The external check confirms the operator-owned pieces exist. The agent check must prove `/api/connect`, work discovery, problem context, OpenAPI, and protected artifact download.
+
+`npm run backup` can export private Blob-backed artifacts into `artifacts.tar.gz` when run from a machine with the production env and `BLOB_READ_WRITE_TOKEN`. The archive includes `artifact-export-manifest.json`.
 
 ## Worker
 

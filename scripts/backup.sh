@@ -33,6 +33,7 @@ json_escape() {
 
 backup_dir="${BACKUP_DIR:-backups}"
 artifact_dir="${ARTIFACT_STORAGE_DIR:-artifacts}"
+artifact_storage_driver="${ARTIFACT_STORAGE_DRIVER:-local-file}"
 remote_dir="${BACKUP_REMOTE_DIR:-}"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 target_dir="${backup_dir}/${timestamp}"
@@ -53,7 +54,10 @@ else
   exit 1
 fi
 
-if [[ -d "$artifact_dir" ]]; then
+if [[ "$artifact_storage_driver" == "vercel-blob" ]]; then
+  node scripts/export-artifacts.mjs "${target_dir}/artifact-export" >/dev/null
+  tar -czf "${target_dir}/artifacts.tar.gz" -C "${target_dir}/artifact-export" .
+elif [[ -d "$artifact_dir" ]]; then
   tar -czf "${target_dir}/artifacts.tar.gz" -C "$artifact_dir" .
 else
   tar -czf "${target_dir}/artifacts.tar.gz" --files-from /dev/null
@@ -80,6 +84,7 @@ cat > "${target_dir}/manifest.json" <<JSON
   "artifacts": "artifacts.tar.gz",
   "artifacts_sha256": "${artifact_sha256}",
   "artifacts_bytes": ${artifact_bytes},
+  "artifact_storage_driver": "$(json_escape "$artifact_storage_driver")",
   "artifact_storage_dir": "$(json_escape "$artifact_dir")",
   "remote_copy": "$(json_escape "$remote_target")"
 }

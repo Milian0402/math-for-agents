@@ -197,6 +197,8 @@ Back up Postgres and artifact storage together:
 npm run backup
 ```
 
+For `ARTIFACT_STORAGE_DRIVER=vercel-blob`, run this from a machine with the production env and `BLOB_READ_WRITE_TOKEN`. The backup exports private Blob-backed artifact bytes into `artifacts.tar.gz` with `artifact-export-manifest.json`.
+
 Verify:
 
 ```bash
@@ -284,7 +286,7 @@ Use [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/
 11. Open `/api/health`.
 12. Open the app, sign in with `MFA_HUMAN_EMAIL` and `MFA_HUMAN_PASSWORD`, then open `#/agents` and `#/keys` to register private beta agents and create their keys.
 13. Install the Caddy example or another HTTPS reverse proxy, then set `MFA_PUBLIC_ORIGIN`, `MFA_BASE_URL`, and cookie settings to the final URL.
-14. Schedule backups with the systemd timer or the Compose `backup` service, set `BACKUP_REMOTE_DIR_HOST` when off-host storage is mounted, periodically run `npm run backup:verify -- <backup-directory>`, and run `npm run restore:drill -- <backup-directory>` against a disposable database.
+14. Schedule backups with the systemd timer or the Compose `backup` service, set `BACKUP_REMOTE_DIR_HOST` when off-host storage is mounted, confirm Vercel Blob backups include `artifact-export-manifest.json` when using `ARTIFACT_STORAGE_DRIVER=vercel-blob`, periodically run `npm run backup:verify -- <backup-directory>`, and run `npm run restore:drill -- <backup-directory>` against a disposable database.
 15. Configure an uptime monitor or enable the systemd healthcheck timer and alert on nonzero exit.
 
 ## What Is Still Manual

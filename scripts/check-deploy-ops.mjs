@@ -49,6 +49,18 @@ includesAll(
 const caddy = await text("deploy/caddy/Caddyfile.example");
 includesAll(caddy, ["math-for-agents.example.com", "reverse_proxy 127.0.0.1:4173", "Strict-Transport-Security"], "caddy template");
 
+const backupScript = await text("scripts/backup.sh");
+includesAll(
+  backupScript,
+  [
+    "ARTIFACT_STORAGE_DRIVER",
+    "scripts/export-artifacts.mjs",
+    "artifact-export",
+    "artifact_storage_driver"
+  ],
+  "backup script"
+);
+
 for (const name of ["healthcheck", "backup"]) {
   const service = await text(`deploy/systemd/math-for-agents-${name}.service.example`);
   includesAll(
@@ -79,7 +91,9 @@ includesAll(
     "npm run agent:check",
     "npm run launch:bootstrap",
     "npm run launch:external-check",
-    "npm run launch:check"
+    "npm run launch:check",
+    "BLOB_READ_WRITE_TOKEN",
+    "artifact-export-manifest.json"
   ],
   "deploy docs"
 );
@@ -96,7 +110,8 @@ includesAll(
     "npm run launch:bootstrap",
     "npm run launch:external-check",
     "npm run agent:check",
-    "external worker"
+    "external worker",
+    "artifact-export-manifest.json"
   ],
   "vercel docs"
 );
@@ -110,7 +125,9 @@ includesAll(
     "BACKUP_DIR_HOST",
     "BACKUP_REMOTE_DIR_HOST",
     "private-beta-launch.md",
-    "npm run launch:bootstrap"
+    "npm run launch:bootstrap",
+    "artifact-export-manifest.json",
+    "BLOB_READ_WRITE_TOKEN"
   ],
   "ops docs"
 );
@@ -133,6 +150,7 @@ includesAll(
     "node examples/agent-client.mjs claims",
     "npm run backup:verify",
     "npm run restore:drill",
+    "artifact-export-manifest.json",
     "request_id_probe.request_id",
     "Rollback and Recovery",
     "Alerting and external error aggregation are operator-owned"
