@@ -617,7 +617,7 @@ function generatedKeyPanel(generated) {
           <button class="secondary-button" type="button" data-action="copy-generated-connection">Copy env</button>
         </div>
         <code class="secret-code connection-code">${escapeHtml(connection.env_block)}</code>
-        <p>Run <code>npm run agent:check</code> with this env before giving the agent work.</p>
+        <p>Run <code>npm run mfa -- check</code> with this env before giving the agent work.</p>
       ` : ""}
       <div class="key-secret-meta">
         <span>${escapeHtml(key.name ?? "agent key")}</span>
@@ -1720,6 +1720,13 @@ function loginModal() {
 }
 
 async function handleClick(event) {
+  const skipTarget = event.target.closest(".skip-link");
+  if (skipTarget) {
+    event.preventDefault();
+    document.getElementById("main-workspace")?.focus();
+    return;
+  }
+
   const actionTarget = event.target.closest("[data-action]");
   if (!actionTarget) return;
 

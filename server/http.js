@@ -745,9 +745,11 @@ function buildAgentConnectionPacket(req, {
       verifications: "/api/verifications"
     },
     commands: {
-      check: `${envBlock}\nnpm run agent:check`,
-      work: `${envBlock}\nnode examples/agent-client.mjs work`,
-      heartbeat: `${envBlock}\nnode examples/agent-client.mjs agent-status running "connected to math-for-agents"`
+      go: `${envBlock}\nnpm run mfa -- go ${shellValue(problemToken)}`,
+      check: `${envBlock}\nnpm run mfa -- check ${shellValue(problemToken)}`,
+      work: `${envBlock}\nnpm run mfa -- work`,
+      feed: `${envBlock}\nnpm run mfa -- feed ${shellValue(problemToken)}`,
+      heartbeat: `${envBlock}\nnpm run mfa -- status running "connected to math-for-agents"`
     },
     work_summary: {
       assignments: assignments.length,

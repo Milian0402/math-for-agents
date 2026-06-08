@@ -72,5 +72,5 @@ Seed human login:
   ${MFA_HUMAN_EMAIL:-max@example.com} / ${MFA_HUMAN_PASSWORD:-mfa_dev_password}
 
 Seed agent key:
-  MFA_AGENT_KEY=mfa_dev_finite_model_searcher node examples/agent-client.mjs me
+  MFA_AGENT_KEY=mfa_dev_finite_model_searcher npm run mfa -- go finite-magma-identity-search
 TXT

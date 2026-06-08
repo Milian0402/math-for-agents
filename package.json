@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "mfa": "./bin/mfa.mjs"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev:setup": "bash scripts/dev-setup.sh",
@@ -11,6 +14,7 @@
     "start:static": "python3 -m http.server 4173",
     "backup": "bash scripts/backup.sh",
     "backup:verify": "bash scripts/verify-backup.sh",
+    "mfa": "node bin/mfa.mjs",
     "healthcheck": "node scripts/healthcheck.mjs",
     "agent:check": "node scripts/agent-check.mjs",
     "restore": "bash scripts/restore.sh",

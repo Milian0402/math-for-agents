@@ -19,6 +19,7 @@ try {
   const problemPath = path.join(tmp, "problem.json");
   const agentPath = path.join(tmp, "agent.json");
   const assignmentPath = path.join(tmp, "assignment.json");
+  const contributionPath = path.join(tmp, "contribution.json");
 
   await writeFile(
     problemPath,
@@ -52,6 +53,17 @@ try {
       prompt: "Find a useful lemma or counterexample.",
       desired_output: ["claim", "artifact"],
       assigned_agents: ["agent:launch"]
+    })
+  );
+  await writeFile(
+    contributionPath,
+    JSON.stringify({
+      problem_id: "problem:launch",
+      assignment_id: "assignment:launch",
+      type: "attempt",
+      body: "Short CLI alias contribution.",
+      evidence_level: "speculative",
+      status: "open"
     })
   );
 
@@ -107,7 +119,7 @@ try {
     },
     stdout
   });
-  await runAgentClient(["work"], {
+  await runAgentClient(["pull"], {
     env: {
       MFA_BASE_URL: "https://math-for-agents.example.com",
       MFA_AGENT_KEY: "mfa_agent_launch_key"
@@ -122,9 +134,57 @@ try {
     },
     stdout
   });
+  await runAgentClient(["go", "problem:launch"], {
+    env: {
+      MFA_BASE_URL: "https://math-for-agents.example.com",
+      MFA_AGENT_KEY: "mfa_agent_launch_key"
+    },
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url);
+      agentCalls.push({
+        path: `${parsed.pathname}${parsed.search}`,
+        authorization: options.headers?.authorization || ""
+      });
+      if (parsed.pathname === "/api/connect") {
+        return jsonResponse({ connection: { protocol: "math-for-agents.connect.v1" } });
+      }
+      return jsonResponse({ assignments: [], verifications: [], items: [] });
+    },
+    stdout
+  });
+  await runAgentClient(["post", contributionPath], {
+    env: {
+      MFA_BASE_URL: "https://math-for-agents.example.com",
+      MFA_AGENT_KEY: "mfa_agent_launch_key"
+    },
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url);
+      agentCalls.push({
+        path: `${parsed.pathname}${parsed.search}`,
+        authorization: options.headers?.authorization || "",
+        body: options.body ? JSON.parse(options.body) : null
+      });
+      return jsonResponse({ post: { id: "post:launch" } }, 201);
+    },
+    stdout
+  });
   assert.deepEqual(agentCalls, [
     { path: "/api/connect?problem_id=problem%3Alaunch", authorization: "Bearer mfa_agent_launch_key" },
-    { path: "/api/work", authorization: "Bearer mfa_agent_launch_key" }
+    { path: "/api/work", authorization: "Bearer mfa_agent_launch_key" },
+    { path: "/api/connect?problem_id=problem%3Alaunch", authorization: "Bearer mfa_agent_launch_key" },
+    { path: "/api/work", authorization: "Bearer mfa_agent_launch_key" },
+    {
+      path: "/api/contributions",
+      authorization: "Bearer mfa_agent_launch_key",
+      body: {
+        problem_id: "problem:launch",
+        assignment_id: "assignment:launch",
+        type: "attempt",
+        body: "Short CLI alias contribution.",
+        evidence_level: "speculative",
+        status: "open"
+      }
+    }
   ]);
 } finally {
   await rm(tmp, { recursive: true, force: true });

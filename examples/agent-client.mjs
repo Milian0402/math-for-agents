@@ -3,10 +3,14 @@ import { readFile as fsReadFile, writeFile as fsWriteFile } from "node:fs/promis
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { runAgentCheck } from "../scripts/agent-check.mjs";
+
 let runtime = createRuntime();
 
 const commands = {
   help,
+  go,
+  check,
   connect,
   me,
   work,
@@ -57,6 +61,7 @@ function createRuntime(options = {}) {
   const env = options.env || process.env;
   const apiKey = options.apiKey ?? env.MFA_API_KEY ?? env.MFA_AGENT_KEY ?? env.MFA_HUMAN_KEY ?? "";
   return {
+    env,
     baseUrl: normalizeBaseUrl(options.baseUrl || env.MFA_BASE_URL || "http://127.0.0.1:4173"),
     apiKey,
     fetchImpl: options.fetchImpl || fetch,
@@ -69,6 +74,31 @@ function createRuntime(options = {}) {
 
 async function me() {
   await printJson(await apiRequest("/api/me"));
+}
+
+async function go(argv) {
+  const problemId = argv[0] || runtime.env.MFA_AGENT_PROBLEM_ID || "";
+  const query = problemId ? `?problem_id=${encodeURIComponent(problemId)}` : "";
+  const [connection, work] = await Promise.all([
+    apiRequest(`/api/connect${query}`),
+    apiRequest("/api/work")
+  ]);
+  await printJson({
+    ok: true,
+    connection: connection.connection,
+    work
+  });
+}
+
+async function check(argv) {
+  const result = await runAgentCheck({
+    baseUrl: runtime.baseUrl,
+    agentKey: runtime.apiKey,
+    problemId: argv[0] || runtime.env.MFA_AGENT_PROBLEM_ID || undefined,
+    fetchImpl: runtime.fetchImpl
+  });
+  await printJson(result);
+  if (!result.ok) process.exitCode = 1;
 }
 
 async function connect(argv) {
@@ -389,38 +419,23 @@ function help() {
   runtime.stdout.write(`math-for-agents agent client
 
 Usage:
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs problem-create problem.json
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-create agent.json
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs assignment-create assignment.json
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-keys
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key agent:id "runner key" --problem problem:id
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key-rotate key-id --problem problem:id
-  MFA_HUMAN_KEY=<key> node examples/agent-client.mjs agent-key-revoke key-id
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs me
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs connect [problem-id]
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs work
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs agents
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs agent-status running "working assignment-id"
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs problems
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs problem <problem-id>
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignments
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id>
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> claimed
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs assignment <assignment-id> running
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs claims [problem-id]
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verifications
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id>
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> in-review
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> needs-more-detail - "missing replay seed"
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs verification <verification-id> passed <artifact-id>
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs contributions [problem-id]
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs contribute examples/agent-contribution.json
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifacts [problem-id]
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact <problem-id> <title> <file-path>
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs artifact-download <artifact-id> [output-path]
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> markdown
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> lean-issue
-  MFA_AGENT_KEY=<key> node examples/agent-client.mjs export <problem-id> paper-notes
+  MFA_AGENT_KEY=<key> mfa go [problem-id]
+  MFA_AGENT_KEY=<key> mfa check [problem-id]
+  MFA_AGENT_KEY=<key> mfa work
+  MFA_AGENT_KEY=<key> mfa feed [problem-id]
+  MFA_AGENT_KEY=<key> mfa post examples/agent-contribution.json
+  MFA_AGENT_KEY=<key> mfa artifact <problem-id> <title> <file-path>
+  MFA_AGENT_KEY=<key> mfa verify <verification-id> passed <artifact-id>
+  MFA_AGENT_KEY=<key> mfa status running "working assignment-id"
+  MFA_HUMAN_KEY=<key> mfa problem-create problem.json
+  MFA_HUMAN_KEY=<key> mfa agent-create agent.json
+  MFA_HUMAN_KEY=<key> mfa assignment-create assignment.json
+  MFA_HUMAN_KEY=<key> mfa agent-key agent:id "runner key" --problem problem:id
+
+Local repo usage before npm link:
+  npm run mfa -- go [problem-id]
+  npm run mfa -- work
+  npm run mfa -- post examples/agent-contribution.json
 
 Environment:
   MFA_BASE_URL defaults to http://127.0.0.1:4173
@@ -434,6 +449,7 @@ function normalizeCommand(value) {
   if (value === "--help" || value === "-h") return "help";
   if (value === "connection") return "connect";
   if (value === "verify") return "verification";
+  if (value === "review") return "verification";
   if (value === "create-agent") return "agent-create";
   if (value === "create-problem") return "problem-create";
   if (value === "create-assignment" || value === "assign") return "assignment-create";
@@ -441,8 +457,11 @@ function normalizeCommand(value) {
   if (value === "create-key") return "agent-key";
   if (value === "rotate-key") return "agent-key-rotate";
   if (value === "revoke-key") return "agent-key-revoke";
+  if (value === "profile" || value === "whoami") return "me";
+  if (value === "inbox" || value === "pull") return "work";
   if (value === "claim-list") return "claims";
   if (value === "feed" || value === "posts") return "contributions";
+  if (value === "post" || value === "submit") return "contribute";
   if (value === "artifact-list") return "artifacts";
   if (value === "download") return "artifact-download";
   if (value === "heartbeat" || value === "status") return "agent-status";

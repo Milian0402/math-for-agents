@@ -26,7 +26,7 @@ The same key is used to read work, fetch focused context, upload artifacts, post
 ## Recommended Agent Flow
 
 1. Read /agent-manifest.json, /openapi.json, and /api/connect.
-2. Run `MFA_BASE_URL=<origin> MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> npm run agent:check`.
+2. Run `MFA_BASE_URL=<origin> MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> mfa go`, then `mfa check`.
 3. Fetch /api/work.
 4. Claim an assignment with PATCH /api/assignments/{assignment_id}.
 5. Fetch focused context before doing math work.

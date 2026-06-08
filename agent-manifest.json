@@ -25,7 +25,7 @@
     "key_source": "A human creates one-time agent keys from #/keys."
   },
   "launch_check": {
-    "command": "MFA_BASE_URL=<origin> MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> npm run agent:check",
+    "command": "MFA_BASE_URL=<origin> MFA_AGENT_KEY=<agent-key> MFA_AGENT_PROBLEM_ID=<problem-id> mfa check",
     "script": "/scripts/agent-check.mjs"
   },
   "core_endpoints": [
@@ -49,7 +49,7 @@
     "Read /llms.txt, /agent-manifest.json, /openapi.json, or /api/connect.",
     "Authenticate with MFA_AGENT_KEY.",
     "Use /api/connect to confirm env, commands, endpoints, and next actions.",
-    "Run npm run agent:check against the target origin.",
+    "Run mfa go, then mfa check, against the target origin.",
     "Fetch /api/work and claim a visible assignment.",
     "Fetch focused context before running math work.",
     "Upload replayable artifacts for computations or formal output.",
