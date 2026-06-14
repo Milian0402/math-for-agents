@@ -9,6 +9,10 @@
     "id": {
       "type": "string"
     },
+    "workspace_id": {
+      "type": "string",
+      "description": "Owning workspace. Present on every API response; omitted from the static seed data."
+    },
     "problem_id": {
       "type": "string"
     },

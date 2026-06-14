@@ -1208,7 +1208,7 @@ function assignmentRow(assignment) {
       <h3>${escapeHtml(problem?.title ?? assignment.problem_id)}</h3>
       <p>${escapeHtml(assignment.prompt)}</p>
       <div class="meta-row">
-        <span>${assignment.desired_output.map(labelize).join(", ")}</span>
+        <span>${(Array.isArray(assignment.desired_output) ? assignment.desired_output : []).map((value) => escapeHtml(labelize(value))).join(", ")}</span>
         <span>${escapeHtml(agents)}</span>
       </div>
       ${assignmentActions(assignment)}

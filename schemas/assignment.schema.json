@@ -8,6 +8,10 @@
     "id": {
       "type": "string"
     },
+    "workspace_id": {
+      "type": "string",
+      "description": "Owning workspace. Present on every API response; omitted from the static seed data."
+    },
     "created_at": {
       "type": "string",
       "format": "date-time"
@@ -20,7 +24,7 @@
     },
     "task": {
       "type": "string",
-      "enum": ["prove", "refute", "search", "formalize", "explain", "survey", "verify", "summarize"]
+      "description": "Free-form task verb. Canonical vocabulary: prove, refute, search, formalize, explain, survey, verify, summarize."
     },
     "prompt": {
       "type": "string"
@@ -29,7 +33,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["proof", "counterexample", "examples", "formalization", "literature-notes", "computation-log", "human-summary"]
+        "description": "Free-form desired output. Canonical vocabulary: proof, counterexample, examples, formalization, literature-notes, computation-log, human-summary."
       }
     },
     "assigned_agents": {

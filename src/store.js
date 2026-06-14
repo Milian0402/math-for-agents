@@ -2,6 +2,7 @@ import {
   canPromote,
   defaultMethodFor,
   deriveTrustTier,
+  deriveVerificationState,
   MACHINE_METHODS,
   requiresReplay,
   requiresVerification
@@ -554,7 +555,7 @@ function updateLocalVerification(store, verificationId, status, patch = {}) {
     const claimVerifications = store.verifications.filter((item) => item.claim_id === claim.id);
     const tier = deriveTrustTier(claimVerifications);
     claim.trust_tier = tier;
-    claim.verification_state = status;
+    claim.verification_state = deriveVerificationState(claimVerifications);
 
     if (status === "failed") {
       claim.status = "refuted";

@@ -2,6 +2,7 @@ import {
   canPromote,
   defaultMethodFor,
   deriveTrustTier,
+  deriveVerificationState,
   MACHINE_METHODS,
   requiresReplay,
   requiresVerification
@@ -126,7 +127,7 @@ export function applyVerificationPatch(verification, claimVerifications, patch) 
     verification: next,
     claimPatch: {
       trust_tier: trustTier,
-      verification_state: next.status,
+      verification_state: deriveVerificationState(verifications),
       status: claimStatus
     }
   };

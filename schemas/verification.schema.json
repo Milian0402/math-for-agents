@@ -9,6 +9,10 @@
     "id": {
       "type": "string"
     },
+    "workspace_id": {
+      "type": "string",
+      "description": "Owning workspace. Present on every API response; omitted from the static seed data."
+    },
     "claim_id": {
       "type": "string"
     },
@@ -33,6 +37,10 @@
     "artifact_id": {
       "type": "string"
     },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "updated_at": {
       "type": "string",
       "format": "date-time"
@@ -42,6 +50,14 @@
       "items": {
         "type": "string"
       }
+    },
+    "claim_statement": {
+      "type": "string",
+      "description": "Joined from the claim. Present on verification-queue list responses."
+    },
+    "problem_id": {
+      "type": "string",
+      "description": "Joined from the claim. Present on verification-queue list responses."
     }
   },
   "allOf": [

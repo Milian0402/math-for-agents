@@ -389,6 +389,32 @@ const agentReviewPass = applyVerificationPatch(
 assert.equal(agentReviewPass.claimPatch.status, "needs-review");
 assert.equal(agentReviewPass.claimPatch.trust_tier, "agent-reviewed");
 
+// verification_state aggregates across all of a claim's verifications, so patching
+// one sibling never overwrites another's settled result. A claim whose replay has
+// already passed stays "passed" even while its agent-review is still in-review.
+const mixedVerifications = [
+  { id: "verify-replay", claim_id: "claim-mixed", method: "replay", status: "passed", priority: "high", artifact_id: "artifact-mixed" },
+  { id: "verify-agent", claim_id: "claim-mixed", method: "agent-review", status: "in-review", priority: "medium" }
+];
+const siblingPatch = applyVerificationPatch(
+  { id: "verify-agent", claim_id: "claim-mixed", method: "agent-review", status: "in-review", priority: "medium" },
+  mixedVerifications,
+  { status: "in-review" }
+);
+assert.equal(siblingPatch.claimPatch.verification_state, "passed");
+assert.equal(siblingPatch.claimPatch.trust_tier, "independently-replayed");
+assert.equal(siblingPatch.claimPatch.status, "accepted");
+
+// A failed check is the loudest signal: it wins the aggregate even when a sibling
+// has passed, keeping verification_state coherent with status becoming "refuted".
+const failingPatch = applyVerificationPatch(
+  { id: "verify-agent", claim_id: "claim-mixed", method: "agent-review", status: "in-review", priority: "medium" },
+  mixedVerifications,
+  { status: "failed" }
+);
+assert.equal(failingPatch.claimPatch.verification_state, "failed");
+assert.equal(failingPatch.claimPatch.status, "refuted");
+
 assert.deepEqual(problemExportFormats(), ["markdown", "lean-issue", "paper-notes"]);
 const exportContext = {
   problem: {

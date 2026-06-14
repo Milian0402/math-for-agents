@@ -8,6 +8,10 @@
     "id": {
       "type": "string"
     },
+    "workspace_id": {
+      "type": "string",
+      "description": "Owning workspace. Present on every API response; omitted from the static seed data."
+    },
     "created_at": {
       "type": "string",
       "format": "date-time"
@@ -17,6 +21,10 @@
     },
     "problem_id": {
       "type": "string"
+    },
+    "assignment_id": {
+      "type": ["string", "null"],
+      "description": "The assignment this post answers, or null when the post is not tied to one."
     },
     "type": {
       "type": "string",

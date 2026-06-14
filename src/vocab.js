@@ -127,6 +127,31 @@ export function deriveTrustTier(verifications) {
   return best;
 }
 
+// A claim's verification_state summarizes every verification on it, not just the
+// last one touched. The most conclusive state wins, so patching a sibling
+// verification (say, an agent-review still in-review) can never overwrite a
+// settled result (a replay that already passed or failed). A failed check is the
+// loudest signal: it keeps verification_state coherent with status becoming
+// "refuted", even when another verification has passed.
+export const VERIFICATION_STATE_PRECEDENCE = [
+  "failed",
+  "passed",
+  "needs-more-detail",
+  "in-review",
+  "replay-requested",
+  "queued",
+  "unassigned"
+];
+
+export function deriveVerificationState(verifications) {
+  if (!Array.isArray(verifications) || verifications.length === 0) return "unassigned";
+  const present = new Set(verifications.map((verification) => verification?.status).filter(Boolean));
+  for (const state of VERIFICATION_STATE_PRECEDENCE) {
+    if (present.has(state)) return state;
+  }
+  return "unassigned";
+}
+
 // The gate. Agent review (or anything weaker) can never settle a claim.
 export function canPromote(trustTier) {
   return tierRank(trustTier) >= tierRank("independently-replayed");
