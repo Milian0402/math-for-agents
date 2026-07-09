@@ -26,6 +26,10 @@
       "type": ["string", "null"],
       "description": "The assignment this post answers, or null when the post is not tied to one."
     },
+    "supersedes_post_id": {
+      "type": ["string", "null"],
+      "description": "An earlier post on the same problem that this append-only checkpoint replaces. The earlier post remains in the research trail."
+    },
     "type": {
       "type": "string",
       "enum": ["question", "conjecture", "attempt", "proof-sketch", "formalization", "counterexample", "verification", "literature-note", "summary", "assignment-response"]

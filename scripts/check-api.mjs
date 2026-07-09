@@ -12,12 +12,21 @@ import {
   responseHeaders,
   requestBodyLimitBytes,
   resolveStaticFilePath,
-  sessionWriteOriginCheck
+  sessionWriteOriginCheck,
+  principalCanSupersedePost,
+  assertPrincipalCanSupersedePost,
+  assertContributionReferenceProblem
 } from "../server/http.js";
 import { generateAgentApiKey, stableKeyHash } from "../server/ids.js";
 import { buildErrorLogEntry, clientIp, logErrorEvent } from "../server/ops.js";
 import { formatProblemExport, problemExportFormats } from "../server/problem-export.js";
-import { assertAgentInput, assertAgentPatch, assertAssignmentPatch, assertProblemInput } from "../server/validation.js";
+import {
+  assertAgentInput,
+  assertAgentPatch,
+  assertAssignmentPatch,
+  assertContributionInput,
+  assertProblemInput
+} from "../server/validation.js";
 import { evaluateExecution, stdoutHash } from "../server/verification-worker.js";
 
 const generatedKey = generateAgentApiKey();
@@ -295,6 +304,100 @@ assert.doesNotThrow(() => assertAssignmentPatch({ status: "running" }));
 assert.throws(() => assertAssignmentPatch({ status: "waiting" }), /status must be one of/);
 assert.throws(() => assertAssignmentPatch({ status: "running", agent: "agent:test" }), /unknown field/);
 
+assert.throws(
+  () =>
+    assertContributionInput({
+      agent: "agent:finite-model-searcher",
+      problem_id: "finite-magma-identity-search",
+      claim_id: "claim-existing",
+      claim_statement: "An ambiguous replacement statement.",
+      type: "attempt",
+      evidence_level: "speculative",
+      body: "This should be rejected before persistence."
+    }),
+  /claim_id cannot be combined with claim_statement/
+);
+assert.throws(
+  () =>
+    assertContributionInput({
+      agent: "agent:finite-model-searcher",
+      problem_id: "finite-magma-identity-search",
+      claim_id: "claim-existing",
+      claim_type: "lemma",
+      type: "attempt",
+      evidence_level: "speculative",
+      body: "This should also be rejected before persistence."
+    }),
+  /claim_id cannot be combined with claim_type/
+);
+assert.throws(
+  () =>
+    assertContributionInput({
+      agent: "agent:finite-model-searcher",
+      problem_id: "finite-magma-identity-search",
+      claim_id: "claim-existing",
+      type: "counterexample",
+      evidence_level: "worked-example",
+      body: "A counterexample must become its own verifiable claim instead of certifying the claim it challenges."
+    }),
+  /counterexample contributions must open their own claim/
+);
+
+assert.equal(
+  principalCanSupersedePost(
+    { kind: "agent", id: "agent:finite-model-searcher" },
+    { agent: "agent:finite-model-searcher" }
+  ),
+  true
+);
+assert.equal(
+  principalCanSupersedePost(
+    { kind: "agent", id: "agent:other" },
+    { agent: "agent:finite-model-searcher" }
+  ),
+  false
+);
+assert.equal(
+  principalCanSupersedePost(
+    { kind: "human", id: "human:max" },
+    { agent: "agent:finite-model-searcher" }
+  ),
+  true
+);
+assert.throws(
+  () =>
+    assertPrincipalCanSupersedePost(
+      { kind: "agent", id: "agent:other" },
+      { agent: "agent:finite-model-searcher" }
+    ),
+  /agent keys can only supersede their own contributions/
+);
+assert.doesNotThrow(() =>
+  assertContributionReferenceProblem(
+    { id: "claim-existing", problem_id: "finite-magma-identity-search" },
+    "finite-magma-identity-search",
+    "claim_id"
+  )
+);
+assert.throws(
+  () =>
+    assertContributionReferenceProblem(
+      { id: "claim-foreign", problem_id: "other-problem" },
+      "finite-magma-identity-search",
+      "claim_id"
+    ),
+  /claim_id must belong to problem_id/
+);
+assert.throws(
+  () =>
+    assertContributionReferenceProblem(
+      { id: "post-foreign", problem_id: "other-problem" },
+      "finite-magma-identity-search",
+      "supersedes_post_id"
+    ),
+  /supersedes_post_id must belong to problem_id/
+);
+
 const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },
   { exit_code: 0, timed_out: false, stdout: "ok\n" }
@@ -358,8 +461,78 @@ const contribution = buildContribution(
 assert.equal(contribution.post.replay.command, "python search.py --seed 7");
 assert.equal(contribution.artifact.content_hash, "sha256:test");
 assert.equal(contribution.claim.status, "needs-review");
+assert.equal(contribution.claim_created, true);
 assert.equal(contribution.verification.method, "replay");
 assert.equal(contribution.verificationJob.status, "waiting-for-replay");
+
+const existingClaim = {
+  id: "claim-existing",
+  workspace_id: "workspace:default",
+  problem_id: "finite-magma-identity-search",
+  type: "lemma",
+  statement: "No counterexample appears below the current finite boundary.",
+  status: "needs-review",
+  evidence_level: "computational",
+  trust_tier: "unverified",
+  verification_state: "replay-requested",
+  linked_posts: ["post-original"]
+};
+const continuation = buildContribution(
+  {
+    agent: "agent:finite-model-searcher",
+    problem_id: "finite-magma-identity-search",
+    claim_id: existingClaim.id,
+    supersedes_post_id: "post-original",
+    dependencies: ["post-context", "post-original"],
+    type: "attempt",
+    evidence_level: "computational",
+    status: "needs-review",
+    body: "Replayed a wider search after correcting the original encoding.",
+    replay: {
+      command: "python search.py --max-order 7",
+      seed: "11",
+      env: "python 3.12"
+    }
+  },
+  {
+    existingClaim,
+    postId: "post-revision",
+    verificationId: "verify-revision",
+    verificationJobId: "job-revision",
+    now: "2026-06-03T00:00:00.000Z"
+  }
+);
+
+assert.equal(continuation.claim_created, false);
+assert.equal(continuation.claim.id, existingClaim.id);
+assert.deepEqual(continuation.claim.linked_posts, ["post-original", "post-revision"]);
+assert.equal(continuation.post.supersedes_post_id, "post-original");
+assert.deepEqual(continuation.post.dependencies, ["post-context", "post-original"]);
+assert.equal(continuation.verification.claim_id, existingClaim.id);
+assert.equal(continuation.verification.method, "replay");
+assert.equal(continuation.verificationJob.payload.post_id, "post-revision");
+
+const summaryContinuation = buildContribution(
+  {
+    agent: "agent:finite-model-searcher",
+    problem_id: "finite-magma-identity-search",
+    claim_id: existingClaim.id,
+    type: "summary",
+    evidence_level: "speculative",
+    status: "open",
+    body: "The corrected search is now the current branch; formalization remains open."
+  },
+  {
+    existingClaim,
+    postId: "post-summary",
+    now: "2026-06-03T00:01:00.000Z"
+  }
+);
+
+assert.equal(summaryContinuation.claim_created, false);
+assert.deepEqual(summaryContinuation.claim.linked_posts, ["post-original", "post-summary"]);
+assert.equal(summaryContinuation.verification, null);
+assert.equal(summaryContinuation.verificationJob, null);
 
 assert.throws(
   () =>

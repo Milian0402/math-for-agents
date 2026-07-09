@@ -15,9 +15,16 @@ export function buildContribution(input, options = {}) {
 
   const now = options.now || new Date().toISOString();
   const postId = options.postId || makeId("post");
+  const existingClaim = options.existingClaim || null;
+  if (input.claim_id && !existingClaim) {
+    const error = new Error("Existing claim context is required for a claim continuation");
+    error.statusCode = 404;
+    throw error;
+  }
   const artifactIds = [];
   const artifact = buildInlineArtifact(input, now);
   const replay = buildReplay(input);
+  const dependencies = [...new Set([...(input.dependencies ?? []), input.supersedes_post_id].filter(Boolean))];
 
   if (artifact) artifactIds.push(artifact.id);
   if (input.artifact_id) artifactIds.push(input.artifact_id);
@@ -30,11 +37,12 @@ export function buildContribution(input, options = {}) {
     assignment_id: input.assignment_id || null,
     type: input.type,
     body: input.body.trim(),
-    dependencies: input.dependencies ?? [],
+    dependencies,
     artifacts: [...new Set(artifactIds)],
     evidence_level: input.evidence_level,
     status: input.status || "open",
-    replay
+    replay,
+    supersedes_post_id: input.supersedes_post_id || null
   };
 
   if (!post.replay) delete post.replay;
@@ -43,11 +51,17 @@ export function buildContribution(input, options = {}) {
   const ruleTriggered = requiresVerification(post);
   const needsReplay = requiresReplay(input.evidence_level);
   let claim = null;
+  let claimCreated = false;
   let verification = null;
   let verificationJob = null;
 
-  if (statedClaim || ruleTriggered) {
-    const method = defaultMethodFor(post);
+  if (existingClaim) {
+    claim = {
+      ...existingClaim,
+      linked_posts: [...new Set([...(existingClaim.linked_posts || []), post.id])]
+    };
+  } else if (statedClaim || ruleTriggered) {
+    claimCreated = true;
     claim = {
       id: options.claimId || makeId("claim"),
       problem_id: input.problem_id,
@@ -59,7 +73,11 @@ export function buildContribution(input, options = {}) {
       verification_state: needsReplay ? "replay-requested" : "queued",
       linked_posts: [post.id]
     };
+  }
 
+  const continuationNeedsVerification = Boolean(existingClaim) && (ruleTriggered || needsReplay);
+  if ((claimCreated && claim) || continuationNeedsVerification) {
+    const method = defaultMethodFor(post);
     verification = {
       id: options.verificationId || makeId("verify"),
       claim_id: claim.id,
@@ -87,7 +105,7 @@ export function buildContribution(input, options = {}) {
     };
   }
 
-  return { artifact, post, claim, verification, verificationJob };
+  return { artifact, post, claim, claim_created: claimCreated, verification, verificationJob };
 }
 
 export function verificationAgentForContribution(input, options = {}) {
@@ -96,7 +114,8 @@ export function verificationAgentForContribution(input, options = {}) {
     type: input.type,
     evidence_level: input.evidence_level
   };
-  if (!statedClaim && !requiresVerification(post)) return "";
+  const continuationNeedsVerification = Boolean(input.claim_id?.trim?.()) && requiresReplay(input.evidence_level);
+  if (!statedClaim && !requiresVerification(post) && !continuationNeedsVerification) return "";
   return input.verifier?.trim?.() || options.defaultVerifier || "agent:verifier";
 }
 

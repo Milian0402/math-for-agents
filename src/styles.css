@@ -1295,6 +1295,307 @@ p {
   }
 }
 
+/* Research Trail v1: make provenance, branch closure, and the live frontier legible. */
+.research-frontier {
+  border: 1px solid #81909b;
+  background: #eef3f5;
+  box-shadow: 3px 3px 0 rgba(42, 58, 70, 0.12);
+  padding: 14px;
+}
+
+.frontier-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #9ba8b1;
+  padding-bottom: 10px;
+}
+
+.frontier-heading h2 {
+  color: #142536;
+  font-size: 18px;
+}
+
+.frontier-heading > span,
+.trail-count {
+  color: #4c5d6b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.frontier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.frontier-group {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  border-left: 3px solid #516b7d;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px;
+}
+
+.frontier-group > strong,
+.trail-relations > strong,
+.compact-relations > strong {
+  color: #334755;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.frontier-link,
+.trail-relation-link {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 1px solid #b5c0c7;
+  background: #fff;
+  color: #13293a;
+  padding: 7px 8px;
+}
+
+.frontier-link:hover,
+.trail-relation-link:hover {
+  border-color: #7b3147;
+  background: #fff8fa;
+}
+
+.frontier-link span,
+.trail-relation-link span {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.frontier-link small,
+.trail-relation-link small {
+  color: #60717d;
+  font-size: 10px;
+}
+
+.frontier-empty {
+  color: #64737d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.research-trail-panel {
+  overflow: visible;
+}
+
+.problem-artifacts-panel .artifact-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.problem-artifacts-panel .artifact-row {
+  align-content: start;
+  min-width: 0;
+}
+
+.research-trail {
+  display: grid;
+  gap: 0;
+}
+
+.trail-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  padding: 0 0 18px;
+}
+
+.trail-step:not(:last-child)::before {
+  position: absolute;
+  top: 26px;
+  bottom: 0;
+  left: 13px;
+  width: 1px;
+  background: #96a5af;
+  content: "";
+}
+
+.trail-marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid #526878;
+  border-radius: 50%;
+  background: #eef3f5;
+  color: #233c4e;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.trail-step-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+  min-width: 0;
+  border: 1px solid #a9b5bd;
+  background: #fff;
+  padding: 11px;
+}
+
+.trail-step-body > * {
+  min-width: 0;
+}
+
+.trail-step-body .meta-row,
+.trail-step-body .post-author {
+  flex-wrap: wrap;
+}
+
+.trail-step-body .meta-row span {
+  overflow-wrap: anywhere;
+}
+
+.trail-step.is-superseded .trail-step-body,
+.post-card.is-superseded {
+  border-style: dashed;
+  background: #f2f3f3;
+  opacity: 0.82;
+}
+
+.trail-step-topline {
+  justify-content: flex-start;
+}
+
+.trail-post-id {
+  overflow: hidden;
+  margin-left: auto;
+  color: #73818a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trail-step-copy {
+  color: #263845;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.trail-relations,
+.compact-relations {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border-left: 2px solid #7a8f9d;
+  padding-left: 8px;
+}
+
+.trail-supersedes,
+.trail-superseded-by,
+.compact-relations.is-replaced {
+  border-left-color: #9a3f59;
+}
+
+.trail-claims {
+  border-left-color: #3d6e62;
+}
+
+.compact-relations {
+  margin-top: 9px;
+}
+
+.compact-relations .trail-relation-link {
+  padding: 5px 7px;
+}
+
+.relation-more {
+  color: #60717d;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.research-record {
+  scroll-margin: 24px;
+  transition: box-shadow 160ms ease, outline-color 160ms ease;
+}
+
+.research-record.is-focused {
+  outline: 3px solid #91344f;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(145, 52, 79, 0.13);
+}
+
+.trail-fields .field-help,
+.contribution-form .field-help {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  color: #596b77;
+  font-size: 11px;
+}
+
+.trail-fields select[multiple] {
+  min-height: 126px;
+}
+
+.trail-fields label small {
+  color: #64747f;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+  .frontier-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .research-trail-panel,
+  .research-frontier {
+    grid-column: 1 / -1;
+  }
+
+  .problem-artifacts-panel .artifact-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .frontier-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .trail-step {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .trail-marker {
+    width: 23px;
+    height: 23px;
+  }
+
+  .trail-step:not(:last-child)::before {
+    top: 22px;
+    left: 11px;
+  }
+
+  .trail-post-id {
+    width: 90px;
+  }
+}
+
 @media (max-width: 480px) {
   .workspace,
   .sidebar {
@@ -6469,4 +6770,27 @@ body {
   .assignment-form .form-actions .secondary-button {
     flex: 1 1 0;
   }
+}
+
+/* Research Trail v1 sits after the theme stack so its hierarchy stays stable. */
+.research-frontier,
+.trail-step-body,
+.frontier-group,
+.frontier-link,
+.trail-relation-link {
+  font-family: var(--xfire-font, inherit);
+}
+
+.research-frontier {
+  color: #142536;
+}
+
+.research-frontier .eyebrow,
+.research-frontier p,
+.research-frontier h2 {
+  color: inherit;
+}
+
+.research-trail-panel .panel-header {
+  align-items: end;
 }

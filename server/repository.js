@@ -2,6 +2,7 @@ import { query, transaction } from "./db.js";
 import { generateSessionToken, verifyPassword } from "./auth.js";
 import { generateAgentApiKey, makeId, stableKeyHash } from "./ids.js";
 import { applyVerificationPatch, buildContribution } from "./domain.js";
+import { deriveVerificationState } from "../src/vocab.js";
 
 export async function authenticateAgent(apiKey) {
   const keyHash = stableKeyHash(apiKey);
@@ -783,6 +784,11 @@ export async function getClaim(workspaceId, claimId) {
   return result.rows[0] || null;
 }
 
+export async function getPost(workspaceId, postId) {
+  const result = await query("select * from posts where workspace_id = $1 and id = $2", [workspaceId, postId]);
+  return result.rows[0] || null;
+}
+
 export async function getVerification(workspaceId, verificationId) {
   const result = await query("select * from verifications where workspace_id = $1 and id = $2", [workspaceId, verificationId]);
   return result.rows[0] || null;
@@ -939,23 +945,86 @@ export async function createAssignment(workspaceId, owner, input) {
 }
 
 export async function createContribution(workspaceId, input) {
-  const built = buildContribution(input);
-
   return transaction(async (client) => {
+    let existingClaim = null;
+    if (input.claim_id) {
+      const claimResult = await client.query(
+        "select * from claims where workspace_id = $1 and id = $2 for update",
+        [workspaceId, input.claim_id]
+      );
+      existingClaim = claimResult.rows[0] || null;
+      if (!existingClaim) throw repositoryError(404, "claim not found");
+      if (existingClaim.problem_id !== input.problem_id) {
+        throw repositoryError(422, "claim_id must belong to problem_id");
+      }
+    }
+
+    let supersededPost = null;
+    if (input.supersedes_post_id) {
+      const postResult = await client.query(
+        "select * from posts where workspace_id = $1 and id = $2 for update",
+        [workspaceId, input.supersedes_post_id]
+      );
+      supersededPost = postResult.rows[0] || null;
+      if (!supersededPost) throw repositoryError(404, "supersedes_post_id not found");
+      if (supersededPost.problem_id !== input.problem_id) {
+        throw repositoryError(422, "supersedes_post_id must belong to problem_id");
+      }
+    }
+
+    const built = buildContribution(input, { existingClaim });
+
     if (built.artifact) {
       await insertArtifact(client, workspaceId, built.artifact);
     }
     await insertPost(client, workspaceId, built.post);
 
     if (built.claim) {
-      await insertClaim(client, workspaceId, built.claim);
-      await appendClaimToProblem(client, workspaceId, built.claim.problem_id, built.claim.id);
+      if (built.claim_created) {
+        await insertClaim(client, workspaceId, built.claim);
+        await appendClaimToProblem(client, workspaceId, built.claim.problem_id, built.claim.id);
+      } else {
+        const claimResult = await client.query(
+          `update claims
+              set linked_posts = case
+                    when coalesce(linked_posts, '[]'::jsonb) ? $3 then linked_posts
+                    else coalesce(linked_posts, '[]'::jsonb) || to_jsonb($3::text)
+                  end
+            where workspace_id = $1 and id = $2
+            returning *`,
+          [workspaceId, built.claim.id, built.post.id]
+        );
+        built.claim = claimResult.rows[0] || built.claim;
+      }
     }
     if (built.verification) {
       await insertVerification(client, workspaceId, built.verification);
+      if (!built.claim_created) {
+        const verificationsResult = await client.query(
+          "select * from verifications where workspace_id = $1 and claim_id = $2",
+          [workspaceId, built.verification.claim_id]
+        );
+        const verificationState = deriveVerificationState(verificationsResult.rows);
+        const claimStateResult = await client.query(
+          `update claims
+              set verification_state = $3,
+                  status = case when status = 'open' then 'needs-review' else status end
+            where workspace_id = $1 and id = $2
+            returning status, verification_state`,
+          [workspaceId, built.verification.claim_id, verificationState]
+        );
+        built.claim = { ...built.claim, ...(claimStateResult.rows[0] || { verification_state: verificationState }) };
+      }
     }
     if (built.verificationJob) {
       await insertVerificationJob(client, workspaceId, built.verificationJob);
+    }
+
+    if (supersededPost) {
+      await client.query(
+        "update posts set status = 'superseded' where workspace_id = $1 and id = $2",
+        [workspaceId, supersededPost.id]
+      );
     }
 
     if (input.assignment_id) {
@@ -1067,8 +1136,8 @@ async function insertArtifact(client, workspaceId, artifact) {
 async function insertPost(client, workspaceId, post) {
   await client.query(
     `insert into posts
-      (id, workspace_id, created_at, agent, problem_id, assignment_id, type, body, dependencies, artifacts, evidence_level, status, replay)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      (id, workspace_id, created_at, agent, problem_id, assignment_id, type, body, dependencies, artifacts, evidence_level, status, replay, supersedes_post_id)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
     [
       post.id,
       workspaceId,
@@ -1082,9 +1151,16 @@ async function insertPost(client, workspaceId, post) {
       JSON.stringify(post.artifacts || []),
       post.evidence_level,
       post.status,
-      post.replay ? JSON.stringify(post.replay) : null
+      post.replay ? JSON.stringify(post.replay) : null,
+      post.supersedes_post_id || null
     ]
   );
+}
+
+function repositoryError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
 }
 
 async function insertClaim(client, workspaceId, claim) {

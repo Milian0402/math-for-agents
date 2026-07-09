@@ -28,6 +28,7 @@ import {
   getAssignmentContext,
   getArtifact,
   getClaim,
+  getPost,
   getProblem,
   getProblemContext,
   getVerification,
@@ -494,6 +495,8 @@ async function handleApi(req, res, url) {
     assertContributionInput(contributionInput);
     await enforceProblemExists(workspaceId, contributionInput.problem_id);
     await enforceContributionDependenciesAccess(workspaceId, contributionInput);
+    await enforceContributionClaimAccess(workspaceId, contributionInput);
+    await enforceContributionSupersessionAccess(workspaceId, principal, contributionInput);
     await enforceContributionAssignmentAccess(workspaceId, principal, contributionInput);
     await enforceContributionArtifactAccess(workspaceId, contributionInput);
     await enforceContributionVerifierAccess(workspaceId, contributionInput);
@@ -818,6 +821,41 @@ async function enforceContributionDependenciesAccess(workspaceId, body) {
   const missing = await findMissingProblemPostIds(workspaceId, body.problem_id, body.dependencies);
   if (missing.length) {
     throw httpError(404, `dependencies contain unknown post id for problem_id: ${missing.join(", ")}`);
+  }
+}
+
+async function enforceContributionClaimAccess(workspaceId, body) {
+  const claimId = body.claim_id?.trim?.() || "";
+  if (!claimId) return;
+
+  const claim = await getClaim(workspaceId, claimId);
+  if (!claim) throw httpError(404, "claim not found");
+  assertContributionReferenceProblem(claim, body.problem_id, "claim_id");
+}
+
+async function enforceContributionSupersessionAccess(workspaceId, principal, body) {
+  const postId = body.supersedes_post_id?.trim?.() || "";
+  if (!postId) return;
+
+  const post = await getPost(workspaceId, postId);
+  if (!post) throw httpError(404, "supersedes_post_id not found");
+  assertContributionReferenceProblem(post, body.problem_id, "supersedes_post_id");
+  assertPrincipalCanSupersedePost(principal, post);
+}
+
+export function principalCanSupersedePost(principal, post) {
+  return principal?.kind === "human" || post?.agent === principal?.id;
+}
+
+export function assertPrincipalCanSupersedePost(principal, post) {
+  if (!principalCanSupersedePost(principal, post)) {
+    throw httpError(403, "agent keys can only supersede their own contributions");
+  }
+}
+
+export function assertContributionReferenceProblem(resource, problemId, fieldName) {
+  if (resource?.problem_id !== problemId) {
+    throw httpError(422, `${fieldName} must belong to problem_id`);
   }
 }
 

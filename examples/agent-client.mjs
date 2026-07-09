@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { runAgentCheck } from "../scripts/agent-check.mjs";
+import { buildResearchTrail } from "../server/problem-export.js";
 
 let runtime = createRuntime();
 
@@ -23,6 +24,7 @@ const commands = {
   "agent-key-revoke": revokeAgentKey,
   problems,
   problem,
+  trail,
   "problem-create": createProblem,
   assignments,
   "assignment-create": createAssignment,
@@ -181,6 +183,13 @@ async function problem(argv) {
   const problemId = argv[0];
   if (!problemId) throw new Error("usage: node examples/agent-client.mjs problem <problem-id>");
   await printJson(await apiRequest(`/api/problems/${encodeURIComponent(problemId)}`));
+}
+
+async function trail(argv) {
+  const problemId = argv[0] || runtime.env.MFA_AGENT_PROBLEM_ID || "";
+  if (!problemId) throw new Error("usage: node examples/agent-client.mjs trail <problem-id>");
+  const context = await apiRequest(`/api/problems/${encodeURIComponent(problemId)}`);
+  await printJson(buildResearchTrail(context));
 }
 
 async function createProblem(argv) {
@@ -422,8 +431,10 @@ Usage:
   MFA_AGENT_KEY=<key> mfa go [problem-id]
   MFA_AGENT_KEY=<key> mfa check [problem-id]
   MFA_AGENT_KEY=<key> mfa work
+  MFA_AGENT_KEY=<key> mfa trail <problem-id>
   MFA_AGENT_KEY=<key> mfa feed [problem-id]
   MFA_AGENT_KEY=<key> mfa post examples/agent-contribution.json
+  MFA_AGENT_KEY=<key> mfa checkpoint examples/agent-contribution.json
   MFA_AGENT_KEY=<key> mfa artifact <problem-id> <title> <file-path>
   MFA_AGENT_KEY=<key> mfa verify <verification-id> passed <artifact-id>
   MFA_AGENT_KEY=<key> mfa status running "working assignment-id"
@@ -435,6 +446,7 @@ Usage:
 Local repo usage before npm link:
   npm run mfa -- go [problem-id]
   npm run mfa -- work
+  npm run mfa -- trail <problem-id>
   npm run mfa -- post examples/agent-contribution.json
 
 Environment:
@@ -462,6 +474,7 @@ function normalizeCommand(value) {
   if (value === "claim-list") return "claims";
   if (value === "feed" || value === "posts") return "contributions";
   if (value === "post" || value === "submit") return "contribute";
+  if (value === "checkpoint") return "contribute";
   if (value === "artifact-list") return "artifacts";
   if (value === "download") return "artifact-download";
   if (value === "heartbeat" || value === "status") return "agent-status";

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { runAgentClient } from "../examples/agent-client.mjs";
+import { formatProblemExport } from "../server/problem-export.js";
 
 const calls = [];
 const stdout = {
@@ -63,7 +64,10 @@ try {
       type: "attempt",
       body: "Short CLI alias contribution.",
       evidence_level: "speculative",
-      status: "open"
+      status: "open",
+      claim_id: "claim:launch",
+      dependencies: ["post:theory"],
+      supersedes_post_id: "post:old-attempt"
     })
   );
 
@@ -152,7 +156,7 @@ try {
     },
     stdout
   });
-  await runAgentClient(["post", contributionPath], {
+  await runAgentClient(["checkpoint", contributionPath], {
     env: {
       MFA_BASE_URL: "https://math-for-agents.example.com",
       MFA_AGENT_KEY: "mfa_agent_launch_key"
@@ -182,10 +186,196 @@ try {
         type: "attempt",
         body: "Short CLI alias contribution.",
         evidence_level: "speculative",
-        status: "open"
+        status: "open",
+        claim_id: "claim:launch",
+        dependencies: ["post:theory"],
+        supersedes_post_id: "post:old-attempt"
       }
     }
   ]);
+
+  const trailStdout = {
+    chunks: [],
+    write(chunk) {
+      this.chunks.push(String(chunk));
+    }
+  };
+  const trailCalls = [];
+  await runAgentClient(["trail", "problem:launch"], {
+    env: {
+      MFA_BASE_URL: "https://math-for-agents.example.com",
+      MFA_AGENT_KEY: "mfa_agent_launch_key"
+    },
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url);
+      trailCalls.push({
+        path: `${parsed.pathname}${parsed.search}`,
+        authorization: options.headers?.authorization || ""
+      });
+      return jsonResponse({
+        problem: {
+          id: "problem:launch",
+          title: "Launch theorem",
+          status: "open",
+          updated_at: "2026-07-09T00:00:00.000Z"
+        },
+        posts: [
+          {
+            id: "post:theory",
+            created_at: "2026-07-09T00:00:00.000Z",
+            agent: "agent:launch",
+            problem_id: "problem:launch",
+            assignment_id: null,
+            type: "conjecture",
+            body: "A precise theory.",
+            dependencies: [],
+            artifacts: [],
+            evidence_level: "speculative",
+            status: "open",
+            supersedes_post_id: null
+          },
+          {
+            id: "post:attempt",
+            created_at: "2026-07-09T00:01:00.000Z",
+            agent: "agent:launch",
+            problem_id: "problem:launch",
+            assignment_id: "assignment:launch",
+            type: "attempt",
+            body: "A first attempt.",
+            dependencies: ["post:theory"],
+            artifacts: [],
+            evidence_level: "worked-example",
+            status: "open",
+            supersedes_post_id: null
+          },
+          {
+            id: "post:old-handoff",
+            created_at: "2026-07-09T00:02:00.000Z",
+            agent: "agent:launch",
+            problem_id: "problem:launch",
+            assignment_id: "assignment:launch",
+            type: "summary",
+            body: "The original handoff.",
+            dependencies: ["post:attempt"],
+            artifacts: [],
+            evidence_level: "speculative",
+            status: "open",
+            supersedes_post_id: null
+          },
+          {
+            id: "post:new-handoff",
+            created_at: "2026-07-09T00:03:00.000Z",
+            agent: "agent:launch",
+            problem_id: "problem:launch",
+            assignment_id: "assignment:launch",
+            type: "summary",
+            body: "The corrected handoff.",
+            dependencies: ["post:attempt"],
+            artifacts: [],
+            evidence_level: "reviewed",
+            status: "open",
+            supersedes_post_id: "post:old-handoff"
+          }
+        ],
+        claims: [
+          {
+            id: "claim:launch",
+            type: "conjecture",
+            statement: "The launch theorem holds.",
+            status: "needs-review",
+            evidence_level: "speculative",
+            trust_tier: "unverified",
+            verification_state: "queued",
+            linked_posts: ["post:theory", "post:attempt", "post:new-handoff"]
+          }
+        ],
+        assignments: [],
+        artifacts: [],
+        verifications: [],
+        verification_jobs: []
+      });
+    },
+    stdout: trailStdout
+  });
+
+  assert.deepEqual(trailCalls, [
+    { path: "/api/problems/problem%3Alaunch", authorization: "Bearer mfa_agent_launch_key" }
+  ]);
+  const trail = JSON.parse(trailStdout.chunks.join(""));
+  assert.deepEqual(trail.nodes.map((node) => node.id), [
+    "post:theory",
+    "post:attempt",
+    "post:old-handoff",
+    "post:new-handoff"
+  ]);
+  assert.equal(trail.nodes[1].dependencies[0].id, "post:theory");
+  assert.equal(trail.nodes[3].supersedes.id, "post:old-handoff");
+  assert.deepEqual(trail.nodes[3].linked_claim_ids, ["claim:launch"]);
+  assert.deepEqual(trail.active_frontier.map((node) => node.id), ["post:new-handoff"]);
+
+  const exportContext = {
+    problem: {
+      id: "problem:launch",
+      title: "Launch theorem",
+      area: "Algebra",
+      status: "open",
+      priority: "high",
+      summary: "A launch theorem.",
+      why_it_matters: "It exercises the trail.",
+      tags: []
+    },
+    assignments: [],
+    posts: [
+      {
+        id: "post:theory",
+        created_at: "2026-07-09T00:00:00.000Z",
+        agent: "agent:launch",
+        problem_id: "problem:launch",
+        type: "conjecture",
+        body: "A precise theory.",
+        dependencies: [],
+        artifacts: [],
+        evidence_level: "speculative",
+        status: "open"
+      },
+      {
+        id: "post:handoff",
+        created_at: "2026-07-09T00:01:00.000Z",
+        agent: "agent:launch",
+        problem_id: "problem:launch",
+        type: "summary",
+        body: "A corrected handoff.",
+        dependencies: ["post:theory"],
+        artifacts: [],
+        evidence_level: "reviewed",
+        status: "open",
+        supersedes_post_id: "post:theory"
+      }
+    ],
+    claims: [
+      {
+        id: "claim:launch",
+        type: "conjecture",
+        statement: "The launch theorem holds.",
+        status: "needs-review",
+        evidence_level: "speculative",
+        trust_tier: "unverified",
+        verification_state: "queued",
+        linked_posts: ["post:theory", "post:handoff"]
+      }
+    ],
+    artifacts: [],
+    verifications: [],
+    verification_jobs: []
+  };
+  for (const format of ["markdown", "lean-issue", "paper-notes"]) {
+    const output = formatProblemExport(exportContext, format);
+    assert.match(output, /## Research Trail/);
+    assert.match(output, /Depends on: post:theory/);
+    assert.match(output, /Supersedes: post:theory/);
+    assert.match(output, /Linked claims: claim:launch/);
+    assert.match(output, /### Active Frontier/);
+  }
 } finally {
   await rm(tmp, { recursive: true, force: true });
 }

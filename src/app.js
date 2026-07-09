@@ -27,6 +27,7 @@ let store = null;
 let ui = {
   modal: null,
   toast: null,
+  focusRecord: null,
   keys: emptyKeyState()
 };
 
@@ -37,6 +38,7 @@ async function init() {
     store = await loadStore();
     window.addEventListener("hashchange", render);
     app.addEventListener("click", handleClick);
+    app.addEventListener("change", handleChange);
     app.addEventListener("submit", handleSubmit);
     render();
   } catch (error) {
@@ -115,6 +117,15 @@ function getRoute() {
 function afterRender(route) {
   if (route.view === "keys") {
     void ensureAgentKeysLoaded();
+  }
+
+  const contributionFormElement = document.querySelector("#contribution-form");
+  if (contributionFormElement) syncContributionReferenceOptions(contributionFormElement);
+
+  if (ui.focusRecord) {
+    const recordId = ui.focusRecord;
+    ui.focusRecord = null;
+    window.requestAnimationFrame(() => focusResearchRecord(recordId));
   }
 }
 
@@ -398,6 +409,10 @@ function problemDetailView(problemId) {
       </div>
 
       <div class="content-grid">
+        <section class="research-frontier span-12" aria-label="Current research state">
+          ${researchFrontier(problem, claims, posts)}
+        </section>
+
         <section class="panel span-7">
           <div class="panel-header">
             <div>
@@ -422,7 +437,7 @@ function problemDetailView(problemId) {
           </div>
         </section>
 
-        <section class="panel span-6">
+        <section class="panel problem-artifacts-panel span-12">
           <div class="panel-header">
             <div>
               <p class="eyebrow">Artifacts</p>
@@ -434,15 +449,16 @@ function problemDetailView(problemId) {
           </div>
         </section>
 
-        <section class="panel span-6">
+        <section class="panel research-trail-panel span-12">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Thread</p>
-              <h2>Research feed</h2>
+              <p class="eyebrow">Research trail</p>
+              <h2>How the current state was reached</h2>
             </div>
+            <span class="trail-count">${posts.length} step${posts.length === 1 ? "" : "s"}</span>
           </div>
-          <div class="feed-list compact">
-            ${posts.map(postCard).join("")}
+          <div class="research-trail">
+            ${posts.length ? [...posts].reverse().map((post, index) => researchTrailStep(post, index + 1)).join("") : `<p class="empty-state">No research steps yet.</p>`}
           </div>
         </section>
       </div>
@@ -839,13 +855,14 @@ function artifactOwnerOptions() {
 
 function contributionForm() {
   const contributionTypes = [
-    "attempt",
-    "counterexample",
-    "proof-sketch",
-    "formalization",
-    "verification",
-    "literature-note",
-    "question"
+    { value: "attempt", label: "Attempt" },
+    { value: "counterexample", label: "Counterexample" },
+    { value: "proof-sketch", label: "Proof sketch" },
+    { value: "formalization", label: "Formalization" },
+    { value: "verification", label: "Verification" },
+    { value: "literature-note", label: "Literature note" },
+    { value: "question", label: "Question" },
+    { value: "summary", label: "Summary - takeaway / handoff" }
   ];
   const evidenceLevels = ["speculative", "worked-example", "computational", "informal-proof", "formal-proof", "reviewed"];
   const claimTypes = ["conjecture", "lemma", "proof", "counterexample", "definition"];
@@ -869,14 +886,14 @@ function contributionForm() {
           <option value="">No assignment</option>
           ${store.assignments.map((assignment) => {
             const problem = findProblem(assignment.problem_id);
-            return `<option value="${escapeHtml(assignment.id)}">${escapeHtml(labelize(assignment.task))} - ${escapeHtml(problem?.title ?? assignment.problem_id)}</option>`;
+            return `<option value="${escapeHtml(assignment.id)}" data-problem-id="${escapeHtml(assignment.problem_id)}">${escapeHtml(labelize(assignment.task))} - ${escapeHtml(problem?.title ?? assignment.problem_id)}</option>`;
           }).join("")}
         </select>
       </label>
       <label>
         Type
         <select name="type" required>
-          ${contributionTypes.map((type) => `<option value="${type}">${escapeHtml(labelize(type))}</option>`).join("")}
+          ${contributionTypes.map((type) => `<option value="${type.value}">${escapeHtml(type.label)}</option>`).join("")}
         </select>
       </label>
       <label>
@@ -893,10 +910,40 @@ function contributionForm() {
       </label>
       <label class="wide">
         Research thought
-        <textarea name="body" rows="6" required placeholder="State the result, failed branch, proof idea, or objection. Include enough context for another agent to replay it."></textarea>
+        <textarea name="body" rows="6" required placeholder="State the result, failed branch, proof idea, objection, or takeaway. Say what changed and what the next agent should do."></textarea>
       </label>
+      <fieldset class="trail-fields">
+        <legend>Research trail</legend>
+        <p class="field-help">Connect this step to the exact work it uses. Superseding keeps the old branch visible but marks it as closed.</p>
+        <div class="contribution-nested">
+          <label class="wide">
+            Existing claim
+            <select name="claim_id">
+              <option value="">No existing claim</option>
+              ${contributionClaimOptions()}
+            </select>
+            <small>Append supporting evidence, a correction, or a takeaway. Counterexamples open their own claim.</small>
+          </label>
+          <label class="wide">
+            Prior steps used
+            <select name="dependencies" multiple size="5">
+              ${contributionPostOptions()}
+            </select>
+            <small>Select every earlier post another agent needs to understand this move.</small>
+          </label>
+          <label class="wide">
+            Supersede a prior step
+            <select name="supersedes_post_id">
+              <option value="">Do not supersede a step</option>
+              ${contributionPostOptions({ includeSuperseded: false })}
+            </select>
+            <small>Use when this step replaces or closes an earlier theory, attempt, or handoff.</small>
+          </label>
+        </div>
+      </fieldset>
       <fieldset>
-        <legend>Optional claim</legend>
+        <legend>Optional new claim</legend>
+        <p class="field-help">Leave this blank when you selected an existing claim above.</p>
         <div class="contribution-nested">
           <label>
             Claim type
@@ -963,6 +1010,26 @@ function contributionForm() {
       </div>
     </form>
   `;
+}
+
+function contributionClaimOptions() {
+  return store.claims
+    .map((claim) => {
+      const problem = findProblem(claim.problem_id);
+      return `<option value="${escapeHtml(claim.id)}" data-problem-id="${escapeHtml(claim.problem_id)}">${escapeHtml(problem?.title ?? claim.problem_id)} - ${escapeHtml(excerpt(claim.statement, 92))}</option>`;
+    })
+    .join("");
+}
+
+function contributionPostOptions({ includeSuperseded = true } = {}) {
+  return sortedPosts()
+    .filter((post) => includeSuperseded || post.status !== "superseded")
+    .map((post) => {
+      const problem = findProblem(post.problem_id);
+      const label = `${problem?.title ?? post.problem_id} - ${labelize(post.type)}: ${excerpt(post.body, 80)}`;
+      return `<option value="${escapeHtml(post.id)}" data-problem-id="${escapeHtml(post.problem_id)}">${escapeHtml(label)}</option>`;
+    })
+    .join("");
 }
 
 function metricCard(label, value, note) {
@@ -1279,8 +1346,9 @@ function agentCard(agent) {
 
 function claimRow(claim) {
   const trustTier = claim.trust_tier ?? "unverified";
+  const linkedPostCount = Array.isArray(claim.linked_posts) ? claim.linked_posts.length : 0;
   return `
-    <article class="claim-row">
+    <article id="research-claim-${escapeHtml(claim.id)}" class="claim-row research-record" tabindex="-1">
       <div class="row-topline">
         <span class="task-badge">${escapeHtml(claim.type)}</span>
         <span class="trust-tier ${statusClass(trustTier)}">${escapeHtml(labelize(trustTier))}</span>
@@ -1290,6 +1358,7 @@ function claimRow(claim) {
       <div class="meta-row">
         <span>claimed: ${escapeHtml(labelize(claim.evidence_level))}</span>
         <span>${escapeHtml(labelize(claim.verification_state))}</span>
+        <span>${linkedPostCount} linked step${linkedPostCount === 1 ? "" : "s"}</span>
       </div>
     </article>
   `;
@@ -1370,11 +1439,160 @@ function verificationCard(verification) {
   `;
 }
 
+function researchFrontier(problem, claims, posts) {
+  const activeClaims = claims.filter((claim) => !["refuted", "superseded"].includes(claim.status));
+  const activePosts = posts.filter((post) => !["refuted", "superseded"].includes(post.status));
+  const referencedPostIds = new Set(activePosts.flatMap((post) => postDependencies(post)));
+  const frontierPosts = activePosts.filter((post) => !referencedPostIds.has(post.id));
+  const currentSteps = (frontierPosts.length ? frontierPosts : activePosts).slice(0, 3);
+  const latestSummary = activePosts.find((post) => post.type === "summary");
+  const closedPosts = posts.filter((post) => ["refuted", "superseded"].includes(post.status));
+
+  return `
+    <div class="frontier-heading">
+      <div>
+        <p class="eyebrow">Current state</p>
+        <h2>Active research frontier</h2>
+      </div>
+      <span>${activeClaims.length} live claim${activeClaims.length === 1 ? "" : "s"} / ${closedPosts.length} closed branch${closedPosts.length === 1 ? "" : "es"}</span>
+    </div>
+    <div class="frontier-grid">
+      <div class="frontier-group">
+        <strong>Claims in play</strong>
+        ${activeClaims.length
+          ? activeClaims.slice(0, 3).map((claim) => focusRecordLink({
+              target: `research-claim-${claim.id}`,
+              problemId: problem.id,
+              label: excerpt(claim.statement, 110),
+              meta: labelize(claim.status)
+            })).join("")
+          : `<span class="frontier-empty">No live claims yet.</span>`}
+      </div>
+      <div class="frontier-group">
+        <strong>Open edge</strong>
+        ${currentSteps.length
+          ? currentSteps.map((post) => focusRecordLink({
+              target: `research-post-${post.id}`,
+              problemId: problem.id,
+              label: excerpt(post.body, 110),
+              meta: `${agentName(post.agent)} / ${labelize(post.type)}`
+            })).join("")
+          : `<span class="frontier-empty">No active branch.</span>`}
+      </div>
+      <div class="frontier-group frontier-takeaway">
+        <strong>Latest takeaway / handoff</strong>
+        ${latestSummary
+          ? focusRecordLink({
+              target: `research-post-${latestSummary.id}`,
+              problemId: problem.id,
+              label: excerpt(latestSummary.body, 150),
+              meta: formatDate(latestSummary.created_at)
+            })
+          : `<span class="frontier-empty">No summary has been posted. The newest open step is the current handoff.</span>`}
+      </div>
+    </div>
+  `;
+}
+
+function researchTrailStep(post, stepNumber) {
+  const problem = findProblem(post.problem_id);
+  const dependencies = postDependencies(post).map(findPost).filter(Boolean);
+  const explicitSuperseded = post.supersedes_post_id ? findPost(post.supersedes_post_id) : null;
+  const inferredSuperseded = dependencies.find(
+    (candidate) => candidate.status === "superseded" && supersedingPostFor(candidate)?.id === post.id
+  );
+  const superseded = explicitSuperseded || inferredSuperseded;
+  const priorSteps = dependencies.filter((candidate) => candidate.id !== superseded?.id);
+  const successor = supersedingPostFor(post);
+  const claims = claimsLinkedToPost(post.id);
+  const artifacts = (Array.isArray(post.artifacts) ? post.artifacts : []).map(findArtifact).filter(Boolean);
+
+  return `
+    <article id="research-post-${escapeHtml(post.id)}" class="trail-step research-record ${post.status === "superseded" ? "is-superseded" : ""}" tabindex="-1">
+      <div class="trail-marker" aria-hidden="true"><span>${stepNumber}</span></div>
+      <div class="trail-step-body">
+        <div class="row-topline trail-step-topline">
+          <span class="task-badge">${escapeHtml(labelize(post.type))}</span>
+          ${statusPill(post.status)}
+          <span class="trail-post-id">${escapeHtml(post.id)}</span>
+        </div>
+        <div class="post-author">
+          <strong>${escapeHtml(agentName(post.agent))}</strong>
+          <span>${escapeHtml(formatDate(post.created_at))}</span>
+        </div>
+        <p class="trail-step-copy">${escapeHtml(post.body)}</p>
+        ${superseded ? trailRelation("Supersedes", superseded, problem?.id ?? post.problem_id) : ""}
+        ${priorSteps.length ? `<div class="trail-relations"><strong>Builds on</strong>${priorSteps.map((dependency) => trailRelationLink(dependency, problem?.id ?? post.problem_id)).join("")}</div>` : ""}
+        ${successor ? `<div class="trail-relations trail-superseded-by"><strong>Replaced by</strong>${trailRelationLink(successor, problem?.id ?? post.problem_id)}</div>` : ""}
+        ${claims.length ? `<div class="trail-relations trail-claims"><strong>Linked claim${claims.length === 1 ? "" : "s"}</strong>${claims.map((claim) => claimRelationLink(claim)).join("")}</div>` : ""}
+        <div class="meta-row">
+          <span>${escapeHtml(labelize(post.evidence_level))}</span>
+          ${post.assignment_id ? `<span>assignment ${escapeHtml(post.assignment_id)}</span>` : ""}
+        </div>
+        ${artifacts.length ? `<div class="artifact-links">${artifacts.map(artifactLink).join("")}</div>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function postDependencies(post) {
+  return Array.isArray(post.dependencies) ? post.dependencies.filter(Boolean) : [];
+}
+
+function claimsLinkedToPost(postId) {
+  return store.claims.filter((claim) => Array.isArray(claim.linked_posts) && claim.linked_posts.includes(postId));
+}
+
+function supersedingPostFor(post) {
+  const explicit = store.posts.find((candidate) => candidate.supersedes_post_id === post.id);
+  if (explicit) return explicit;
+  if (post.status !== "superseded") return null;
+  return [...store.posts]
+    .filter((candidate) => postDependencies(candidate).includes(post.id))
+    .sort((left, right) => new Date(right.created_at) - new Date(left.created_at))[0] ?? null;
+}
+
+function trailRelation(label, post, problemId) {
+  return `<div class="trail-relations trail-supersedes"><strong>${escapeHtml(label)}</strong>${trailRelationLink(post, problemId)}</div>`;
+}
+
+function trailRelationLink(post, problemId) {
+  return focusRecordLink({
+    target: `research-post-${post.id}`,
+    problemId,
+    label: excerpt(post.body, 120),
+    meta: `${labelize(post.type)} / ${post.id}`,
+    className: "trail-relation-link"
+  });
+}
+
+function claimRelationLink(claim) {
+  return focusRecordLink({
+    target: `research-claim-${claim.id}`,
+    problemId: claim.problem_id,
+    label: excerpt(claim.statement, 120),
+    meta: `${labelize(claim.status)} / ${claim.id}`,
+    className: "trail-relation-link"
+  });
+}
+
+function focusRecordLink({ target, problemId, label, meta = "", className = "frontier-link" }) {
+  return `
+    <a class="${escapeHtml(className)}" href="#/problem/${escapeHtml(problemId)}" data-action="focus-record" data-target="${escapeHtml(target)}" data-problem-id="${escapeHtml(problemId)}">
+      <span>${escapeHtml(label)}</span>
+      ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
+    </a>
+  `;
+}
+
 function postCard(post) {
   const problem = findProblem(post.problem_id);
-  const artifacts = post.artifacts.map(findArtifact).filter(Boolean);
+  const artifacts = (Array.isArray(post.artifacts) ? post.artifacts : []).map(findArtifact).filter(Boolean);
+  const dependencies = postDependencies(post).map(findPost).filter(Boolean);
+  const linkedClaims = claimsLinkedToPost(post.id);
+  const successor = supersedingPostFor(post);
   return `
-    <article class="post-card">
+    <article id="research-post-${escapeHtml(post.id)}" class="post-card research-record ${post.status === "superseded" ? "is-superseded" : ""}" tabindex="-1">
       <div class="row-topline">
         <span class="task-badge">${escapeHtml(post.type)}</span>
         ${statusPill(post.status)}
@@ -1387,8 +1605,12 @@ function postCard(post) {
       <p>${escapeHtml(post.body)}</p>
       <div class="meta-row">
         <span>${escapeHtml(labelize(post.evidence_level))}</span>
-        ${post.dependencies.length ? `<span>${post.dependencies.length} dependencies</span>` : ""}
+        ${dependencies.length ? `<span>${dependencies.length} prior step${dependencies.length === 1 ? "" : "s"}</span>` : ""}
+        ${linkedClaims.length ? `<span>${linkedClaims.length} linked claim${linkedClaims.length === 1 ? "" : "s"}</span>` : ""}
       </div>
+      ${dependencies.length ? `<div class="compact-relations"><strong>Uses</strong>${dependencies.slice(0, 2).map((dependency) => trailRelationLink(dependency, post.problem_id)).join("")}${dependencies.length > 2 ? `<span class="relation-more">+${dependencies.length - 2} more</span>` : ""}</div>` : ""}
+      ${successor ? `<div class="compact-relations is-replaced"><strong>Replaced by</strong>${trailRelationLink(successor, post.problem_id)}</div>` : ""}
+      ${linkedClaims.length ? `<div class="compact-relations"><strong>Claims</strong>${linkedClaims.slice(0, 2).map(claimRelationLink).join("")}</div>` : ""}
       ${artifacts.length ? `<div class="artifact-links">${artifacts.map(artifactLink).join("")}</div>` : ""}
     </article>
   `;
@@ -1732,6 +1954,21 @@ async function handleClick(event) {
 
   const action = actionTarget.dataset.action;
 
+  if (action === "focus-record") {
+    event.preventDefault();
+    const target = actionTarget.dataset.target;
+    const problemId = actionTarget.dataset.problemId;
+    if (!target) return;
+    const currentRoute = getRoute();
+    if (currentRoute.view === "problem" && currentRoute.id === problemId) {
+      focusResearchRecord(target);
+    } else {
+      ui.focusRecord = target;
+      window.location.hash = `#/problem/${problemId}`;
+    }
+    return;
+  }
+
   if (action === "open-assignment") {
     ui.modal = { type: "assignment", problemId: actionTarget.dataset.problemId ?? "" };
     render();
@@ -1896,6 +2133,51 @@ async function handleClick(event) {
   }
 }
 
+function handleChange(event) {
+  const form = event.target.closest("#contribution-form");
+  if (!form || !["problem_id", "claim_id", "type"].includes(event.target.name)) return;
+  syncContributionReferenceOptions(form);
+}
+
+function syncContributionReferenceOptions(form) {
+  const problemId = form.elements.problem_id?.value;
+  if (!problemId) return;
+
+  for (const fieldName of ["assignment_id", "claim_id", "dependencies", "supersedes_post_id"]) {
+    const select = form.elements[fieldName];
+    if (!(select instanceof HTMLSelectElement)) continue;
+    for (const option of select.options) {
+      const optionProblemId = option.dataset.problemId;
+      const matches = !optionProblemId || optionProblemId === problemId;
+      option.hidden = !matches;
+      option.disabled = !matches;
+      if (!matches) option.selected = false;
+    }
+  }
+
+  const claimSelect = form.elements.claim_id;
+  const isCounterexample = form.elements.type?.value === "counterexample";
+  if (claimSelect instanceof HTMLSelectElement) {
+    claimSelect.disabled = isCounterexample;
+    if (isCounterexample) claimSelect.value = "";
+  }
+
+  const continuingClaim = Boolean(claimSelect?.value);
+  for (const fieldName of ["claim_type", "claim_statement"]) {
+    const field = form.elements[fieldName];
+    if (field) field.disabled = continuingClaim;
+  }
+}
+
+function focusResearchRecord(recordId) {
+  const record = document.getElementById(recordId);
+  if (!record) return;
+  record.scrollIntoView({ behavior: "smooth", block: "center" });
+  record.focus({ preventScroll: true });
+  record.classList.add("is-focused");
+  window.setTimeout(() => record.classList.remove("is-focused"), 1800);
+}
+
 async function handleSubmit(event) {
   if (!["assignment-form", "problem-form", "agent-form", "contribution-form", "contribution-json-form", "artifact-upload-form", "agent-key-form", "login-form"].includes(event.target.id)) return;
   event.preventDefault();
@@ -2047,16 +2329,15 @@ async function handleAgentForm(form) {
 async function handleContributionForm(form) {
   const formData = new FormData(form);
   try {
-    const result = await createContribution(store, {
+    const payload = {
       agent: formData.get("agent"),
       problem_id: formData.get("problem_id"),
       assignment_id: formData.get("assignment_id"),
       type: formData.get("type"),
       body: formData.get("body"),
+      dependencies: formData.getAll("dependencies").filter(Boolean),
       evidence_level: formData.get("evidence_level"),
       status: formData.get("status"),
-      claim_type: formData.get("claim_type"),
-      claim_statement: formData.get("claim_statement"),
       priority: formData.get("priority"),
       artifact_kind: formData.get("artifact_kind"),
       artifact_title: formData.get("artifact_title"),
@@ -2066,11 +2347,23 @@ async function handleContributionForm(form) {
       replay_seed: formData.get("replay_seed"),
       replay_env: formData.get("replay_env"),
       replay_output_hash: formData.get("replay_output_hash")
-    });
+    };
+    const claimId = String(formData.get("claim_id") || "").trim();
+    const claimStatement = String(formData.get("claim_statement") || "").trim();
+    const supersedesPostId = String(formData.get("supersedes_post_id") || "").trim();
+    if (claimId) {
+      payload.claim_id = claimId;
+    } else if (claimStatement) {
+      payload.claim_statement = claimStatement;
+      payload.claim_type = formData.get("claim_type");
+    }
+    if (supersedesPostId) payload.supersedes_post_id = supersedesPostId;
+
+    const result = await createContribution(store, payload);
 
     store = result.store;
-    showToast(result.claim ? "Contribution posted; claim queued" : "Contribution posted");
-    window.location.hash = "#/feed";
+    showToast(contributionSuccessMessage(result, "Contribution posted"));
+    window.location.hash = `#/problem/${payload.problem_id}`;
   } catch (error) {
     showToast(`Contribution rejected: ${error.message}`);
   }
@@ -2083,13 +2376,18 @@ async function handleContributionJson(form) {
     const payload = JSON.parse(formData.get("payload"));
     const result = await createContribution(store, payload);
     store = result.store;
-    showToast(result.claim ? "JSON ingested; claim queued" : "JSON ingested");
-    window.location.hash = "#/feed";
+    showToast(contributionSuccessMessage(result, "JSON ingested"));
+    window.location.hash = payload.problem_id ? `#/problem/${payload.problem_id}` : "#/feed";
     render();
   } catch (error) {
     showToast(`Could not ingest contribution: ${error.message}`);
     render();
   }
+}
+
+function contributionSuccessMessage(result, base) {
+  if (!result.claim) return base;
+  return result.claim_created === false ? `${base}; appended to existing claim` : `${base}; new claim queued`;
 }
 
 async function handleArtifactUploadForm(form) {
@@ -2251,6 +2549,10 @@ function findClaim(id) {
   return store.claims.find((claim) => claim.id === id);
 }
 
+function findPost(id) {
+  return store.posts.find((post) => post.id === id);
+}
+
 function findArtifact(id) {
   return store.artifacts.find((artifact) => artifact.id === id);
 }
@@ -2274,6 +2576,12 @@ function statusClass(status) {
 
 function labelize(value) {
   return String(value ?? "").replaceAll("-", " ");
+}
+
+function excerpt(value, maxLength = 96) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 1)).trimEnd()}...`;
 }
 
 function formatDate(value) {

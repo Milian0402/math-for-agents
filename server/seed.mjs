@@ -150,8 +150,8 @@ async function main() {
     for (const post of seed.posts) {
       await client.query(
         `insert into posts
-          (id, workspace_id, created_at, agent, problem_id, assignment_id, type, body, dependencies, artifacts, evidence_level, status, replay)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+          (id, workspace_id, created_at, agent, problem_id, assignment_id, type, body, dependencies, supersedes_post_id, artifacts, evidence_level, status, replay)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
         [
           post.id,
           workspaceId,
@@ -162,6 +162,7 @@ async function main() {
           post.type,
           post.body,
           JSON.stringify(post.dependencies || []),
+          post.supersedes_post_id || null,
           JSON.stringify(post.artifacts || []),
           post.evidence_level,
           post.status,

@@ -405,6 +405,50 @@ function createLocalContribution(store, input) {
   const artifactIds = [];
   const replay = buildReplay(input);
 
+  if (input.claim_id !== undefined && !input.claim_id?.trim?.()) {
+    throw new Error("claim_id must be a non-empty claim id");
+  }
+  const existingClaim = input.claim_id
+    ? store.claims.find((candidate) => candidate.id === input.claim_id)
+    : null;
+  if (input.claim_id && !existingClaim) {
+    throw new Error("claim_id must reference an existing claim");
+  }
+  if (existingClaim && existingClaim.problem_id !== input.problem_id) {
+    throw new Error("claim_id must belong to problem_id");
+  }
+  if (existingClaim && (input.claim_statement !== undefined || input.claim_type !== undefined)) {
+    throw new Error("claim_id cannot be combined with new claim fields");
+  }
+  if (existingClaim && input.type === "counterexample") {
+    throw new Error("counterexample contributions must open their own claim and link to the challenged work through dependencies");
+  }
+
+  const requestedDependencies = input.dependencies ?? [];
+  if (!Array.isArray(requestedDependencies) || requestedDependencies.some((id) => typeof id !== "string" || !id.trim())) {
+    throw new Error("dependencies must be an array of non-empty post ids");
+  }
+  for (const dependencyId of requestedDependencies) {
+    const dependency = store.posts.find((candidate) => candidate.id === dependencyId);
+    if (!dependency) throw new Error(`dependency not found: ${dependencyId}`);
+    if (dependency.problem_id !== input.problem_id) {
+      throw new Error("dependencies must belong to problem_id");
+    }
+  }
+
+  if (input.supersedes_post_id !== undefined && !input.supersedes_post_id?.trim?.()) {
+    throw new Error("supersedes_post_id must be a non-empty post id");
+  }
+  const supersededPost = input.supersedes_post_id
+    ? store.posts.find((candidate) => candidate.id === input.supersedes_post_id)
+    : null;
+  if (input.supersedes_post_id && !supersededPost) {
+    throw new Error("supersedes_post_id must reference an existing post");
+  }
+  if (supersededPost && supersededPost.problem_id !== input.problem_id) {
+    throw new Error("supersedes_post_id must belong to problem_id");
+  }
+
   if (requiresReplay(input.evidence_level) && !replay) {
     throw new Error(`${input.evidence_level} contributions require a replay command`);
   }
@@ -424,6 +468,10 @@ function createLocalContribution(store, input) {
     artifactIds.push(artifact.id);
   }
 
+  const dependencies = [...new Set([
+    ...requestedDependencies,
+    ...(input.supersedes_post_id ? [input.supersedes_post_id] : [])
+  ])];
   const post = {
     id: postId,
     created_at: now,
@@ -432,22 +480,29 @@ function createLocalContribution(store, input) {
     assignment_id: input.assignment_id || null,
     type: input.type,
     body: input.body.trim(),
-    dependencies: input.dependencies ?? [],
+    dependencies,
     artifacts: artifactIds,
     evidence_level: input.evidence_level,
     status: input.status || "open"
   };
 
   if (replay) post.replay = replay;
+  if (supersededPost) {
+    post.supersedes_post_id = supersededPost.id;
+    supersededPost.status = "superseded";
+  }
 
   store.posts.unshift(post);
 
   const statedClaim = input.claim_statement?.trim();
   const ruleTriggered = requiresVerification(post);
 
-  let claim = null;
-  if (statedClaim || ruleTriggered) {
-    const method = defaultMethodFor(post);
+  let claim = existingClaim;
+  let claimCreated = false;
+  if (existingClaim) {
+    existingClaim.linked_posts = existingClaim.linked_posts ?? [];
+    if (!existingClaim.linked_posts.includes(post.id)) existingClaim.linked_posts.push(post.id);
+  } else if (statedClaim || ruleTriggered) {
     const needsReplay = requiresReplay(input.evidence_level);
 
     claim = {
@@ -463,6 +518,12 @@ function createLocalContribution(store, input) {
     };
     store.claims.unshift(claim);
 
+    claimCreated = true;
+  }
+
+  if (claim && (claimCreated || ruleTriggered || requiresReplay(input.evidence_level))) {
+    const method = defaultMethodFor(post);
+    const needsReplay = requiresReplay(input.evidence_level);
     store.verifications.unshift({
       id: `verify-${Date.now().toString(36)}`,
       claim_id: claim.id,
@@ -476,6 +537,10 @@ function createLocalContribution(store, input) {
           : "Independent check requested. Provide the backing artifact (replay log, CAS run, or Lean output) before promotion.",
       checklist: checklistFor(method)
     });
+
+    const claimVerifications = store.verifications.filter((item) => item.claim_id === claim.id);
+    claim.verification_state = deriveVerificationState(claimVerifications);
+    if (claim.status === "open") claim.status = "needs-review";
   }
 
   const assignment = store.assignments.find((item) => item.id === input.assignment_id);
@@ -488,12 +553,12 @@ function createLocalContribution(store, input) {
     problem.status = problem.status === "open" ? "active" : problem.status;
     problem.updated_at = now;
     problem.claim_ids = problem.claim_ids ?? [];
-    if (claim && !problem.claim_ids.includes(claim.id)) {
+    if (claimCreated && claim && !problem.claim_ids.includes(claim.id)) {
       problem.claim_ids.unshift(claim.id);
     }
   }
 
-  return { store: saveStore(store), post, claim };
+  return { store: saveStore(store), post, claim, claim_created: claimCreated };
 }
 
 function buildReplay(input) {

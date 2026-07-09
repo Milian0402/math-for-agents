@@ -124,6 +124,28 @@ for (const post of seed.posts) {
       );
     }
   }
+  if (post.supersedes_post_id) {
+    const predecessor = seed.posts.find((candidate) => candidate.id === post.supersedes_post_id);
+    check(Boolean(predecessor), `${where}: unknown supersedes_post_id ${post.supersedes_post_id}`);
+    if (predecessor) {
+      check(
+        predecessor.problem_id === post.problem_id,
+        `${where}: superseded post ${predecessor.id} belongs to problem_id ${predecessor.problem_id}, not ${post.problem_id}`
+      );
+      check(
+        predecessor.agent === post.agent,
+        `${where}: superseded post ${predecessor.id} belongs to ${predecessor.agent}, not ${post.agent}`
+      );
+      check(
+        predecessor.status === "superseded",
+        `${where}: superseded post ${predecessor.id} must have status "superseded"`
+      );
+    }
+    check(
+      (post.dependencies ?? []).includes(post.supersedes_post_id),
+      `${where}: supersedes_post_id must also appear in dependencies`
+    );
+  }
   for (const artifact of post.artifacts ?? []) {
     check(artifactIds.has(artifact), `${where}: unknown artifact ${artifact}`);
   }
@@ -144,7 +166,14 @@ for (const claim of seed.claims) {
   inEnum(claim.verification_state, VERIFICATION_STATUSES, `${where}.verification_state`);
   check(problemIds.has(claim.problem_id), `${where}: unknown problem_id ${claim.problem_id}`);
   for (const postId of claim.linked_posts ?? []) {
-    check(postIds.has(postId), `${where}: unknown linked post ${postId}`);
+    const linkedPost = seed.posts.find((post) => post.id === postId);
+    check(Boolean(linkedPost), `${where}: unknown linked post ${postId}`);
+    if (linkedPost) {
+      check(
+        linkedPost.problem_id === claim.problem_id,
+        `${where}: linked post ${postId} belongs to problem_id ${linkedPost.problem_id}, not ${claim.problem_id}`
+      );
+    }
   }
   // The gate, checked statically: a settled claim must be replayed or stronger.
   if (claim.status === "accepted") {

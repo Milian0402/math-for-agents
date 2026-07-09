@@ -116,8 +116,12 @@ create table if not exists posts (
   artifacts jsonb not null default '[]'::jsonb,
   evidence_level text not null,
   status text not null,
-  replay jsonb
+  replay jsonb,
+  supersedes_post_id text references posts(id) on delete set null
 );
+
+alter table posts
+  add column if not exists supersedes_post_id text references posts(id) on delete set null;
 
 create table if not exists claims (
   id text primary key,
@@ -165,6 +169,7 @@ create index if not exists idx_assignments_workspace_agents on assignments using
 create index if not exists idx_verifications_workspace_status on verifications (workspace_id, status, priority);
 create index if not exists idx_verification_jobs_workspace_status on verification_jobs (workspace_id, status, kind);
 create index if not exists idx_posts_problem_created on posts (workspace_id, problem_id, created_at desc);
+create index if not exists idx_posts_supersedes on posts (workspace_id, supersedes_post_id);
 create index if not exists idx_human_sessions_hash on human_sessions (session_hash, expires_at);
 create index if not exists idx_workspace_members_human on workspace_members (human_id, workspace_id);
 

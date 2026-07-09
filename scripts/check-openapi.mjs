@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const spec = JSON.parse(await readFile("openapi.json", "utf8"));
 const server = await readFile("server/http.js", "utf8");
+const researchPostSchema = JSON.parse(await readFile("schemas/research-post.schema.json", "utf8"));
 
 assert.equal(spec.openapi, "3.1.0");
 assert.equal(spec.info.title, "math-for-agents API");
@@ -101,5 +102,21 @@ assert.ok(server.includes('req.method === "PATCH" && verificationMatch'), "serve
 for (const schema of ["Agent", "Problem", "Assignment", "Claim", "Post", "Verification"]) {
   assert.ok(spec.components.schemas[schema]?.$ref, `${schema} should reference the shared JSON schema`);
 }
+
+const contributionCreate = spec.components.schemas.ContributionCreateRequest;
+assert.equal(contributionCreate.properties.claim_id.type, "string");
+assert.equal(contributionCreate.properties.supersedes_post_id.type, "string");
+
+const contributionResponse = spec.components.schemas.ContributionResponse;
+assert.ok(contributionResponse.required.includes("claim_created"));
+assert.equal(contributionResponse.properties.claim_created.type, "boolean");
+for (const field of ["artifact", "claim", "verification", "verificationJob"]) {
+  assert.ok(
+    contributionResponse.properties[field].anyOf.some((schema) => schema.type === "null"),
+    `ContributionResponse.${field} must allow null`
+  );
+}
+
+assert.deepEqual(researchPostSchema.properties.supersedes_post_id.type, ["string", "null"]);
 
 console.log(`OpenAPI checks passed: ${expectedOperations.length} operations.`);

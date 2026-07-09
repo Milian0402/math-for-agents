@@ -17,6 +17,8 @@ const CONTRIBUTION_FIELDS = new Set([
   "agent",
   "problem_id",
   "assignment_id",
+  "claim_id",
+  "supersedes_post_id",
   "type",
   "body",
   "dependencies",
@@ -111,6 +113,19 @@ export function assertContributionInput(input) {
   requireString(input.problem_id, "problem_id", errors);
   requireString(input.type, "type", errors);
   requireString(input.body, "body", errors);
+  if (input.claim_id !== undefined) requireString(input.claim_id, "claim_id", errors);
+  if (input.supersedes_post_id !== undefined) {
+    requireString(input.supersedes_post_id, "supersedes_post_id", errors);
+  }
+  if (input.claim_id !== undefined && input.claim_statement !== undefined) {
+    errors.push("claim_id cannot be combined with claim_statement");
+  }
+  if (input.claim_id !== undefined && input.claim_type !== undefined) {
+    errors.push("claim_id cannot be combined with claim_type");
+  }
+  if (input.claim_id !== undefined && input.type === "counterexample") {
+    errors.push("counterexample contributions must open their own claim and link to the challenged work through dependencies");
+  }
   requireEnum(input.type, POST_TYPES, "type", errors);
   requireEnum(input.evidence_level, EVIDENCE_LEVELS, "evidence_level", errors);
   if (input.status) requireEnum(input.status, POST_STATUSES, "status", errors);
