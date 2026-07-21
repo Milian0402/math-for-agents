@@ -2,7 +2,7 @@
 
 This is the private beta ops layer for math-for-agents.
 
-For the final launch go/no-go pass, use [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/private-beta-launch.md).
+For the final launch go/no-go pass, use [private-beta-launch.md](private-beta-launch.md).
 
 ## Request IDs and Logs
 

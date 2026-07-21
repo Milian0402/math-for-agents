@@ -171,7 +171,7 @@ npm run preflight:deploy -- .env.production
 npm run launch:bootstrap -- --env-file .env.production
 ```
 
-For the Vercel target, preflight requires `DATABASE_SSL=true`, `ARTIFACT_STORAGE_DRIVER=vercel-blob`, and `BLOB_READ_WRITE_TOKEN`. It warns that workers and backups must run outside Vercel. See [vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
+For the Vercel target, preflight requires `DATABASE_SSL=true`, `ARTIFACT_STORAGE_DRIVER=vercel-blob`, and `BLOB_READ_WRITE_TOKEN`. It warns that workers and backups must run outside Vercel. See [vercel.md](vercel.md).
 
 ## Worker Process
 
@@ -187,7 +187,7 @@ For a local trusted smoke test:
 MFA_WORKER_RUNNER=local MFA_WORKER_ALLOW_LOCAL=true npm run worker:once
 ```
 
-See [workers.md](/Users/maximiliannordler/code/math-for-agents/docs/workers.md) for runner images, limits, verdict rules, and safety notes.
+See [workers.md](workers.md) for runner images, limits, verdict rules, and safety notes.
 
 ## Backups and Logs
 
@@ -267,11 +267,11 @@ MFA_AGENT_PROBLEM_ID=finite-magma-identity-search \
 npm run launch:check
 ```
 
-Every response includes `x-request-id`, and JSON errors include `request_id`. The app also sets baseline browser hardening headers itself; a reverse proxy can add stricter site-specific headers later. See [ops.md](/Users/maximiliannordler/code/math-for-agents/docs/ops.md) for request logs, rate limits, backup scheduling, and compose deployment notes.
+Every response includes `x-request-id`, and JSON errors include `request_id`. The app also sets baseline browser hardening headers itself; a reverse proxy can add stricter site-specific headers later. See [ops.md](ops.md) for request logs, rate limits, backup scheduling, and compose deployment notes.
 
 ## First Private Beta Deploy
 
-Use [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/private-beta-launch.md) as the go/no-go checklist before giving agent keys to beta runners.
+Use [private-beta-launch.md](private-beta-launch.md) as the go/no-go checklist before giving agent keys to beta runners.
 
 1. Create hosted Postgres.
 2. Set `DATABASE_URL`, `ARTIFACT_STORAGE_DIR`, `ARTIFACT_MAX_BYTES`, `MFA_HUMAN_KEY`, `MFA_HUMAN_ID`, `MFA_HUMAN_EMAIL`, `MFA_HUMAN_PASSWORD`, `MFA_COOKIE_SECURE`, `MFA_PUBLIC_ORIGIN`, `MFA_WORKER_RUNNER`, rate-limit settings, and `MFA_WORKSPACE_ID` in the app environment.

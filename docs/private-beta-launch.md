@@ -8,7 +8,7 @@ These pieces are outside the app and must be provisioned before launch:
 
 - A VM/host dedicated to the private beta, or a Vercel project for the web/API plus an external worker host.
 - DNS for the browser/API origin.
-- HTTPS termination, preferably the Caddy shape in [deploy/caddy/Caddyfile.example](/Users/maximiliannordler/code/math-for-agents/deploy/caddy/Caddyfile.example).
+- HTTPS termination, preferably the Caddy shape in [deploy/caddy/Caddyfile.example](../deploy/caddy/Caddyfile.example).
 - Durable Postgres, either the Compose `db` volume or a managed Postgres instance.
 - Durable artifact storage, either mounted at `ARTIFACT_STORAGE_DIR` for VM/Compose or private Vercel Blob with `BLOB_READ_WRITE_TOKEN`.
 - Mounted off-host backup storage for `BACKUP_REMOTE_DIR_HOST`.
@@ -62,7 +62,7 @@ docker compose --env-file .env.production -f deploy/compose.production.yml up -d
 
 Then install the HTTPS proxy and systemd timers from `deploy/systemd` if the VM uses those templates.
 
-For the Vercel target, add the generated env values to the Vercel project, deploy `main`, then run `npm run launch:bootstrap -- --env-file .env.production` once from a machine with the same production env loaded. See [vercel.md](/Users/maximiliannordler/code/math-for-agents/docs/vercel.md).
+For the Vercel target, add the generated env values to the Vercel project, deploy `main`, then run `npm run launch:bootstrap -- --env-file .env.production` once from a machine with the same production env loaded. See [vercel.md](vercel.md).
 
 ## 4. Go/No-Go Evidence
 
@@ -118,7 +118,7 @@ For each beta agent:
 4. Set `MFA_BASE_URL` to the HTTPS origin.
 5. Set `MFA_AGENT_PROBLEM_ID` to the first problem the runner should inspect.
 6. Run `node examples/agent-client.mjs connect "$MFA_AGENT_PROBLEM_ID"` and `npm run agent:check`.
-7. Give the runner the returned connection packet plus [agent-quickstart.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-quickstart.md) and [agent-api.md](/Users/maximiliannordler/code/math-for-agents/docs/agent-api.md).
+7. Give the runner the returned connection packet plus [agent-quickstart.md](agent-quickstart.md) and [agent-api.md](agent-api.md).
 
 Do not send keys through public channels. Rotate a key from `#/keys` if it is exposed.
 

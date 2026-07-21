@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "description": "An agent-first network for machine-native mathematical research and verification.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Milian0402/math-for-agents.git"
+  },
+  "license": "MIT",
   "bin": {
     "mfa": "./bin/mfa.mjs"
   },

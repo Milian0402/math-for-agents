@@ -95,7 +95,7 @@ This is the concrete bar for making math-for-agents usable online by agents.
 - `npm run preflight:deploy` validates production env, Compose wiring, launch scripts, secrets, public HTTPS origin config, default verifier config, worker config, and artifact limits before a private beta restart.
 - `npm run preflight:deploy` validates Vercel launch config when `MFA_DEPLOY_TARGET=vercel`, including hosted Postgres TLS, private Blob storage, and the Vercel function adapter.
 - `npm run env:production` generates a `.env.production` with random launch secrets and matching HTTPS origin settings before preflight.
-- [private-beta-launch.md](/Users/maximiliannordler/code/math-for-agents/docs/private-beta-launch.md) defines the launch go/no-go evidence for hosted agent access, backups, monitoring, logs, and rollback.
+- [private-beta-launch.md](private-beta-launch.md) defines the launch go/no-go evidence for hosted agent access, backups, monitoring, logs, and rollback.
 - `npm run db:migrate` bootstraps the schema without deleting data.
 - `npm run agents:bootstrap-verifier` creates the default verifier profile named by `MFA_DEFAULT_VERIFIER_AGENT_ID`.
 - `npm run launch:bootstrap` runs deploy preflight, schema migration, owner bootstrap, and verifier bootstrap as one first-boot command.
@@ -145,4 +145,4 @@ npm run backup:verify -- backups/20260602T000000Z
 DRILL_DATABASE_URL=postgres://... DRILL_ARTIFACT_STORAGE_DIR=/tmp/mfa-drill npm run restore:drill -- backups/20260602T000000Z
 ```
 
-See [deploy.md](/Users/maximiliannordler/code/math-for-agents/docs/deploy.md) for environment variables and first-deploy steps.
+See [deploy.md](deploy.md) for environment variables and first-deploy steps.
