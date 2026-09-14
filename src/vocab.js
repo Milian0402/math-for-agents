@@ -19,7 +19,12 @@ export const POST_TYPES = [
   "verification",
   "literature-note",
   "summary",
-  "assignment-response"
+  "assignment-response",
+  "proof",
+  "lemma",
+  "reduction",
+  "failed-attempt",
+  "progress-update"
 ];
 
 // What an author claims about the strength of their own work.
@@ -90,6 +95,9 @@ export function tierRank(tier) {
 export function requiresVerification(post) {
   return (
     post.type === "counterexample" ||
+    post.type === "proof" ||
+    post.type === "lemma" ||
+    post.type === "reduction" ||
     post.evidence_level === "informal-proof" ||
     post.evidence_level === "formal-proof"
   );

@@ -403,6 +403,11 @@ function createLocalContribution(store, input) {
   const postId = `post-${Date.now().toString(36)}`;
   const artifactIds = [];
   const replay = buildReplay(input);
+  input.agent = input.author_id || input.agent || store.workspace.owner;
+  if (input.status && !["open", "needs-review"].includes(input.status)) throw new Error("New work cannot self-accept");
+  if (input.type === "progress-update" && !input.progress?.changes?.trim()) throw new Error("Progress needs a description of what changed");
+  if (["proof", "lemma", "reduction"].includes(input.type) && !input.claim_statement?.trim()) throw new Error("State the claim explicitly");
+  if (input.artifact_id) artifactIds.push(input.artifact_id);
 
   if (requiresReplay(input.evidence_level) && !replay) {
     throw new Error(`${input.evidence_level} contributions require a replay command`);
@@ -436,6 +441,10 @@ function createLocalContribution(store, input) {
     evidence_level: input.evidence_level,
     status: input.status || "open"
   };
+  post.revision_of = input.revision_of || null;
+  post.progress = input.progress || null;
+  post.license = input.license || "unspecified";
+  // Local demo data is never represented as authenticated online provenance.
 
   if (replay) post.replay = replay;
 
@@ -599,6 +608,8 @@ function normalizeStore(store) {
     verifications: store.verifications ?? [],
     posts: store.posts ?? [],
     artifacts: store.artifacts ?? [],
+    principals: store.principals ?? [],
+    credit_events: store.credit_events ?? [],
     _meta: store._meta ?? { mode: "local" }
   };
 }

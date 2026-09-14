@@ -53,6 +53,7 @@ export async function materializeArtifactContent(workspaceId, artifact, input, o
     content_hash: contentHash,
     metadata: {
       ...artifact.metadata,
+      server_stored: true,
       storage: {
         driver: "local-file",
         key: storageKey,
@@ -103,6 +104,7 @@ async function materializeVercelBlobArtifact(artifact, input, options) {
     content_hash: options.contentHash,
     metadata: {
       ...artifact.metadata,
+      server_stored: true,
       storage: {
         driver: "vercel-blob",
         key: uploaded.pathname || options.storageKey,

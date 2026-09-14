@@ -2,6 +2,7 @@ import { query, transaction } from "./db.js";
 import { generateSessionToken, verifyPassword } from "./auth.js";
 import { generateAgentApiKey, makeId, stableKeyHash } from "./ids.js";
 import { applyVerificationPatch, buildContribution } from "./domain.js";
+import { assertAttribution, assertRevisionAuthor, researchHash } from "./research.js";
 
 export async function authenticateAgent(apiKey) {
   const keyHash = stableKeyHash(apiKey);
@@ -125,7 +126,7 @@ export async function getWorkspacePrincipal(workspaceId, principalId) {
 }
 
 export async function getWorkspaceStore(workspaceId) {
-  const [workspace, agents, problems, assignments, claims, verifications, posts, artifacts] = await Promise.all([
+  const [workspace, agents, problems, assignments, claims, verifications, posts, artifacts, principals, creditEvents] = await Promise.all([
     query("select * from workspaces where id = $1", [workspaceId]),
     query("select * from agents where workspace_id = $1 order by reputation desc, name asc", [workspaceId]),
     query("select * from problems where workspace_id = $1 order by updated_at desc nulls last, id asc", [workspaceId]),
@@ -133,7 +134,11 @@ export async function getWorkspaceStore(workspaceId) {
     query("select * from claims where workspace_id = $1 order by id asc", [workspaceId]),
     query("select * from verifications where workspace_id = $1 order by created_at desc", [workspaceId]),
     query("select * from posts where workspace_id = $1 order by created_at desc", [workspaceId]),
-    query("select * from artifacts where workspace_id = $1 order by created_at desc, id asc", [workspaceId])
+    query("select * from artifacts where workspace_id = $1 order by created_at desc, id asc", [workspaceId]),
+    query(`select human_users.id, human_users.name, 'human' as kind from human_users
+           join workspace_members on workspace_members.human_id = human_users.id where workspace_members.workspace_id = $1
+           union all select id, name, 'agent' as kind from agents where workspace_id = $1`, [workspaceId]),
+    listCreditEvents(workspaceId)
   ]);
 
   return {
@@ -144,7 +149,9 @@ export async function getWorkspaceStore(workspaceId) {
     claims: claims.rows,
     verifications: verifications.rows,
     posts: posts.rows,
-    artifacts: artifacts.rows
+    artifacts: artifacts.rows,
+    principals: principals.rows,
+    credit_events: creditEvents
   };
 }
 
@@ -938,14 +945,90 @@ export async function createAssignment(workspaceId, owner, input) {
   return { assignment, post };
 }
 
-export async function createContribution(workspaceId, input) {
+export async function createContribution(workspaceId, input, { principal, author } = {}) {
+  if (!principal || !author || principal.workspace_id !== workspaceId || author.id !== input.agent) {
+    throw Object.assign(new Error("authenticated contribution provenance is required"), { statusCode: 403 });
+  }
+  assertAttribution(principal, author);
   const built = buildContribution(input);
+  const requestHash = researchHash(input);
 
   return transaction(async (client) => {
+    // Serialize submissions per workspace for retry safety, even across processes.
+    await client.query("select id from workspaces where id = $1 for update", [workspaceId]);
+    if (input.idempotency_key) {
+      const existing = await client.query(
+        "select * from posts where workspace_id = $1 and submitted_by = $2 and idempotency_key = $3",
+        [workspaceId, principal.id, input.idempotency_key]
+      );
+      if (existing.rows[0]) {
+        if (existing.rows[0].request_hash !== requestHash) {
+          throw Object.assign(new Error("idempotency_key was already used for different content"), { statusCode: 409 });
+        }
+        return readSubmission(client, workspaceId, existing.rows[0]);
+      }
+    }
+    const parentIds = [...new Set([...built.post.dependencies, input.revision_of].filter(Boolean))];
+    const parents = parentIds.length ? (await client.query(
+      "select * from posts where workspace_id = $1 and problem_id = $2 and id = any($3::text[])",
+      [workspaceId, input.problem_id, parentIds]
+    )).rows : [];
+    if (parents.length !== parentIds.length) {
+      throw Object.assign(new Error("research parents must exist on this problem in this workspace"), { statusCode: 422 });
+    }
+    if (input.revision_of) assertRevisionAuthor(parents.find((post) => post.id === input.revision_of), author);
+    const artifactSnapshots = [];
+    if (input.artifact_id) {
+      const artifact = (await client.query(
+        "select * from artifacts where workspace_id = $1 and problem_id = $2 and id = $3",
+        [workspaceId, input.problem_id, input.artifact_id]
+      )).rows[0];
+      if (!artifact) throw Object.assign(new Error("artifact must belong to this problem"), { statusCode: 422 });
+      artifactSnapshots.push(artifactSnapshot(artifact));
+    }
     if (built.artifact) {
       await insertArtifact(client, workspaceId, built.artifact);
+      artifactSnapshots.push(artifactSnapshot(built.artifact));
     }
+    built.post.author_kind = author.kind;
+    built.post.author_id = author.id;
+    built.post.submitted_by = principal.id;
+    built.post.submitted_by_kind = principal.kind;
+    built.post.provenance = {
+      version: 1,
+      author: { id: author.id, kind: author.kind },
+      submitted_by: { id: principal.id, kind: principal.kind },
+      parents: parents.map((post) => ({ id: post.id, content_hash: post.content_hash || null })),
+      artifacts: artifactSnapshots,
+      inline_artifact_id: built.artifact?.id || null,
+      claim_statement: built.claim?.statement || null,
+      claim_type: built.claim?.type || null,
+      inference: input.inference || null
+    };
+    // Match the persisted/API representation so the digest survives a reload.
+    built.post.replay ??= null;
+    built.post.content_hash = researchHash(built.post);
+    built.post.idempotency_key = input.idempotency_key || null;
+    built.post.request_hash = requestHash;
     await insertPost(client, workspaceId, built.post);
+    for (const parent of built.post.dependencies) {
+      await insertContributionEdge(client, workspaceId, built.post.id, parent, "builds-on");
+    }
+    if (input.revision_of) await insertContributionEdge(client, workspaceId, built.post.id, input.revision_of, "revises");
+    await insertCreditEvent(client, workspaceId, built.post, author, "authorship-recorded", "attributed", {
+      content_hash: built.post.content_hash
+    });
+    if (input.inference) {
+      const runId = makeId("inference");
+      await client.query(
+        `insert into inference_runs (id, workspace_id, post_id, reported_by, provider, provider_request_id, usage)
+         values ($1,$2,$3,$4,$5,$6,$7)`,
+        [runId, workspaceId, built.post.id, principal.id, input.inference.provider, input.inference.provider_request_id, JSON.stringify(input.inference)]
+      );
+      await insertCreditEvent(client, workspaceId, built.post, principal, "inference-reported", "self-reported", {
+        inference_run_id: runId, usage: input.inference, redeemable: false
+      });
+    }
 
     if (built.claim) {
       await insertClaim(client, workspaceId, built.claim);
@@ -975,6 +1058,45 @@ export async function createContribution(workspaceId, input) {
 
     return built;
   });
+}
+
+function artifactSnapshot(artifact) {
+  // Path-only artifacts may contain an author-supplied hash. Never call that verified bytes.
+  const stored = artifact.metadata?.server_stored === true && ["local-file", "vercel-blob"].includes(artifact.metadata?.storage?.driver);
+  return { id: artifact.id, path: artifact.path, content_hash: artifact.content_hash || null, bytes_stored: stored };
+}
+
+async function insertContributionEdge(client, workspaceId, postId, parentId, relation) {
+  await client.query("insert into contribution_edges (workspace_id, post_id, parent_post_id, relation) values ($1,$2,$3,$4)",
+    [workspaceId, postId, parentId, relation]);
+}
+
+async function insertCreditEvent(client, workspaceId, post, actor, kind, evidence, details) {
+  await client.query(
+    `insert into credit_events (id, workspace_id, post_id, principal_id, principal_kind, kind, evidence_status, details)
+     values ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [makeId("credit"), workspaceId, post.id, actor.id, actor.kind, kind, evidence, JSON.stringify(details)]
+  );
+}
+
+async function readSubmission(client, workspaceId, post) {
+  const claim = (await client.query("select * from claims where workspace_id = $1 and linked_posts ? $2", [workspaceId, post.id])).rows[0] || null;
+  const verification = claim ? (await client.query("select * from verifications where workspace_id = $1 and claim_id = $2", [workspaceId, claim.id])).rows[0] || null : null;
+  const verificationJob = verification ? (await client.query("select * from verification_jobs where workspace_id = $1 and verification_id = $2", [workspaceId, verification.id])).rows[0] || null : null;
+  const artifact = post.provenance?.inline_artifact_id ? (await client.query("select * from artifacts where workspace_id = $1 and id = $2", [workspaceId, post.provenance.inline_artifact_id])).rows[0] || null : null;
+  return { post, claim, verification, verificationJob, artifact };
+}
+
+export async function listCreditEvents(workspaceId, { problemId = "", principalId = "", limit = 100, before = "" } = {}) {
+  const result = await query(
+    `select credit_events.* from credit_events join posts on posts.id = credit_events.post_id and posts.workspace_id = credit_events.workspace_id
+     where credit_events.workspace_id = $1 and ($2 = '' or posts.problem_id = $2)
+       and ($3 = '' or credit_events.principal_id = $3)
+       and (nullif($5, '') is null or credit_events.sequence < nullif($5, '')::bigint)
+     order by credit_events.sequence desc limit $4`,
+    [workspaceId, problemId, principalId, limit, before]
+  );
+  return result.rows.map((event) => ({ ...event, sequence: String(event.sequence) }));
 }
 
 export async function updateVerification(workspaceId, verificationId, patch) {
@@ -1067,8 +1189,9 @@ async function insertArtifact(client, workspaceId, artifact) {
 async function insertPost(client, workspaceId, post) {
   await client.query(
     `insert into posts
-      (id, workspace_id, created_at, agent, problem_id, assignment_id, type, body, dependencies, artifacts, evidence_level, status, replay)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      (id, workspace_id, created_at, agent, problem_id, assignment_id, type, body, dependencies, artifacts, evidence_level, status, replay,
+       author_kind, submitted_by, submitted_by_kind, revision_of, progress, license, provenance, content_hash, idempotency_key, request_hash)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
     [
       post.id,
       workspaceId,
@@ -1082,7 +1205,17 @@ async function insertPost(client, workspaceId, post) {
       JSON.stringify(post.artifacts || []),
       post.evidence_level,
       post.status,
-      post.replay ? JSON.stringify(post.replay) : null
+      post.replay ? JSON.stringify(post.replay) : null,
+      post.author_kind || null,
+      post.submitted_by || null,
+      post.submitted_by_kind || null,
+      post.revision_of || null,
+      post.progress ? JSON.stringify(post.progress) : null,
+      post.license || "unspecified",
+      post.provenance ? JSON.stringify(post.provenance) : null,
+      post.content_hash || null,
+      post.idempotency_key || null,
+      post.request_hash || null
     ]
   );
 }

@@ -45,6 +45,7 @@ async function readJson(relPath) {
 // Schema files must at least be valid JSON.
 for (const file of [
   "schemas/research-post.schema.json",
+  "schemas/research.schema.json",
   "schemas/agent.schema.json",
   "schemas/problem.schema.json",
   "schemas/assignment.schema.json",

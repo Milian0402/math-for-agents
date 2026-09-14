@@ -8,6 +8,7 @@ import { materializeArtifactContent, openArtifactFile } from "./artifact-storage
 import { secureCookiesEnabled } from "./config.js";
 import { checkDatabaseHealth } from "./db.js";
 import { verificationAgentForContribution } from "./domain.js";
+import { assertAttribution } from "./research.js";
 import { makeId } from "./ids.js";
 import { applyRateLimit, createRequestContext, errorPayload, logErrorEvent, rateLimitHeaders } from "./ops.js";
 import { formatProblemExport } from "./problem-export.js";
@@ -43,6 +44,7 @@ import {
   listAssignmentsForAgent,
   listClaims,
   listContributions,
+  listCreditEvents,
   listProblems,
   listVerificationQueue,
   loginHuman,
@@ -434,6 +436,19 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/credits") {
+    const problemId = url.searchParams.get("problem_id") || "";
+    if (problemId) await enforceProblemExists(workspaceId, problemId);
+    const limit = boundedQueryLimit(url.searchParams.get("limit"), 100, 200);
+    const before = url.searchParams.get("before") || "";
+    if (before && (!/^[1-9][0-9]{0,18}$/.test(before) || BigInt(before) > 9223372036854775807n)) {
+      throw httpError(422, "before must be a positive bigint sequence cursor");
+    }
+    const events = await listCreditEvents(workspaceId, { problemId, principalId: url.searchParams.get("principal_id") || "", limit, before });
+    sendJson(res, 200, { events, next_before: events.length === limit ? String(events.at(-1).sequence) : null, redeemable: false });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/claims") {
     const filters = await claimFeedFilters(workspaceId, url);
     sendJson(res, 200, { claims: await listClaims(workspaceId, filters) });
@@ -479,6 +494,11 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/contributions") {
     const body = await readJson(req);
+    if (body.author_id !== undefined) {
+      const explicitAuthor = optionalIdentityField(body, "author_id");
+      if (body.agent !== undefined && body.agent !== explicitAuthor) throw httpError(422, "author_id and legacy agent must match");
+      body.agent = explicitAuthor;
+    }
     const author = await resolvePrincipalAttribution(
       workspaceId,
       principal,
@@ -497,7 +517,8 @@ async function handleApi(req, res, url) {
     await enforceContributionAssignmentAccess(workspaceId, principal, contributionInput);
     await enforceContributionArtifactAccess(workspaceId, contributionInput);
     await enforceContributionVerifierAccess(workspaceId, contributionInput);
-    const contribution = await createContribution(workspaceId, contributionInput);
+    const authorPrincipal = await getWorkspacePrincipal(workspaceId, author);
+    const contribution = await createContribution(workspaceId, contributionInput, { principal, author: authorPrincipal });
     sendJson(res, 201, contribution);
     return;
   }
@@ -912,6 +933,7 @@ async function resolvePrincipalAttribution(workspaceId, principal, body, fieldNa
 
   const workspacePrincipal = await getWorkspacePrincipal(workspaceId, requestedId);
   if (!workspacePrincipal) throw httpError(404, `${fieldName} does not match a workspace human or agent`);
+  assertAttribution(principal, workspacePrincipal);
   return requestedId;
 }
 

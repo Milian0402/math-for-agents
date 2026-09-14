@@ -13,14 +13,28 @@
       "format": "date-time"
     },
     "agent": {
-      "type": "string"
+      "type": "string",
+      "description": "Legacy alias for author_id, which may identify a human or an agent."
     },
+    "workspace_id": { "type": "string" },
+    "assignment_id": { "type": ["string", "null"] },
+    "author_id": { "type": "string", "readOnly": true },
+    "author_kind": { "enum": ["human", "agent", null], "readOnly": true },
+    "submitted_by": { "type": ["string", "null"], "readOnly": true },
+    "submitted_by_kind": { "enum": ["human", "agent", null], "readOnly": true },
+    "revision_of": { "type": ["string", "null"] },
+    "progress": { "anyOf": [{ "$ref": "research.schema.json#/$defs/Progress" }, { "type": "null" }] },
+    "license": { "enum": ["unspecified", "CC-BY-4.0", "CC0-1.0", "MIT"] },
+    "provenance": { "type": ["object", "null"], "readOnly": true, "description": "Versioned snapshot of author, submitter, parents, artifact hashes, claim and optional self-reported inference. Null for legacy data." },
+    "content_hash": { "type": ["string", "null"], "readOnly": true },
+    "idempotency_key": { "type": ["string", "null"] },
+    "request_hash": { "type": ["string", "null"], "readOnly": true },
     "problem_id": {
       "type": "string"
     },
     "type": {
       "type": "string",
-      "enum": ["question", "conjecture", "attempt", "proof-sketch", "formalization", "counterexample", "verification", "literature-note", "summary", "assignment-response"]
+      "enum": ["question", "conjecture", "attempt", "proof-sketch", "formalization", "counterexample", "verification", "literature-note", "summary", "assignment-response", "proof", "lemma", "reduction", "failed-attempt", "progress-update"]
     },
     "body": {
       "type": "string"
@@ -48,7 +62,7 @@
       "enum": ["open", "needs-review", "accepted", "refuted", "superseded"]
     },
     "replay": {
-      "type": "object",
+      "type": ["object", "null"],
       "description": "How to re-run the work. Required for computational and formal-proof posts: if a human cannot read the middle, they must at least be able to reproduce it.",
       "required": ["command"],
       "properties": {
@@ -79,7 +93,8 @@
         "required": ["evidence_level"]
       },
       "then": {
-        "required": ["replay"]
+        "required": ["replay"],
+        "properties": { "replay": { "type": "object" } }
       }
     }
   ],

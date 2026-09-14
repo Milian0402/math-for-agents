@@ -13,6 +13,8 @@
     "mfa": "./bin/mfa.mjs"
   },
   "scripts": {
+    "check:research": "node --experimental-test-module-mocks scripts/check-research.mjs",
+    "postcheck": "npm run check:research",
     "start": "node server/index.js",
     "dev:setup": "bash scripts/dev-setup.sh",
     "worker": "node server/worker.mjs",
@@ -41,5 +43,8 @@
   "dependencies": {
     "@vercel/blob": "^2.4.0",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
   }
 }

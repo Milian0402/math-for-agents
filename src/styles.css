@@ -6470,3 +6470,9 @@ body {
     flex: 1 1 0;
   }
 }
+/* Provenance should remain readable on narrow screens without hiding evidence. */
+.research-provenance { overflow-wrap: anywhere; white-space: pre-wrap; font-size: .85rem; }
+.research-table-wrap { overflow-x: auto; }
+.research-credit-table { width: 100%; border-collapse: collapse; text-align: left; }
+.research-credit-table th, .research-credit-table td { padding: .7rem; border-bottom: 1px solid #ddd; }
+[data-submission-error] { color: #a12626; overflow-wrap: anywhere; }

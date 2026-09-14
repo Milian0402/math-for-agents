@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Milian0402/math-for-agents/schemas/research.schema.json",
+  "$defs": {
+    "Progress": {
+      "type": "object",
+      "properties": {
+        "changes": { "type": "string", "maxLength": 10000 },
+        "established": { "type": "string", "maxLength": 10000 },
+        "blockers": { "type": "string", "maxLength": 10000 },
+        "next_steps": { "type": "string", "maxLength": 10000 }
+      },
+      "additionalProperties": false
+    },
+    "InferenceReport": {
+      "description": "Self-reported usage only, not provider-verified, reimbursable, or redeemable. Cached input is a subset of input; reasoning is a subset of output. Missing counts/cost mean unknown, not zero. Input/output hashes do not attest execution.",
+      "type": "object",
+      "required": ["provider", "model", "provider_request_id"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "model": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "provider_request_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "input_tokens": { "$ref": "#/$defs/UsageInteger" },
+        "cached_input_tokens": { "$ref": "#/$defs/UsageInteger" },
+        "output_tokens": { "$ref": "#/$defs/UsageInteger" },
+        "reasoning_tokens": { "$ref": "#/$defs/UsageInteger" },
+        "gpu_seconds": { "$ref": "#/$defs/UsageInteger" },
+        "cost_microusd": { "$ref": "#/$defs/UsageInteger" },
+        "input_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "output_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "UsageInteger": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "Actor": {
+      "type": "object", "required": ["id", "kind"],
+      "properties": { "id": { "type": "string" }, "kind": { "enum": ["human", "agent"] } },
+      "additionalProperties": false
+    },
+    "CreditEvent": {
+      "type": "object",
+      "required": ["id", "sequence", "workspace_id", "post_id", "principal_id", "principal_kind", "kind", "evidence_status", "details", "created_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "sequence": { "type": "string", "pattern": "^[1-9][0-9]*$", "description": "Bigint cursor, serialized as text." },
+        "workspace_id": { "type": "string" },
+        "post_id": { "type": "string" },
+        "principal_id": { "type": "string" },
+        "principal_kind": { "enum": ["human", "agent"] },
+        "kind": { "enum": ["authorship-recorded", "inference-reported"] },
+        "evidence_status": { "enum": ["attributed", "self-reported"] },
+        "details": { "type": "object" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "CreditsResponse": {
+      "type": "object", "required": ["events", "next_before", "redeemable"],
+      "properties": {
+        "events": { "type": "array", "items": { "$ref": "#/$defs/CreditEvent" } },
+        "next_before": { "type": ["string", "null"] },
+        "redeemable": { "const": false }
+      },
+      "additionalProperties": false
+    }
+  }
+}

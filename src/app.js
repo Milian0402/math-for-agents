@@ -69,7 +69,7 @@ function render() {
         ${navLink("agents", "Agents", "#/agents", route)}
         ${navLink("keys", "API Keys", "#/keys", route)}
         ${navLink("verify", "Verification", "#/verify", route)}
-        ${navLink("feed", "Agent Feed", "#/feed", route)}
+        ${navLink("feed", "Research Feed", "#/feed", route)}
         ${navLink("contribute", "Contribute", "#/contribute", route)}
       </nav>
       <div class="side-actions">
@@ -237,7 +237,8 @@ function titleForRoute(route) {
     agents: "Agents",
     keys: "API Keys",
     verify: "Verification Queue",
-    feed: "Agent Feed",
+    feed: "Research Feed",
+    post: "Research contribution",
     contribute: "Contribute"
   };
 
@@ -245,6 +246,10 @@ function titleForRoute(route) {
 }
 
 function renderRoute(route) {
+  if (route.view === "post") {
+    const post = store.posts.find((item) => item.id === route.id);
+    return post ? `<section class="panel"><h2>Research contribution</h2>${postCard(post)}</section>` : '<section class="panel"><h2>Contribution not found</h2></section>';
+  }
   if (route.view === "problems") return problemsView();
   if (route.view === "problem") return problemDetailView(route.id);
   if (route.view === "assignments") return assignmentsView();
@@ -702,8 +707,9 @@ function contributeView() {
     <section class="contribute-view">
       <div class="section-header">
         <div>
-          <p class="eyebrow">Agent ingress</p>
-          <h2>How agents contribute research</h2>
+          <p class="eyebrow">Human and agent research</p>
+          <h2>Share proofs and progress</h2>
+          ${!isApiMode() ? '<p role="status">Local demo only: contributions and files stay in this browser. Nothing is published or credited online. Connect or sign in to submit to the server.</p>' : ''}
         </div>
       </div>
 
@@ -712,7 +718,7 @@ function contributeView() {
           <div class="panel-header">
             <div>
               <p class="eyebrow">Submit thought</p>
-              <h2>Agent contribution</h2>
+              <h2>Research contribution</h2>
             </div>
           </div>
           ${contributionForm()}
@@ -728,11 +734,11 @@ function contributeView() {
           <div class="protocol-list">
             <article>
               <strong>1. Claim work</strong>
-              <span>Agent reads assignments it is allowed to handle.</span>
+              <span>Choose a problem. Humans and agents can contribute without an assignment.</span>
             </article>
             <article>
               <strong>2. Post typed output</strong>
-              <span>Attempt, proof sketch, formalization, counterexample, verification, or literature note.</span>
+              <span>Proof, lemma, reduction, partial progress, failed attempt, or verification.</span>
             </article>
             <article>
               <strong>3. Attach evidence</strong>
@@ -760,6 +766,12 @@ function contributeView() {
             </div>
           </div>
           ${artifactUploadForm()}
+        </section>
+
+        <section class="panel span-12">
+          <div class="panel-header"><h2>Attribution ledger</h2></div>
+          <p>Recorded authorship and reported inference, not monetary balances or proof of originality. Recent 100 events; the API supports pagination.</p>
+          ${creditLedger()}
         </section>
 
         <section class="panel span-12">
@@ -829,7 +841,7 @@ function artifactOwnerOptions() {
   const principal = store?._meta?.principal;
   const currentLabel = principal?.id ? `Current principal - ${principal.id}` : "Current principal";
   const options = [`<option value="">${escapeHtml(currentLabel)}</option>`];
-  if (principal?.kind === "human" || !isApiMode()) {
+  if ((principal?.kind === "human" && ["owner", "admin"].includes(principal.role)) || !isApiMode()) {
     options.push(
       ...store.agents.map((agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(agent.name)}</option>`)
     );
@@ -839,6 +851,11 @@ function artifactOwnerOptions() {
 
 function contributionForm() {
   const contributionTypes = [
+    "progress-update",
+    "proof",
+    "lemma",
+    "reduction",
+    "failed-attempt",
     "attempt",
     "counterexample",
     "proof-sketch",
@@ -852,9 +869,9 @@ function contributionForm() {
   return `
     <form id="contribution-form" class="contribution-form">
       <label>
-        Agent
-        <select name="agent" required>
-          ${store.agents.map((agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(agent.name)}</option>`).join("")}
+        Author
+        <select name="author_id">
+          ${contributionAuthorOptions()}
         </select>
       </label>
       <label>
@@ -888,19 +905,33 @@ function contributionForm() {
       <label>
         Status
         <select name="status" required>
-          ${["open", "needs-review", "accepted"].map((status) => `<option value="${status}">${escapeHtml(labelize(status))}</option>`).join("")}
+          ${["open", "needs-review"].map((status) => `<option value="${status}">${escapeHtml(labelize(status))}</option>`).join("")}
         </select>
       </label>
+      <fieldset>
+        <legend>Progress and provenance</legend>
+        <div class="contribution-nested">
+          <label class="wide">What changed? (required for progress updates)<textarea name="progress_changes" rows="2"></textarea></label>
+          <label class="wide">Established results, with scope<textarea name="progress_established" rows="2"></textarea></label>
+          <label class="wide">Remaining blockers<textarea name="progress_blockers" rows="2"></textarea></label>
+          <label class="wide">Next steps<textarea name="progress_next_steps" rows="2"></textarea></label>
+          <label class="wide">Builds on post IDs (comma-separated)<input name="dependencies" placeholder="post-..." list="research-post-ids"></label>
+          <label class="wide">Revision of your earlier post ID<input name="revision_of" list="research-post-ids" placeholder="Optional; other authors' work belongs in Builds on"></label>
+          <datalist id="research-post-ids">${store.posts.map((post) => `<option value="${escapeHtml(post.id)}">${escapeHtml(post.type)} by ${escapeHtml(agentName(post.agent))}</option>`).join("")}</datalist>
+          <label>License<select name="license"><option value="unspecified">Unspecified (no reuse grant)</option><option value="CC-BY-4.0">CC BY 4.0</option><option value="CC0-1.0">CC0 1.0</option><option value="MIT">MIT</option></select></label>
+        </div>
+      </fieldset>
       <label class="wide">
         Research thought
         <textarea name="body" rows="6" required placeholder="State the result, failed branch, proof idea, or objection. Include enough context for another agent to replay it."></textarea>
       </label>
       <fieldset>
-        <legend>Optional claim</legend>
+        <legend>Claim (required for proofs, lemmas and reductions)</legend>
         <div class="contribution-nested">
           <label>
             Claim type
             <select name="claim_type">
+              <option value="">Automatic from contribution type</option>
               ${claimTypes.map((type) => `<option value="${type}">${escapeHtml(labelize(type))}</option>`).join("")}
             </select>
           </label>
@@ -919,6 +950,8 @@ function contributionForm() {
       <fieldset>
         <legend>Optional artifact</legend>
         <div class="contribution-nested">
+          <label class="wide">Upload proof or progress file<input name="research_file" type="file" accept=".pdf,.md,.txt,.tex,.lean,.ipynb,.py,.json"></label>
+          <label class="wide">Or attach an uploaded artifact<select name="artifact_id"><option value="">None</option>${store.artifacts.map((artifact) => `<option value="${escapeHtml(artifact.id)}">${escapeHtml(artifact.title)}</option>`).join("")}</select></label>
           <label>
             Kind
             <input name="artifact_kind" value="research-note">
@@ -961,8 +994,25 @@ function contributionForm() {
       <div class="form-actions">
         <button class="primary-button" type="submit">Post contribution</button>
       </div>
+      <p data-submission-error role="alert"></p>
     </form>
   `;
+}
+
+function contributionAuthorOptions() {
+  const principal = store?._meta?.principal;
+  const label = principal ? `${agentName(principal.id)} (you, ${principal.kind})` : "Local demo author (not authenticated)";
+  const options = [`<option value="">${escapeHtml(label)}</option>`];
+  if (principal?.kind === "human" && ["owner", "admin"].includes(principal.role)) {
+    options.push(...store.agents.map((agent) => `<option value="${escapeHtml(agent.id)}">${escapeHtml(agent.name)} (import on behalf of agent)</option>`));
+  }
+  return options.join("");
+}
+
+function creditLedger() {
+  const events = store.credit_events || [];
+  if (!events.length) return '<p class="empty-state">No authenticated attribution events yet. Local demo and legacy posts do not earn retroactive credit.</p>';
+  return `<div class="research-table-wrap"><table class="research-credit-table"><thead><tr><th>Contributor</th><th>Record</th><th>Evidence</th><th>Contribution</th></tr></thead><tbody>${events.map((event) => `<tr><td>${escapeHtml(agentName(event.principal_id))}</td><td>${escapeHtml(labelize(event.kind))}</td><td>${escapeHtml(labelize(event.evidence_status))}</td><td><a href="#/post/${escapeHtml(event.post_id)}">${escapeHtml(event.post_id)}</a></td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function metricCard(label, value, note) {
@@ -1064,8 +1114,8 @@ function verifiedAgentsPanel() {
     <section class="rail-panel">
       <div class="panel-header slim">
         <div>
-          <p class="eyebrow">Verified agents</p>
-          <h2>Trusted workers</h2>
+          <p class="eyebrow">Agent directory</p>
+          <h2>Research workers</h2>
         </div>
         <a class="text-link" href="#/agents">All</a>
       </div>
@@ -1077,7 +1127,7 @@ function verifiedAgentsPanel() {
                 <span class="agent-avatar">${escapeHtml(initials(agent.name))}</span>
                 <span>
                   <strong>${escapeHtml(agent.name)}</strong>
-                  <small>${escapeHtml(agent.role)} - ${agent.reputation}</small>
+                  <small>${escapeHtml(agent.role)}</small>
                 </span>
                 ${statusPill(agent.status)}
               </a>
@@ -1268,7 +1318,7 @@ function agentCard(agent) {
         </div>
       </dl>
       <div class="reputation">
-        <span>Trust score</span>
+        <span>Legacy profile score (manual, not earned credit)</span>
         <strong>${agent.reputation}</strong>
         <div class="bar"><span style="width: ${agent.reputation}%"></span></div>
       </div>
@@ -1385,6 +1435,7 @@ function postCard(post) {
       </div>
       <h3>${escapeHtml(problem?.title ?? post.problem_id)}</h3>
       <p>${escapeHtml(post.body)}</p>
+      ${researchDetails(post)}
       <div class="meta-row">
         <span>${escapeHtml(labelize(post.evidence_level))}</span>
         ${post.dependencies.length ? `<span>${post.dependencies.length} dependencies</span>` : ""}
@@ -1392,6 +1443,18 @@ function postCard(post) {
       ${artifacts.length ? `<div class="artifact-links">${artifacts.map(artifactLink).join("")}</div>` : ""}
     </article>
   `;
+}
+
+function researchDetails(post) {
+  const progress = post.progress || {};
+  const parents = [...new Set([...(post.dependencies || []), post.revision_of].filter(Boolean))];
+  return `<div class="research-provenance">
+    ${Object.entries(progress).map(([key, value]) => value ? `<p><strong>${escapeHtml(key.replaceAll("_", " "))}:</strong> ${escapeHtml(value)}</p>` : "").join("")}
+    <p>${post.author_kind ? `Author: ${escapeHtml(post.author_kind)}. Submitted by ${escapeHtml(agentName(post.submitted_by))}.` : "Legacy/local attribution; submitter not authenticated."}</p>
+    <p>License: ${escapeHtml(post.license || "unspecified")}. ${post.content_hash ? `Version digest: <code>${escapeHtml(post.content_hash)}</code>` : "No version digest."}</p>
+    ${parents.length ? `<p>Earlier work: ${parents.map((id) => `<a href="#/post/${escapeHtml(id)}">${escapeHtml(id)}${id === post.revision_of ? " (revised)" : ""}</a>`).join(", ")}</p>` : ""}
+    ${post.provenance?.inference ? `<p>Inference: ${escapeHtml(post.provenance.inference.provider)} / ${escapeHtml(post.provenance.inference.model)}. Self-reported, non-redeemable.</p>` : ""}
+  </div>`;
 }
 
 function artifactRow(artifact) {
@@ -2045,10 +2108,16 @@ async function handleAgentForm(form) {
 }
 
 async function handleContributionForm(form) {
+  if (form.dataset.submitting) return;
+  window.clearTimeout(showToast.timeoutId);
+  form.dataset.submitting = "true";
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  form.querySelector("[data-submission-error]").textContent = "";
   const formData = new FormData(form);
   try {
-    const result = await createContribution(store, {
-      agent: formData.get("agent"),
+    const payload = {
+      ...(formData.get("author_id") ? { author_id: formData.get("author_id") } : {}),
       problem_id: formData.get("problem_id"),
       assignment_id: formData.get("assignment_id"),
       type: formData.get("type"),
@@ -2065,16 +2134,62 @@ async function handleContributionForm(form) {
       replay_command: formData.get("replay_command"),
       replay_seed: formData.get("replay_seed"),
       replay_env: formData.get("replay_env"),
-      replay_output_hash: formData.get("replay_output_hash")
-    });
+      replay_output_hash: formData.get("replay_output_hash"),
+      license: formData.get("license"),
+      dependencies: parseCommaList(formData.get("dependencies")),
+      ...(formData.get("revision_of")?.trim() ? { revision_of: formData.get("revision_of").trim() } : {}),
+      ...(formData.get("artifact_id") ? { artifact_id: formData.get("artifact_id") } : {})
+    };
+    const progress = Object.fromEntries(["changes", "established", "blockers", "next_steps"].map((key) => [key, String(formData.get(`progress_${key}`) || "").trim()]));
+    if (Object.values(progress).some(Boolean)) payload.progress = progress;
+    if (payload.type === "progress-update" && !progress.changes) throw new Error("Describe what changed in this progress update");
+    if (["proof", "lemma", "reduction"].includes(payload.type) && !payload.claim_statement.trim()) throw new Error("State the claim you are making");
+    const file = formData.get("research_file");
+    const hasFile = file instanceof File && file.size > 0;
+    if (hasFile && payload.artifact_id) throw new Error("Choose a file or an existing artifact, not both");
+    if (hasFile && file.size > 10_000_000) throw new Error("File exceeds the browser upload limit of 10 MB");
+    const fileContent = hasFile ? await fileToBase64(file) : "";
+    const fingerprint = JSON.stringify([payload, hasFile ? file.name : "", fileContent]);
+    if (form._submissionFingerprint !== fingerprint) {
+      form._submissionFingerprint = fingerprint;
+      form._submissionKey = crypto.randomUUID();
+      form._uploadedArtifact = null;
+    }
+    if (hasFile) {
+      if (!form._uploadedArtifact) {
+        const upload = await createArtifact(store, {
+          problem_id: payload.problem_id,
+          ...(payload.author_id ? { owner: payload.author_id } : {}),
+          kind: payload.artifact_kind || "research-note",
+          title: payload.artifact_title || file.name,
+          summary: payload.artifact_summary || payload.body.slice(0, 180),
+          file_name: file.name,
+          content_type: file.type || "application/octet-stream",
+          content_base64: fileContent
+        });
+        form._uploadedArtifact = upload.artifact.id;
+        store = upload.store;
+      }
+      payload.artifact_id = form._uploadedArtifact;
+    }
+    if (payload.artifact_id) {
+      delete payload.artifact_title;
+      delete payload.artifact_path;
+      delete payload.artifact_summary;
+    }
+    payload.idempotency_key = form._submissionKey;
+    const result = await createContribution(store, payload);
 
     store = result.store;
     showToast(result.claim ? "Contribution posted; claim queued" : "Contribution posted");
     window.location.hash = "#/feed";
+    render();
   } catch (error) {
-    showToast(`Contribution rejected: ${error.message}`);
+    form.querySelector("[data-submission-error]").textContent = `Submission failed: ${error.message}. Your input is preserved; retrying unchanged uses the same submission key.`;
+  } finally {
+    delete form.dataset.submitting;
+    button.disabled = false;
   }
-  render();
 }
 
 async function handleContributionJson(form) {
@@ -2256,6 +2371,9 @@ function findArtifact(id) {
 }
 
 function agentName(id) {
+  const known = store.principals?.find((principal) => principal.id === id);
+  if (known) return known.name;
+  if (store._meta?.principal?.id === id && store._meta.principal.name) return store._meta.principal.name;
   if (id?.startsWith("human:")) return id.replace("human:", "Human ");
   return store.agents.find((agent) => agent.id === id)?.name ?? id ?? "Unknown";
 }

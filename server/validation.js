@@ -12,8 +12,15 @@ import {
   MACHINE_METHODS,
   requiresReplay
 } from "../src/vocab.js";
+import { assertResearchInput } from "./research.js";
 
 const CONTRIBUTION_FIELDS = new Set([
+  "author_id",
+  "revision_of",
+  "progress",
+  "license",
+  "inference",
+  "idempotency_key",
   "agent",
   "problem_id",
   "assignment_id",
@@ -111,6 +118,9 @@ export function assertContributionInput(input) {
   requireString(input.problem_id, "problem_id", errors);
   requireString(input.type, "type", errors);
   requireString(input.body, "body", errors);
+  if (input.claim_statement !== undefined && typeof input.claim_statement !== "string") {
+    errors.push("claim_statement must be text");
+  }
   requireEnum(input.type, POST_TYPES, "type", errors);
   requireEnum(input.evidence_level, EVIDENCE_LEVELS, "evidence_level", errors);
   if (input.status) requireEnum(input.status, POST_STATUSES, "status", errors);
@@ -123,10 +133,14 @@ export function assertContributionInput(input) {
     errors.push(`${input.evidence_level} contributions require replay.command`);
   }
   throwIfErrors(errors);
+  assertResearchInput(input);
 }
 
 export function assertArtifactInput(input) {
   const errors = [];
+  if (input.metadata?.storage !== undefined || input.metadata?.server_stored !== undefined) {
+    errors.push("artifact storage metadata is server-managed; upload the actual bytes");
+  }
   if (!rejectUnknownFields(input, ARTIFACT_FIELDS, errors)) return throwIfErrors(errors);
   requireString(input.problem_id, "problem_id", errors);
   requireString(input.owner, "owner", errors);

@@ -132,7 +132,10 @@ function artifactLine(artifact) {
 
 function postLine(post) {
   const assignment = post.assignment_id ? `; assignment ${post.assignment_id}` : "";
-  return `${post.id}: ${post.type} by ${post.agent}${assignment} [${post.status}; ${post.evidence_level}] - ${cleanInline(post.body)}`;
+  const provenance = post.author_kind ? `; ${post.author_kind}; submitted by ${post.submitted_by}; version ${post.content_hash}` : "; legacy/local attribution";
+  const parents = [...new Set([...(post.dependencies || []), post.revision_of].filter(Boolean))];
+  const progress = Object.entries(post.progress || {}).filter(([, value]) => value).map(([key, value]) => `${key}: ${cleanInline(value)}`).join("; ");
+  return `${post.id}: ${post.type} by ${post.agent}${assignment}${provenance} [${post.status}; ${post.evidence_level}; license ${post.license || "unspecified"}] - ${cleanInline(post.body)}${parents.length ? `; builds on ${parents.join(", ")}` : ""}${progress ? `; ${progress}` : ""}`;
 }
 
 function bulletList(items, formatter) {

@@ -29,12 +29,15 @@ export function buildContribution(input, options = {}) {
     assignment_id: input.assignment_id || null,
     type: input.type,
     body: input.body.trim(),
-    dependencies: input.dependencies ?? [],
+    dependencies: [...new Set(input.dependencies ?? [])],
     artifacts: [...new Set(artifactIds)],
     evidence_level: input.evidence_level,
     status: input.status || "open",
     replay
   };
+  post.revision_of = input.revision_of || null;
+  post.progress = input.progress || null;
+  post.license = input.license || "unspecified";
 
   if (!post.replay) delete post.replay;
 
@@ -50,7 +53,7 @@ export function buildContribution(input, options = {}) {
     claim = {
       id: options.claimId || makeId("claim"),
       problem_id: input.problem_id,
-      type: input.claim_type || (post.type === "counterexample" ? "counterexample" : "conjecture"),
+      type: input.claim_type || ({ counterexample: "counterexample", proof: "proof", lemma: "lemma", reduction: "lemma" }[post.type] || "conjecture"),
       statement: statedClaim || summarizeForClaim(post.body),
       status: "needs-review",
       evidence_level: input.evidence_level,

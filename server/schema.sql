@@ -168,4 +168,81 @@ create index if not exists idx_posts_problem_created on posts (workspace_id, pro
 create index if not exists idx_human_sessions_hash on human_sessions (session_hash, expires_at);
 create index if not exists idx_workspace_members_human on workspace_members (human_id, workspace_id);
 
+-- Additive upgrade: never invent authenticated provenance for legacy posts.
+alter table posts add column if not exists author_id text generated always as (agent) stored;
+alter table posts add column if not exists author_kind text check (author_kind in ('human', 'agent'));
+alter table posts add column if not exists submitted_by text;
+alter table posts add column if not exists submitted_by_kind text check (submitted_by_kind in ('human', 'agent'));
+alter table posts add column if not exists revision_of text references posts(id);
+alter table posts add column if not exists progress jsonb;
+alter table posts add column if not exists license text not null default 'unspecified';
+alter table posts add column if not exists provenance jsonb;
+alter table posts add column if not exists content_hash text;
+alter table posts add column if not exists idempotency_key text;
+alter table posts add column if not exists request_hash text;
+create unique index if not exists idx_posts_request_key on posts (workspace_id, submitted_by, idempotency_key);
+create unique index if not exists idx_posts_workspace_id on posts (workspace_id, id);
+
+create table if not exists contribution_edges (
+  workspace_id text not null references workspaces(id) on delete cascade,
+  post_id text not null,
+  parent_post_id text not null,
+  relation text not null check (relation in ('builds-on', 'revises')),
+  primary key (workspace_id, post_id, parent_post_id, relation),
+  foreign key (workspace_id, post_id) references posts(workspace_id, id) on delete cascade,
+  foreign key (workspace_id, parent_post_id) references posts(workspace_id, id),
+  check (post_id <> parent_post_id)
+);
+
+-- These are self-reported measurements, not trusted provider receipts or balances.
+create table if not exists inference_runs (
+  id text primary key,
+  workspace_id text not null references workspaces(id) on delete cascade,
+  post_id text not null unique,
+  reported_by text not null,
+  provider text not null,
+  provider_request_id text not null,
+  usage jsonb not null,
+  evidence_status text not null default 'self-reported' check (evidence_status = 'self-reported'),
+  created_at timestamptz not null default now(),
+  foreign key (workspace_id, post_id) references posts(workspace_id, id) on delete cascade,
+  unique (workspace_id, reported_by, provider, provider_request_id)
+);
+
+-- Attribution events only. No user-facing INSERT/PATCH/DELETE or spendable credit.
+create table if not exists credit_events (
+  id text primary key,
+  sequence bigint generated always as identity unique,
+  workspace_id text not null references workspaces(id) on delete cascade,
+  post_id text not null,
+  principal_id text not null,
+  principal_kind text not null check (principal_kind in ('human', 'agent')),
+  kind text not null check (kind in ('authorship-recorded', 'inference-reported')),
+  evidence_status text not null check (evidence_status in ('attributed', 'self-reported')),
+  details jsonb not null,
+  created_at timestamptz not null default now(),
+  foreign key (workspace_id, post_id) references posts(workspace_id, id) on delete cascade,
+  unique (workspace_id, post_id, kind)
+);
+create index if not exists idx_credit_events_principal on credit_events (workspace_id, principal_id, created_at desc, id);
+create index if not exists idx_credit_events_sequence on credit_events (workspace_id, sequence desc);
+
+create or replace function protect_research_history() returns trigger language plpgsql as $$
+begin
+  if TG_TABLE_NAME = 'credit_events' then
+    raise exception 'research history is append-only: create a new contribution revision';
+  end if;
+  if OLD.content_hash is not null then
+    raise exception 'research history is append-only: create a new contribution revision';
+  end if;
+  return NEW;
+end;
+$$;
+drop trigger if exists immutable_research_post on posts;
+create trigger immutable_research_post before update on posts for each row execute function protect_research_history();
+-- Credits are append-only through the API and protected from accidental UPDATE.
+-- Workspace/account deletion remains an administrative, explicit operation.
+drop trigger if exists immutable_credit_event on credit_events;
+create trigger immutable_credit_event before update on credit_events for each row execute function protect_research_history();
+
 commit;
