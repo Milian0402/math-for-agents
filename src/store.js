@@ -247,7 +247,7 @@ async function loadApiStoreStrict() {
   });
 }
 
-async function apiRequest(path, options = {}) {
+export async function apiRequest(path, options = {}) {
   const key = getApiKey();
   const headers = {
     "Content-Type": "application/json",
@@ -549,6 +549,10 @@ function updateLocalVerification(store, verificationId, status, patch = {}) {
   const nextMethod = patch.method || verification.method;
   const nextArtifactId = patch.artifact_id || verification.artifact_id;
 
+  if (status === "passed" && nextMethod === "lean-kernel") {
+    throw new Error("Command logs and manual patches cannot certify a formal theorem");
+  }
+
   if (status === "passed" && MACHINE_METHODS.includes(nextMethod) && !nextArtifactId) {
     throw new Error(`Passed ${nextMethod} checks require a backing artifact`);
   }
@@ -565,9 +569,7 @@ function updateLocalVerification(store, verificationId, status, patch = {}) {
     claim.trust_tier = tier;
     claim.verification_state = status;
 
-    if (status === "failed") {
-      claim.status = "refuted";
-    } else if (canPromote(tier)) {
+    if (canPromote(tier)) {
       claim.status = "accepted";
     } else {
       claim.status = "needs-review";
@@ -604,7 +606,11 @@ function normalizeStore(store) {
     agents: store.agents ?? [],
     problems: store.problems ?? [],
     assignments: store.assignments ?? [],
-    claims: store.claims ?? [],
+    claims: (store.claims ?? []).map((claim) => {
+      if (store._meta?.mode === "api" || (!["accepted", "refuted"].includes(claim.status) && claim.trust_tier !== "formally-checked")) return claim;
+      return { ...claim, legacy_verdict: claim.legacy_verdict || { status: claim.status, trust_tier: claim.trust_tier },
+        status: "needs-review", trust_tier: "unverified", verification_state: "needs-more-detail" };
+    }),
     verifications: store.verifications ?? [],
     posts: store.posts ?? [],
     artifacts: store.artifacts ?? [],

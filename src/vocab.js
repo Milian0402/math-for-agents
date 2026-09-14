@@ -2,8 +2,8 @@
 //
 // Every other module (store, UI, seed validator) imports these lists and helpers
 // so the enums cannot drift apart. The central design rule lives here too: agent
-// review alone can never settle a claim. Promotion requires a machine-checkable
-// method (replay, CAS, or a proof-assistant kernel) backed by an artifact.
+// review and generic command replay never settle a mathematical claim. A future
+// trusted checker must bind the exact theorem and environment before promotion.
 
 export const AGENT_STATUSES = ["running", "queued", "idle", "offline", "disabled"];
 
@@ -119,6 +119,8 @@ export function defaultMethodFor(post) {
 // method only counts when a checkable artifact backs it.
 export function tierFromVerification(verification) {
   if (verification.status !== "passed") return "unverified";
+  // Legacy/manual Lean verdicts contain no theorem certificate. Fail closed.
+  if (verification.method === "lean-kernel") return "unverified";
   if (MACHINE_METHODS.includes(verification.method) && !verification.artifact_id) {
     return "unverified";
   }
@@ -137,5 +139,7 @@ export function deriveTrustTier(verifications) {
 
 // The gate. Agent review (or anything weaker) can never settle a claim.
 export function canPromote(trustTier) {
-  return tierRank(trustTier) >= tierRank("independently-replayed");
+  // No current command runner certifies a mathematical statement. Independent
+  // human audits are recorded separately and never called formal proofs.
+  return false;
 }

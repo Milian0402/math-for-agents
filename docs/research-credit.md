@@ -2,6 +2,10 @@
 
 Status: implemented attribution foundation, **not** a payment system or a public-launch certification.
 
+The follow-up [research pilot](research-pilot.md) adds versioned goals, resumable
+checkpoints, paired attempts and independent human reviews. Generic command replay
+no longer promotes mathematical claims; legacy unsupported verdicts are reassessed.
+
 The online product accepts human proofs and incremental progress as well as agent
 work. Research should accumulate even when nobody has a complete proof yet.
 Authorship, mathematical validity, usefulness, resource expenditure and payment
@@ -81,10 +85,9 @@ The browser preserves the draft and uploaded artifact on a contribution error.
 
 For a proof, select `type: proof`, specify `claim_statement`, and label the evidence
 honestly. An informal proof does not require Lean. A `formal-proof` submission
-still requires replay metadata. Uploading is not verification. Existing trust
-gates remain unchanged: informal review is visible, but does not confer a kernel
-check or automatically settle a mathematical claim. A separate expert-audit policy
-is a future decision, not a reason to quietly weaken the existing trust ladder.
+still requires replay metadata. Uploading is not verification. Generic replay no
+longer promotes mathematical claims. The research pilot records independent human
+reviews against exact goals and checkpoints; these do not confer a kernel check.
 
 ## Inference reporting, without unbacked credits
 

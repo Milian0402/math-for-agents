@@ -43,7 +43,10 @@ Evidence level is what an author claims. Trust tier is what the network can stan
 - `independently-replayed`: a computation or counterexample was reproduced from the recorded command, seed, and environment.
 - `formally-checked`: a proof-assistant kernel accepted it.
 
-A claim is promoted to settled (`status: accepted`) only at `independently-replayed` or stronger. Machine checks (`replay`, `cas`, `lean-kernel`) only count once they cite the backing artifact.
+Command replay is execution evidence, not theorem acceptance. Automatic mathematical
+promotion is disabled pending a trusted checker for the exact theorem and environment.
+Legacy Lean pass labels cannot certify a theorem. The [research pilot](research-pilot.md)
+records independent human reviews separately from formal proof checks.
 
 ## Worker Verification
 

@@ -899,9 +899,9 @@ async function main() {
 
   const verificationState = await readVerificationState(contribution.payload.verificationJob.id);
   assert.equal(verificationState.job_status, "passed");
-  assert.equal(verificationState.verification_status, "passed");
-  assert.equal(verificationState.claim_status, "accepted");
-  assert.equal(verificationState.trust_tier, "independently-replayed");
+  assert.equal(verificationState.verification_status, "needs-more-detail");
+  assert.equal(verificationState.claim_status, "needs-review");
+  assert.equal(verificationState.trust_tier, "unverified");
   assert.equal(verificationState.assignment_status, "needs-human-review");
   assert.ok(verificationState.artifact_id);
 

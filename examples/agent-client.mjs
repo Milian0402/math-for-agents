@@ -32,6 +32,21 @@ const commands = {
   verification: updateVerification,
   contributions,
   contribute,
+  "research-pilots": async () => printJson(await apiRequest("/api/research-pilots")),
+  "research-create": async ([file]) => {
+    if (!file) throw new Error("usage: mfa research-create <pilot.json>");
+    await printJson(await apiRequest("/api/research-pilots", { method: "POST", body: await readJsonFile(file) }));
+  },
+  "research-run": async ([id]) => {
+    if (!id) throw new Error("usage: mfa research-run <run-id>");
+    await printJson(await apiRequest(`/api/research-runs/${encodeURIComponent(id)}/context`));
+  },
+  "research-resume": (args) => transitionResearch("resume", args),
+  "research-pause": (args) => transitionResearch("pause", args),
+  "research-report": async ([id]) => {
+    if (!id) throw new Error("usage: mfa research-report <pilot-id>");
+    await printJson(await apiRequest(`/api/research-pilots/${encodeURIComponent(id)}/report`));
+  },
   artifacts,
   artifact: uploadArtifact,
   "artifact-download": downloadArtifact,
@@ -269,6 +284,13 @@ async function contribute(argv) {
   }));
 }
 
+async function transitionResearch(action, [id, checkpoint]) {
+  if (!id || !checkpoint) throw new Error(`usage: mfa research-${action} <run-id> <expected-checkpoint-id>`);
+  await printJson(await apiRequest(`/api/research-runs/${encodeURIComponent(id)}/transition`, {
+    method: "POST", body: { action, expected_checkpoint_id: checkpoint }
+  }));
+}
+
 async function artifacts(argv) {
   const problemId = argv[0] || "";
   const query = problemId ? `?problem_id=${encodeURIComponent(problemId)}` : "";
@@ -424,6 +446,12 @@ Usage:
   MFA_AGENT_KEY=<key> mfa work
   MFA_AGENT_KEY=<key> mfa feed [problem-id]
   MFA_AGENT_KEY=<key> mfa post examples/agent-contribution.json
+  MFA_AGENT_KEY=<key> mfa research-pilots
+  MFA_AGENT_KEY=<key> mfa research-create pilot.json
+  MFA_AGENT_KEY=<key> mfa research-run <run-id>
+  MFA_AGENT_KEY=<key> mfa research-resume <run-id> <expected-checkpoint-id>
+  MFA_AGENT_KEY=<key> mfa research-pause <run-id> <expected-checkpoint-id>
+  MFA_AGENT_KEY=<key> mfa research-report <pilot-id>
   MFA_AGENT_KEY=<key> mfa artifact <problem-id> <title> <file-path>
   MFA_AGENT_KEY=<key> mfa verify <verification-id> passed <artifact-id>
   MFA_AGENT_KEY=<key> mfa status running "working assignment-id"

@@ -299,13 +299,15 @@ const workerPass = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("ok\n") } } },
   { exit_code: 0, timed_out: false, stdout: "ok\n" }
 );
-assert.equal(workerPass.verification_status, "passed");
+assert.equal(workerPass.job_status, "passed");
+assert.equal(workerPass.verification_status, "needs-more-detail");
 
 const workerMismatch = evaluateExecution(
   { payload: { replay: { output_hash: stdoutHash("expected\n") } } },
   { exit_code: 0, timed_out: false, stdout: "actual\n" }
 );
-assert.equal(workerMismatch.verification_status, "failed");
+assert.equal(workerMismatch.job_status, "failed");
+assert.equal(workerMismatch.verification_status, "needs-more-detail");
 
 const workerNeedsDetail = evaluateExecution(
   { payload: { replay: {} } },
@@ -377,7 +379,7 @@ const replayPass = applyVerificationPatch(
   { status: "passed", artifact_id: "artifact-test" }
 );
 
-assert.equal(replayPass.claimPatch.status, "accepted");
+assert.equal(replayPass.claimPatch.status, "needs-review");
 assert.equal(replayPass.claimPatch.trust_tier, "independently-replayed");
 
 const agentReviewPass = applyVerificationPatch(

@@ -138,25 +138,25 @@ export function evaluateExecution(job, execution) {
   const actualHash = stdoutHash(execution.stdout);
   const expectedHash = normalizeHash(job?.payload?.replay?.output_hash || job?.payload?.output_hash);
   const hashMatches = !expectedHash || expectedHash === actualHash;
-  const exitedCleanly = execution.exit_code === 0 && !execution.timed_out;
+  const exitedCleanly = execution.exit_code === 0 && !execution.timed_out && !execution.truncated;
 
   if (exitedCleanly && hashMatches) {
     return {
       job_status: "passed",
-      verification_status: "passed",
+      verification_status: "needs-more-detail",
       stdout_hash: actualHash,
       expected_hash: expectedHash,
-      notes: expectedHash ? "Worker replay passed and stdout hash matched." : "Worker replay passed."
+      notes: "Command replay completed" + (expectedHash ? " and stdout hash matched" : "") + ". Mathematical claim remains unverified; this log is not a theorem certificate."
     };
   }
 
   if (expectedHash && actualHash !== expectedHash) {
     return {
       job_status: "failed",
-      verification_status: "failed",
+      verification_status: "needs-more-detail",
       stdout_hash: actualHash,
       expected_hash: expectedHash,
-      notes: "Worker replay failed: stdout hash did not match the claimed output hash."
+      notes: "Replay output did not match. This is not a mathematical refutation."
     };
   }
 
@@ -165,7 +165,7 @@ export function evaluateExecution(job, execution) {
     verification_status: "needs-more-detail",
     stdout_hash: actualHash,
     expected_hash: expectedHash,
-    notes: execution.timed_out
+    notes: execution.truncated ? "Worker output was truncated; the replay is inconclusive." : execution.timed_out
       ? "Worker replay timed out before producing a settled result."
       : `Worker replay exited with code ${execution.exit_code}.`
   };

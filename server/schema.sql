@@ -245,4 +245,133 @@ create trigger immutable_research_post before update on posts for each row execu
 drop trigger if exists immutable_credit_event on credit_events;
 create trigger immutable_credit_event before update on credit_events for each row execute function protect_research_history();
 
+create table if not exists research_pilots (
+  id text primary key,
+  sequence bigint generated always as identity unique,
+  workspace_id text not null references workspaces(id) on delete cascade,
+  problem_id text not null references problems(id),
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  goal text not null,
+  goal_hash text not null,
+  model text not null,
+  budget_tokens integer not null check (budget_tokens > 0),
+  source_post_id text not null,
+  source_hash text not null,
+  paired boolean not null,
+  idempotency_key text not null,
+  request_hash text not null,
+  unique (workspace_id,id),
+  unique (workspace_id,created_by,idempotency_key),
+  foreign key (workspace_id,source_post_id) references posts(workspace_id,id)
+);
+create table if not exists research_runs (
+  id text primary key,
+  workspace_id text not null references workspaces(id) on delete cascade,
+  pilot_id text not null,
+  mode text not null check (mode in ('independent','shared')),
+  checkpoint_post_id text not null,
+  holder_id text,
+  status text not null check (status in ('paused','running','completed','exhausted')),
+  tokens_used integer not null default 0 check (tokens_used >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (workspace_id,id),
+  unique (workspace_id,pilot_id,mode),
+  foreign key (workspace_id,pilot_id) references research_pilots(workspace_id,id),
+  foreign key (workspace_id,checkpoint_post_id) references posts(workspace_id,id)
+);
+create table if not exists research_checkpoints (
+  sequence bigint generated always as identity primary key,
+  workspace_id text not null,
+  run_id text not null,
+  post_id text not null unique,
+  post_hash text not null,
+  author_id text not null,
+  tokens_used integer not null check (tokens_used >= 0),
+  created_at timestamptz not null default now(),
+  foreign key (workspace_id,run_id) references research_runs(workspace_id,id),
+  foreign key (workspace_id,post_id) references posts(workspace_id,id)
+);
+create table if not exists research_run_context (
+  workspace_id text not null,
+  run_id text not null,
+  post_id text not null,
+  post_hash text not null,
+  added_by text not null,
+  created_at timestamptz not null default now(),
+  primary key (workspace_id,run_id,post_id),
+  foreign key (workspace_id,run_id) references research_runs(workspace_id,id),
+  foreign key (workspace_id,post_id) references posts(workspace_id,id)
+);
+create table if not exists research_run_events (
+  sequence bigint generated always as identity primary key,
+  workspace_id text not null,
+  run_id text not null,
+  actor_id text not null,
+  action text not null check (action in ('resume','pause')),
+  checkpoint_post_id text not null,
+  created_at timestamptz not null default now(),
+  foreign key (workspace_id,run_id) references research_runs(workspace_id,id),
+  foreign key (workspace_id,checkpoint_post_id) references posts(workspace_id,id)
+);
+create table if not exists research_audits (
+  sequence bigint generated always as identity primary key,
+  workspace_id text not null,
+  run_id text not null,
+  reviewer_id text not null,
+  goal_hash text not null,
+  checkpoint_hash text not null,
+  verdict text not null check (verdict in ('supported','needs-work','refuted')),
+  notes text not null,
+  created_at timestamptz not null default now(),
+  foreign key (workspace_id,run_id) references research_runs(workspace_id,id)
+);
+create index if not exists research_pilots_workspace_sequence on research_pilots(workspace_id,sequence desc);
+create index if not exists research_checkpoints_run on research_checkpoints(workspace_id,run_id,sequence);
+create index if not exists research_audits_run on research_audits(workspace_id,run_id,sequence);
+
+create or replace function protect_pilot_history() returns trigger language plpgsql as $$
+begin
+  raise exception 'pilot goals and research history are immutable; create a new record';
+end;
+$$;
+drop trigger if exists immutable_pilot on research_pilots;
+create trigger immutable_pilot before update on research_pilots for each row execute function protect_pilot_history();
+drop trigger if exists immutable_checkpoint on research_checkpoints;
+create trigger immutable_checkpoint before update on research_checkpoints for each row execute function protect_pilot_history();
+drop trigger if exists immutable_context on research_run_context;
+create trigger immutable_context before update on research_run_context for each row execute function protect_pilot_history();
+drop trigger if exists immutable_audit on research_audits;
+create trigger immutable_audit before update on research_audits for each row execute function protect_pilot_history();
+drop trigger if exists immutable_handoff on research_run_events;
+create trigger immutable_handoff before update on research_run_events for each row execute function protect_pilot_history();
+
+-- One-time correction of legacy verdicts. Preserve the previous claim and
+-- verification records before withdrawing mathematical acceptance/refutation.
+create table if not exists verification_reassessments (
+  claim_id text primary key,
+  workspace_id text not null,
+  previous_claim jsonb not null,
+  previous_verifications jsonb not null,
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+create table if not exists schema_migrations (id text primary key, applied_at timestamptz not null default now());
+insert into verification_reassessments (claim_id,workspace_id,previous_claim,previous_verifications,reason)
+select c.id,c.workspace_id,to_jsonb(c),coalesce((select jsonb_agg(to_jsonb(v)) from verifications v
+  where v.claim_id = c.id and v.workspace_id = c.workspace_id),'[]'::jsonb),
+  'Command execution and historical manual verdicts were not bound to a checked theorem.'
+from claims c where (c.status in ('accepted','refuted') or c.trust_tier = 'formally-checked')
+  and not exists (select 1 from schema_migrations where id = '2026-09-replay-is-not-proof')
+on conflict do nothing;
+update claims set status = 'needs-review', trust_tier = 'unverified', verification_state = 'needs-more-detail'
+where id in (select claim_id from verification_reassessments)
+  and not exists (select 1 from schema_migrations where id = '2026-09-replay-is-not-proof');
+update verifications set status = 'needs-more-detail', updated_at = now(),
+  notes = notes || ' [Legacy mathematical verdict withdrawn: no bound theorem certificate.]'
+where claim_id in (select claim_id from verification_reassessments) and method in ('replay','cas','lean-kernel')
+  and not exists (select 1 from schema_migrations where id = '2026-09-replay-is-not-proof');
+insert into schema_migrations (id) values ('2026-09-replay-is-not-proof') on conflict do nothing;
+
 commit;

@@ -109,6 +109,10 @@ export function applyVerificationPatch(verification, claimVerifications, patch) 
     updated_at: new Date().toISOString()
   };
 
+  if (next.method === "lean-kernel" && next.status === "passed") {
+    throw Object.assign(new Error("Formal acceptance requires an independent checker bound to the exact theorem and environment; command logs and manual patches cannot certify it"), { statusCode: 422 });
+  }
+
   if (next.status === "passed" && MACHINE_METHODS.includes(next.method) && !next.artifact_id) {
     const error = new Error(`Passed ${next.method} checks require a backing artifact`);
     error.statusCode = 422;
@@ -119,9 +123,7 @@ export function applyVerificationPatch(verification, claimVerifications, patch) 
   const trustTier = deriveTrustTier(verifications);
   let claimStatus = "needs-review";
 
-  if (next.status === "failed") {
-    claimStatus = "refuted";
-  } else if (canPromote(trustTier)) {
+  if (canPromote(trustTier)) {
     claimStatus = "accepted";
   }
 

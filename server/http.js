@@ -9,6 +9,8 @@ import { secureCookiesEnabled } from "./config.js";
 import { checkDatabaseHealth } from "./db.js";
 import { verificationAgentForContribution } from "./domain.js";
 import { assertAttribution } from "./research.js";
+import { createResearchPilot, listResearchPilots, researchRunContext, transitionResearchRun,
+  addResearchContext, auditResearchRun, researchPilotReport } from "./research-pilot.js";
 import { makeId } from "./ids.js";
 import { applyRateLimit, createRequestContext, errorPayload, logErrorEvent, rateLimitHeaders } from "./ops.js";
 import { formatProblemExport } from "./problem-export.js";
@@ -161,6 +163,34 @@ async function handleApi(req, res, url) {
   req.context.principal = principal;
   const workspaceId = principal.workspace_id;
   enforceSessionWriteOrigin(req, principal);
+
+  if (url.pathname === "/api/research-pilots" && req.method === "POST") {
+    sendJson(res, 201, await createResearchPilot(principal, await readJson(req)));
+    return;
+  }
+  if (url.pathname === "/api/research-pilots" && req.method === "GET") {
+    sendJson(res, 200, await listResearchPilots(workspaceId, url.searchParams.get("before") || ""));
+    return;
+  }
+  const pilotReportMatch = url.pathname.match(/^\/api\/research-pilots\/([^/]+)\/report$/);
+  if (pilotReportMatch && req.method === "GET") {
+    sendJson(res, 200, await researchPilotReport(workspaceId, decodeURIComponent(pilotReportMatch[1])));
+    return;
+  }
+  const runMatch = url.pathname.match(/^\/api\/research-runs\/([^/]+)(?:\/(context|transition|audits))?$/);
+  if (runMatch) {
+    const id = decodeURIComponent(runMatch[1]);
+    if (req.method === "GET" && (!runMatch[2] || runMatch[2] === "context")) {
+      sendJson(res, 200, await researchRunContext(workspaceId, id));
+      return;
+    }
+    if (req.method === "POST" && runMatch[2]) {
+      const body = await readJson(req);
+      const action = { context: addResearchContext, transition: transitionResearchRun, audits: auditResearchRun }[runMatch[2]];
+      sendJson(res, 200, await action(principal, id, body));
+      return;
+    }
+  }
 
   if (req.method === "GET" && url.pathname === "/api/me") {
     sendJson(res, 200, { principal });
@@ -763,7 +793,8 @@ function buildAgentConnectionPacket(req, {
       claims: `/api/claims?problem_id=${encodeURIComponent(problemToken)}`,
       contributions: `/api/contributions?problem_id=${encodeURIComponent(problemToken)}`,
       artifacts: `/api/artifacts?problem_id=${encodeURIComponent(problemToken)}`,
-      verifications: "/api/verifications"
+      verifications: "/api/verifications",
+      research_pilots: "/api/research-pilots"
     },
     commands: {
       go: `${envBlock}\nnpm run mfa -- go ${shellValue(problemToken)}`,

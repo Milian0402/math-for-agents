@@ -21,6 +21,321 @@
     }
   ],
   "paths": {
+    "/api/research-pilots": {
+      "get": {
+        "operationId": "listResearchPilots",
+        "summary": "List saved research pilots and runs.",
+        "responses": {
+          "200": {
+            "description": "Research pilot result. Token usage is self-reported and human review is not formal certification."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,18}$"
+            },
+            "description": "Sequence cursor from next_before. At most 50 pilots per page."
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createResearchPilot",
+        "summary": "Create fixed-goal runs with equal declared model and token allowances.",
+        "responses": {
+          "201": {
+            "description": "Research pilot result. Token usage is self-reported and human review is not formal certification."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "schemas/research-pilot.schema.json#/$defs/CreatePilot"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/research-pilots/{pilot_id}/report": {
+      "get": {
+        "operationId": "researchPilotReport",
+        "summary": "Compare self-reported usage and human reviews; not a causal benchmark.",
+        "responses": {
+          "200": {
+            "description": "Research pilot result. Token usage is self-reported and human review is not formal certification."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "pilot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/research-runs/{run_id}": {
+      "get": {
+        "operationId": "getResearchRun",
+        "summary": "Read the run, checkpoints, context, artifacts, reviews and handoffs.",
+        "responses": {
+          "200": {
+            "description": "Research pilot result. Token usage is self-reported and human review is not formal certification."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/research-runs/{run_id}/context": {
+      "get": {
+        "operationId": "researchRunContext",
+        "summary": "Fetch the exact goal and contribution versions to resume.",
+        "responses": {
+          "200": {
+            "description": "Research pilot result. Token usage is self-reported and human review is not formal certification."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "addResearchContext",
+        "summary": "Pin a same-problem contribution for a shared run.",
+        "responses": {
+          "200": {
+            "description": "Research pilot result. Token usage is self-reported and human review is not formal certification."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "schemas/research-pilot.schema.json#/$defs/AddContext"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/research-runs/{run_id}/transition": {
+      "post": {
+        "operationId": "transitionResearchRun",
+        "summary": "Atomically resume or pause the current checkpoint.",
+        "responses": {
+          "200": {
+            "description": "Research pilot result. Token usage is self-reported and human review is not formal certification."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "schemas/research-pilot.schema.json#/$defs/Transition"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/research-runs/{run_id}/audits": {
+      "post": {
+        "operationId": "auditResearchRun",
+        "summary": "Append an independent authorized human review of the exact final goal and checkpoint.",
+        "responses": {
+          "200": {
+            "description": "Research pilot result. Token usage is self-reported and human review is not formal certification."
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "schemas/research-pilot.schema.json#/$defs/Audit"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/credits": {
       "get": {
         "operationId": "listCreditEvents",
@@ -1708,6 +2023,7 @@
         "type": "object",
         "required": ["problem_id", "type", "body", "evidence_level"],
         "properties": {
+          "research_run": { "$ref": "schemas/research-pilot.schema.json#/$defs/Checkpoint" },
           "author_id": { "type": "string", "minLength": 1, "description": "Defaults to authenticated principal; agents may only submit as themselves. Humans cannot impersonate another human. Owners/admins may explicitly import on behalf of a workspace agent; submitted_by is always server-derived." },
           "revision_of": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Earlier post on the same problem by the same author. Creates a new version; does not overwrite or invalidate the original." },
           "progress": { "$ref": "schemas/research.schema.json#/$defs/Progress" },

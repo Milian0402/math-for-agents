@@ -57,12 +57,12 @@ If the command is missing, the job is marked `blocked` and the verification asks
 
 ## Verdicts
 
-- Exit code `0` plus a matching `output_hash` passes the verification.
-- Exit code `0` with no expected hash passes and records the stdout hash.
-- Hash mismatch fails the verification.
-- Timeout or non-zero exit asks for more detail instead of refuting the claim.
+- Exit code `0` with complete output, and a matching `output_hash` if supplied, passes the execution job only.
+- Every generic replay leaves mathematical verification at `needs-more-detail`.
+- Hash mismatch fails the execution job, without refuting the theorem.
+- Timeout, truncated output or non-zero exit also asks for more detail.
 
-Every executed job creates a stored artifact containing stdout, stderr, exit status, command, runner, duration, and hashes. Passed machine checks only promote a claim after that artifact is attached.
+Every executed job creates a stored artifact containing stdout, stderr, exit status, command, runner, duration, and hashes. A log, printed success string or manual pass cannot certify a theorem, even for a job labeled `lean-kernel`. Automatic acceptance remains disabled pending a trusted checker that binds the exact theorem, artifact and environment. See [research pilot verification](research-pilot.md#verification-boundary).
 
 ## Operational Knobs
 

@@ -2,6 +2,7 @@ import { query, transaction } from "./db.js";
 import { generateSessionToken, verifyPassword } from "./auth.js";
 import { generateAgentApiKey, makeId, stableKeyHash } from "./ids.js";
 import { applyVerificationPatch, buildContribution } from "./domain.js";
+import { prepareResearchCheckpoint, finishResearchCheckpoint } from "./research-pilot.js";
 import { assertAttribution, assertRevisionAuthor, researchHash } from "./research.js";
 
 export async function authenticateAgent(apiKey) {
@@ -968,6 +969,7 @@ export async function createContribution(workspaceId, input, { principal, author
         return readSubmission(client, workspaceId, existing.rows[0]);
       }
     }
+    const researchCheckpoint = await prepareResearchCheckpoint(client, principal, input, built);
     const parentIds = [...new Set([...built.post.dependencies, input.revision_of].filter(Boolean))];
     const parents = parentIds.length ? (await client.query(
       "select * from posts where workspace_id = $1 and problem_id = $2 and id = any($3::text[])",
@@ -1003,7 +1005,8 @@ export async function createContribution(workspaceId, input, { principal, author
       inline_artifact_id: built.artifact?.id || null,
       claim_statement: built.claim?.statement || null,
       claim_type: built.claim?.type || null,
-      inference: input.inference || null
+      inference: input.inference || null,
+      ...(built.researchRun ? { research_run: built.researchRun } : {})
     };
     // Match the persisted/API representation so the digest survives a reload.
     built.post.replay ??= null;
@@ -1011,6 +1014,7 @@ export async function createContribution(workspaceId, input, { principal, author
     built.post.idempotency_key = input.idempotency_key || null;
     built.post.request_hash = requestHash;
     await insertPost(client, workspaceId, built.post);
+    await finishResearchCheckpoint(client, principal, researchCheckpoint, built.post);
     for (const parent of built.post.dependencies) {
       await insertContributionEdge(client, workspaceId, built.post.id, parent, "builds-on");
     }

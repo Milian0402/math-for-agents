@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "research-pilot.schema.json",
+  "$defs": {
+    "CreatePilot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_post_id", "goal", "model", "budget_tokens", "idempotency_key"],
+      "properties": {
+        "source_post_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "goal": { "type": "string", "minLength": 1, "maxLength": 10000 },
+        "model": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "budget_tokens": { "type": "integer", "minimum": 1, "maximum": 1000000000 },
+        "paired": { "type": "boolean", "default": false },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "Transition": {
+      "type": "object", "additionalProperties": false, "required": ["action", "expected_checkpoint_id"],
+      "properties": {
+        "action": { "enum": ["resume", "pause"] },
+        "expected_checkpoint_id": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "Checkpoint": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "expected_checkpoint_id", "status", "tokens_used"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "expected_checkpoint_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "status": { "enum": ["running", "paused", "completed"] },
+        "tokens_used": { "type": "integer", "minimum": 0, "maximum": 1000000000, "description": "Self-reported input plus output tokens. Zero is allowed only for human work without inference." }
+      }
+    },
+    "AddContext": {
+      "type": "object", "additionalProperties": false, "required": ["post_id", "expected_checkpoint_id"],
+      "properties": {
+        "post_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "expected_checkpoint_id": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "Audit": {
+      "type": "object", "additionalProperties": false,
+      "required": ["goal_hash", "checkpoint_hash", "verdict", "notes"],
+      "properties": {
+        "goal_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "checkpoint_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "verdict": { "enum": ["supported", "needs-work", "refuted"] },
+        "notes": { "type": "string", "minLength": 1, "maxLength": 10000 }
+      }
+    },
+    "Run": {
+      "type": "object", "required": ["id", "pilot_id", "mode", "checkpoint_post_id", "status", "tokens_used"],
+      "properties": {
+        "id": { "type": "string" }, "pilot_id": { "type": "string" },
+        "mode": { "enum": ["independent", "shared"] }, "checkpoint_post_id": { "type": "string" },
+        "holder_id": { "type": ["string", "null"] },
+        "status": { "enum": ["paused", "running", "completed", "exhausted"] },
+        "tokens_used": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -20,6 +20,7 @@ import {
   updateVerification
 } from "./store.js";
 import { MACHINE_METHODS, tierRank } from "./vocab.js";
+import { mountResearchPilot } from "./research-pilot.js";
 
 const app = document.querySelector("#app");
 
@@ -65,6 +66,7 @@ function render() {
       <nav class="nav-list" aria-label="Primary">
         ${navLink("dashboard", "Dashboard", "#/", route)}
         ${navLink("problems", "Problems", "#/problems", route)}
+        ${navLink("research", "Research runs", "#/research", route)}
         ${navLink("assignments", "Assignments", "#/assignments", route)}
         ${navLink("agents", "Agents", "#/agents", route)}
         ${navLink("keys", "API Keys", "#/keys", route)}
@@ -113,6 +115,12 @@ function getRoute() {
 }
 
 function afterRender(route) {
+  if (route.view === "research") {
+    void mountResearchPilot(document.querySelector("#research-pilot"), store, decodeURIComponent(route.id || ""), async () => {
+      store = await loadStore();
+      return store;
+    });
+  }
   if (route.view === "keys") {
     void ensureAgentKeysLoaded();
   }
@@ -233,6 +241,7 @@ function titleForRoute(route) {
   const titles = {
     dashboard: "Research Network",
     problems: "Problems",
+    research: "Research runs",
     assignments: "Assignments",
     agents: "Agents",
     keys: "API Keys",
@@ -246,6 +255,7 @@ function titleForRoute(route) {
 }
 
 function renderRoute(route) {
+  if (route.view === "research") return `<section id="research-pilot" class="view-stack" ${isApiMode() ? 'data-online="true"' : ""}></section>`;
   if (route.view === "post") {
     const post = store.posts.find((item) => item.id === route.id);
     return post ? `<section class="panel"><h2>Research contribution</h2>${postCard(post)}</section>` : '<section class="panel"><h2>Contribution not found</h2></section>';
@@ -746,7 +756,7 @@ function contributeView() {
             </article>
             <article>
               <strong>4. Promote only after review</strong>
-              <span>Claims enter verification before becoming accepted math.</span>
+              <span>Claims remain unverified until independently checked. Research runs record human reviews separately.</span>
             </article>
           </div>
           <form id="contribution-json-form" class="json-form">
@@ -1384,7 +1394,7 @@ function verificationCard(verification) {
             ${
               agentOnly
                 ? "Agent review tops out at agent-reviewed. It cannot settle this claim on its own."
-                : "Passing this check needs a cited artifact (replay log, CAS run, or Lean output) to promote the claim."
+                : "Record the execution evidence. Logs cannot accept or refute the mathematical claim."
             }
           </p>
         </div>
@@ -1408,9 +1418,9 @@ function verificationCard(verification) {
                 </label>`
               : ""
           }
-          <button class="secondary-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="passed">Mark passed</button>
+          ${verification.method !== "lean-kernel" ? `<button class="secondary-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="passed">Record check</button>` : "<span>Formal certification requires a trusted theorem checker.</span>"}
           <button class="quiet-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="needs-more-detail">Need detail</button>
-          <button class="quiet-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="failed">Mark failed</button>
+          <button class="quiet-button" type="button" data-action="set-verification" data-id="${escapeHtml(verification.id)}" data-status="failed">Check unsuccessful</button>
         </div>
       </div>
       <ul class="checklist">
@@ -1436,6 +1446,7 @@ function postCard(post) {
       <h3>${escapeHtml(problem?.title ?? post.problem_id)}</h3>
       <p>${escapeHtml(post.body)}</p>
       ${researchDetails(post)}
+      ${isApiMode() && post.content_hash ? `<a class="secondary-button" href="#/research/${encodeURIComponent(post.id)}">Continue this research</a>` : ""}
       <div class="meta-row">
         <span>${escapeHtml(labelize(post.evidence_level))}</span>
         ${post.dependencies.length ? `<span>${post.dependencies.length} dependencies</span>` : ""}
