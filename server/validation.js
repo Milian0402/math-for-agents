@@ -15,6 +15,7 @@ import {
 import { assertResearchInput } from "./research.js";
 
 const CONTRIBUTION_FIELDS = new Set([
+  "reply_to",
   "research_run",
   "author_id",
   "revision_of",

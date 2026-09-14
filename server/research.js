@@ -9,7 +9,7 @@ export function assertResearchInput(input) {
   if (input.artifact_metadata?.storage !== undefined || input.artifact_metadata?.server_stored !== undefined) {
     fail("artifact storage metadata is server-managed; upload the actual bytes");
   }
-  for (const key of ["revision_of", "idempotency_key"]) {
+  for (const key of ["reply_to", "revision_of", "idempotency_key"]) {
     if (input[key] !== undefined && (typeof input[key] !== "string" || !input[key].trim() || input[key].length > 200)) {
       fail(`${key} must be a non-empty string of at most 200 characters`);
     }
@@ -22,6 +22,8 @@ export function assertResearchInput(input) {
     fail(`${input.type} requires an explicit claim_statement`);
   }
   if (input.dependencies?.length > 50) fail("at most 50 dependencies per contribution");
+  if (input.reply_to && !input.idempotency_key) fail("replies require an idempotency_key for safe retries");
+  if (input.reply_to && input.body.length > 20000) fail("reply body must be at most 20000 characters; upload larger artifacts separately");
   if (input.progress !== undefined) {
     objectFields(input.progress, PROGRESS_FIELDS, "progress");
     for (const [key, value] of Object.entries(input.progress)) {

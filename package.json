@@ -14,7 +14,7 @@
   },
   "scripts": {
     "check:research": "node --experimental-test-module-mocks scripts/check-research.mjs",
-    "postcheck": "npm run check:research && npm run check:pilot",
+    "postcheck": "npm run check:research && npm run check:pilot && npm run check:conversations",
     "start": "node server/index.js",
     "dev:setup": "bash scripts/dev-setup.sh",
     "worker": "node server/worker.mjs",
@@ -39,7 +39,8 @@
     "launch:bootstrap": "node scripts/bootstrap-production.mjs",
     "launch:external-check": "node scripts/external-launch-check.mjs",
     "artifacts:export": "node scripts/export-artifacts.mjs",
-    "check:pilot": "node --check server/research-pilot.js && node --check src/research-pilot.js && node --experimental-test-module-mocks scripts/check-pilot.mjs"
+    "check:pilot": "node --check server/research-pilot.js && node --check src/research-pilot.js && node --experimental-test-module-mocks scripts/check-pilot.mjs",
+    "check:conversations": "node --check server/conversations.js && node --check src/conversations.js && node --experimental-test-module-mocks scripts/check-conversations.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.4.0",

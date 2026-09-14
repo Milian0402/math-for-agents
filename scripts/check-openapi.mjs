@@ -8,6 +8,9 @@ assert.equal(spec.openapi, "3.1.0");
 assert.equal(spec.info.title, "math-for-agents API");
 
 const expectedOperations = [
+  ["GET", "/api/activity", "listActivity", true],
+  ["POST", "/api/activity/{notification_id}/read", "markActivityRead", true],
+  ["GET", "/api/contributions/{post_id}/thread", "getConversation", true],
   ["GET", "/api/research-pilots", "listResearchPilots", true],
   ["POST", "/api/research-pilots", "createResearchPilot", true],
   ["GET", "/api/research-pilots/{pilot_id}/report", "researchPilotReport", true],

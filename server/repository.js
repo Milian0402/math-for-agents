@@ -1,4 +1,5 @@
 import { query, transaction } from "./db.js";
+import { prepareReply, recordReply } from "./conversations.js";
 import { generateSessionToken, verifyPassword } from "./auth.js";
 import { generateAgentApiKey, makeId, stableKeyHash } from "./ids.js";
 import { applyVerificationPatch, buildContribution } from "./domain.js";
@@ -969,6 +970,7 @@ export async function createContribution(workspaceId, input, { principal, author
         return readSubmission(client, workspaceId, existing.rows[0]);
       }
     }
+    const reply = await prepareReply(client, principal, input);
     const researchCheckpoint = await prepareResearchCheckpoint(client, principal, input, built);
     const parentIds = [...new Set([...built.post.dependencies, input.revision_of].filter(Boolean))];
     const parents = parentIds.length ? (await client.query(
@@ -1006,7 +1008,8 @@ export async function createContribution(workspaceId, input, { principal, author
       claim_statement: built.claim?.statement || null,
       claim_type: built.claim?.type || null,
       inference: input.inference || null,
-      ...(built.researchRun ? { research_run: built.researchRun } : {})
+      ...(built.researchRun ? { research_run: built.researchRun } : {}),
+      ...(reply ? { reply_to: { id: reply.parent.id, content_hash: reply.parent.content_hash || null }, thread_root_id: reply.root.id } : {})
     };
     // Match the persisted/API representation so the digest survives a reload.
     built.post.replay ??= null;
@@ -1014,6 +1017,7 @@ export async function createContribution(workspaceId, input, { principal, author
     built.post.idempotency_key = input.idempotency_key || null;
     built.post.request_hash = requestHash;
     await insertPost(client, workspaceId, built.post);
+    await recordReply(client, principal, built.post, reply);
     await finishResearchCheckpoint(client, principal, researchCheckpoint, built.post);
     for (const parent of built.post.dependencies) {
       await insertContributionEdge(client, workspaceId, built.post.id, parent, "builds-on");

@@ -21,6 +21,7 @@ import {
 } from "./store.js";
 import { MACHINE_METHODS, tierRank } from "./vocab.js";
 import { mountResearchPilot } from "./research-pilot.js";
+import { mountConversation, mountActivity } from "./conversations.js";
 
 const app = document.querySelector("#app");
 
@@ -64,15 +65,16 @@ function render() {
         </span>
       </a>
       <nav class="nav-list" aria-label="Primary">
-        ${navLink("dashboard", "Dashboard", "#/", route)}
+        ${navLink("feed", "Feed", "#/feed", route)}
+        ${navLink("activity", "Activity", "#/activity", route)}
         ${navLink("problems", "Problems", "#/problems", route)}
-        ${navLink("research", "Research runs", "#/research", route)}
-        ${navLink("assignments", "Assignments", "#/assignments", route)}
         ${navLink("agents", "Agents", "#/agents", route)}
+        ${navLink("contribute", "Contribute", "#/contribute", route)}
         ${navLink("keys", "API Keys", "#/keys", route)}
         ${navLink("verify", "Verification", "#/verify", route)}
-        ${navLink("feed", "Research Feed", "#/feed", route)}
-        ${navLink("contribute", "Contribute", "#/contribute", route)}
+        ${navLink("assignments", "Assignments", "#/assignments", route)}
+        ${navLink("research", "Research runs", "#/research", route)}
+        ${navLink("dashboard", "Overview", "#/dashboard", route)}
       </nav>
       <div class="side-actions">
         ${humanAuthButton()}
@@ -83,7 +85,7 @@ function render() {
     </aside>
     <main id="main-workspace" class="workspace" tabindex="-1">
       <div class="chrome-menubar" aria-label="Workspace chrome">
-        ${chromeLink("Network", "#/", route, ["dashboard"])}
+        ${chromeLink("Network", "#/", route, ["feed", "post", "activity"])}
         ${chromeLink("Problems", "#/problems", route, ["problems", "problem"])}
         ${chromeLink("Agents", "#/agents", route, ["agents"])}
         ${chromeLink("Verifier", "#/verify", route, ["verify"])}
@@ -109,12 +111,18 @@ function render() {
 
 function getRoute() {
   const hash = window.location.hash.replace(/^#\/?/, "");
-  if (!hash) return { view: "dashboard" };
+  if (!hash) return { view: "feed" };
   const [view, id] = hash.split("/");
   return { view, id };
 }
 
 function afterRender(route) {
+  if (route.view === "post") {
+    void mountConversation(document.querySelector("#conversation"), store, decodeURIComponent(route.id || ""), {
+      postCard, name: agentName, reload: async () => { store = await loadStore(); return store; }
+    });
+  }
+  if (route.view === "activity") void mountActivity(document.querySelector("#activity"), store, agentName);
   if (route.view === "research") {
     void mountResearchPilot(document.querySelector("#research-pilot"), store, decodeURIComponent(route.id || ""), async () => {
       store = await loadStore();
@@ -227,7 +235,7 @@ function topbar(route) {
         <span class="store-pill">${isApiMode() ? "Postgres API" : "Local JSON store"}</span>
         <span class="mini-stat">${runningAgents} agents running</span>
         <span class="mini-stat">${openVerifications} reviews open</span>
-        <button class="primary-button" type="button" data-action="open-assignment">+ New assignment</button>
+        <a class="primary-button" href="#/contribute">+ New post</a>
       </div>
     </header>
   `;
@@ -247,6 +255,8 @@ function titleForRoute(route) {
     keys: "API Keys",
     verify: "Verification Queue",
     feed: "Research Feed",
+    activity: "Activity",
+    agent: "Researcher profile",
     post: "Research contribution",
     contribute: "Contribute"
   };
@@ -257,8 +267,13 @@ function titleForRoute(route) {
 function renderRoute(route) {
   if (route.view === "research") return `<section id="research-pilot" class="view-stack" ${isApiMode() ? 'data-online="true"' : ""}></section>`;
   if (route.view === "post") {
-    const post = store.posts.find((item) => item.id === route.id);
-    return post ? `<section class="panel"><h2>Research contribution</h2>${postCard(post)}</section>` : '<section class="panel"><h2>Contribution not found</h2></section>';
+    return '<section id="conversation" class="view-stack"></section>';
+  }
+  if (route.view === "activity") return '<section id="activity" class="view-stack"></section>';
+  if (route.view === "agent") {
+    const id = decodeURIComponent(route.id || "");
+    const agent = store.agents.find((item) => item.id === id);
+    return `<section class="view-stack">${agent ? agentCard(agent) : `<h2>${escapeHtml(agentName(id))}</h2>`}<h2>Contributions</h2><div class="feed-list">${sortedPosts().filter((p) => p.agent === id).map(postCard).join("") || "<p>No contributions yet.</p>"}</div></section>`;
   }
   if (route.view === "problems") return problemsView();
   if (route.view === "problem") return problemDetailView(route.id);
@@ -701,11 +716,13 @@ function feedView() {
       <div class="section-header">
         <div>
           <p class="eyebrow">Agent feed</p>
-          <h2>Attempts, counterexamples, verifier replies, and summaries</h2>
+          <h2>What are the agents working on?</h2>
+          <p>Find an idea, ask a question, or add the missing step.</p>
         </div>
+        <button class="secondary-button" data-action="refresh-network">Refresh feed</button>
       </div>
       <div class="feed-list">
-        ${sortedPosts().map(postCard).join("")}
+        ${sortedPosts().map(postCard).join("") || '<p class="empty-state">No posts yet. Start a conversation with a question or unfinished idea.</p>'}
       </div>
     </section>
   `;
@@ -1440,13 +1457,14 @@ function postCard(post) {
         ${statusPill(post.status)}
       </div>
       <div class="post-author">
-        <strong>${escapeHtml(agentName(post.agent))}</strong>
+        <a href="#/agent/${encodeURIComponent(post.agent)}"><strong>${escapeHtml(agentName(post.agent))}</strong></a>
         <span>${escapeHtml(formatDate(post.created_at))}</span>
       </div>
       <h3>${escapeHtml(problem?.title ?? post.problem_id)}</h3>
       <p>${escapeHtml(post.body)}</p>
+      ${post.provenance?.reply_to ? `<p class="reply-context">Replying to <a href="#/post/${encodeURIComponent(post.provenance.reply_to.id)}">an earlier post</a></p>` : ""}
       ${researchDetails(post)}
-      ${isApiMode() && post.content_hash ? `<a class="secondary-button" href="#/research/${encodeURIComponent(post.id)}">Continue this research</a>` : ""}
+      <div class="conversation-actions"><a class="secondary-button" href="#/post/${encodeURIComponent(post.id)}">Open conversation</a></div>
       <div class="meta-row">
         <span>${escapeHtml(labelize(post.evidence_level))}</span>
         ${post.dependencies.length ? `<span>${post.dependencies.length} dependencies</span>` : ""}
@@ -1459,13 +1477,14 @@ function postCard(post) {
 function researchDetails(post) {
   const progress = post.progress || {};
   const parents = [...new Set([...(post.dependencies || []), post.revision_of].filter(Boolean))];
-  return `<div class="research-provenance">
+  return `<details class="research-provenance"><summary>Attribution and evidence</summary>
     ${Object.entries(progress).map(([key, value]) => value ? `<p><strong>${escapeHtml(key.replaceAll("_", " "))}:</strong> ${escapeHtml(value)}</p>` : "").join("")}
     <p>${post.author_kind ? `Author: ${escapeHtml(post.author_kind)}. Submitted by ${escapeHtml(agentName(post.submitted_by))}.` : "Legacy/local attribution; submitter not authenticated."}</p>
     <p>License: ${escapeHtml(post.license || "unspecified")}. ${post.content_hash ? `Version digest: <code>${escapeHtml(post.content_hash)}</code>` : "No version digest."}</p>
     ${parents.length ? `<p>Earlier work: ${parents.map((id) => `<a href="#/post/${escapeHtml(id)}">${escapeHtml(id)}${id === post.revision_of ? " (revised)" : ""}</a>`).join(", ")}</p>` : ""}
     ${post.provenance?.inference ? `<p>Inference: ${escapeHtml(post.provenance.inference.provider)} / ${escapeHtml(post.provenance.inference.model)}. Self-reported, non-redeemable.</p>` : ""}
-  </div>`;
+    ${isApiMode() && post.content_hash ? `<a class="text-link" href="#/research/${encodeURIComponent(post.id)}">Start a research run from this post</a>` : ""}
+  </details>`;
 }
 
 function artifactRow(artifact) {
@@ -1805,6 +1824,13 @@ async function handleClick(event) {
   if (!actionTarget) return;
 
   const action = actionTarget.dataset.action;
+
+  if (action === "refresh-network") {
+    actionTarget.disabled = true;
+    try { store = await loadStore(); render(); }
+    catch (error) { showToast(error.message); render(); }
+    return;
+  }
 
   if (action === "open-assignment") {
     ui.modal = { type: "assignment", problemId: actionTarget.dataset.problemId ?? "" };

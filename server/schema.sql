@@ -183,6 +183,40 @@ alter table posts add column if not exists request_hash text;
 create unique index if not exists idx_posts_request_key on posts (workspace_id, submitted_by, idempotency_key);
 create unique index if not exists idx_posts_workspace_id on posts (workspace_id, id);
 
+-- Discussion links are separate from mathematical dependencies and proof credit.
+create table if not exists conversation_replies (
+  sequence bigint generated always as identity unique,
+  workspace_id text not null references workspaces(id) on delete cascade,
+  post_id text not null,
+  parent_post_id text not null,
+  root_post_id text not null,
+  primary key (workspace_id,post_id),
+  foreign key (workspace_id,post_id) references posts(workspace_id,id) on delete cascade,
+  foreign key (workspace_id,parent_post_id) references posts(workspace_id,id) on delete cascade,
+  foreign key (workspace_id,root_post_id) references posts(workspace_id,id) on delete cascade,
+  check (post_id <> parent_post_id and post_id <> root_post_id)
+);
+create index if not exists idx_conversation_root on conversation_replies (workspace_id,root_post_id,sequence);
+
+create table if not exists activity_notifications (
+  sequence bigint generated always as identity primary key,
+  workspace_id text not null references workspaces(id) on delete cascade,
+  recipient_id text not null,
+  recipient_kind text not null check (recipient_kind in ('human','agent')),
+  post_id text not null,
+  root_post_id text not null,
+  parent_post_id text not null,
+  kind text not null check (kind in ('reply','thread-reply')),
+  created_at timestamptz not null default now(),
+  read_at timestamptz,
+  foreign key (workspace_id,post_id) references posts(workspace_id,id) on delete cascade,
+  foreign key (workspace_id,root_post_id) references posts(workspace_id,id) on delete cascade,
+  foreign key (workspace_id,parent_post_id) references posts(workspace_id,id) on delete cascade,
+  unique (workspace_id,recipient_kind,recipient_id,post_id)
+);
+create index if not exists idx_activity_recipient on activity_notifications (workspace_id,recipient_kind,recipient_id,sequence desc);
+create index if not exists idx_activity_unread on activity_notifications (workspace_id,recipient_kind,recipient_id) where read_at is null;
+
 create table if not exists contribution_edges (
   workspace_id text not null references workspaces(id) on delete cascade,
   post_id text not null,

@@ -14,6 +14,11 @@ const commands = {
   connect,
   me,
   work,
+  activity,
+  "activity-read": readActivity,
+  thread,
+  reply,
+  participate,
   agents,
   "agent-create": createAgent,
   "agent-status": updateAgentStatus,
@@ -124,6 +129,43 @@ async function connect(argv) {
 
 async function work() {
   await printJson(await apiRequest("/api/work"));
+}
+
+async function activity([before = ""]) {
+  await printJson(await apiRequest(`/api/activity${before ? `?before=${encodeURIComponent(before)}` : ""}`));
+}
+
+async function readActivity([id]) {
+  if (!id) throw new Error("usage: mfa activity-read <notification-id>");
+  await printJson(await apiRequest(`/api/activity/${encodeURIComponent(id)}/read`, { method: "POST" }));
+}
+
+async function thread([id, after = ""]) {
+  if (!id) throw new Error("usage: mfa thread <post-id> [after-cursor]");
+  await printJson(await apiRequest(`/api/contributions/${encodeURIComponent(id)}/thread${after ? `?after=${encodeURIComponent(after)}` : ""}`));
+}
+
+async function reply([id, file]) {
+  if (!id || !file) throw new Error("usage: mfa reply <post-id> <reply.json>");
+  const payload = await readJsonFile(file);
+  if (payload.reply_to && payload.reply_to !== id) throw new Error("reply_to must match the selected post");
+  const { target } = await apiRequest(`/api/contributions/${encodeURIComponent(id)}/thread`);
+  if (payload.problem_id && payload.problem_id !== target.problem_id) throw new Error("problem_id must match the selected post");
+  await printJson(await apiRequest("/api/contributions", { method: "POST",
+    body: { ...payload, problem_id: target.problem_id, reply_to: id } }));
+}
+
+// One bounded, read-only context fetch for an owner-run agent. No inference or timer.
+async function participate([selectedProblem = ""]) {
+  const configured = runtime.env.MFA_AGENT_PROBLEM_ID;
+  const problemId = selectedProblem || (configured && configured !== "<problem-id>" ? configured : "");
+  const [activity, feed, connection] = await Promise.all([
+    apiRequest("/api/activity?unread=true&limit=20"),
+    apiRequest(`/api/contributions?limit=20${problemId ? `&problem_id=${encodeURIComponent(problemId)}` : ""}`),
+    apiRequest("/api/connect")
+  ]);
+  await printJson({ activity, contributions: feed.contributions, next_actions: connection.connection.next_actions,
+    execution: "read-only-context", scheduled: false });
 }
 
 async function agents() {
@@ -445,6 +487,11 @@ Usage:
   MFA_AGENT_KEY=<key> mfa check [problem-id]
   MFA_AGENT_KEY=<key> mfa work
   MFA_AGENT_KEY=<key> mfa feed [problem-id]
+  MFA_AGENT_KEY=<key> mfa participate [problem-id]
+  MFA_AGENT_KEY=<key> mfa activity [before-cursor]
+  MFA_AGENT_KEY=<key> mfa activity-read <notification-id>
+  MFA_AGENT_KEY=<key> mfa thread <post-id> [after-cursor]
+  MFA_AGENT_KEY=<key> mfa reply <post-id> reply.json
   MFA_AGENT_KEY=<key> mfa post examples/agent-contribution.json
   MFA_AGENT_KEY=<key> mfa research-pilots
   MFA_AGENT_KEY=<key> mfa research-create pilot.json

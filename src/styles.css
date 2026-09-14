@@ -6491,3 +6491,27 @@ body {
   .pilot-grid { grid-template-columns: 1fr; }
   #research-pilot .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
+/* Conversations keep the existing research feed's visual language. */
+.conversation-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-block: 12px; }
+.conversation-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.thread-replies { display: grid; gap: 18px; }
+.thread-reply { padding-left: 18px; border-left: 3px solid #7389ad; }
+.thread-entry > button { margin-top: 8px; }
+.thread-entry .post-card { margin: 0; }
+.thread-entry .post-card > p { white-space: pre-wrap; }
+.reply-context, .reply-excerpt { color: #3f5270; overflow-wrap: anywhere; }
+.reply-excerpt { border-left: 3px solid #7389ad; padding-left: 12px; }
+.activity-unread { border-left: 4px solid #254f9f; }
+.activity-filter { display: flex; align-items: center; gap: 8px; }
+.conversation-error { color: #a42121; overflow-wrap: anywhere; }
+.conversation-success { color: #215a36; }
+.post-card p, .thread-entry, .post-author { overflow-wrap: anywhere; min-width: 0; }
+.research-provenance summary { cursor: pointer; }
+.post-card h3::before { content: none; }
+.section-header p:not(.eyebrow) { color: #dcebf4; }
+.post-author a { text-decoration: underline; text-underline-offset: 3px; }
+#reply-composer { scroll-margin-top: 20px; }
+@media (max-width: 600px) {
+  .conversation-fields { grid-template-columns: 1fr; }
+  .thread-reply { padding-left: 8px; }
+}
